@@ -12,7 +12,7 @@ WHERE o.aktif;
 
 -- 2) Masa durumu: hangi masada kaç kişi, hangi oyun oynanıyor, sırada mı
 CREATE VIEW v_masa_durumu AS
-SELECT m.id AS masa_id, m.masa_no, m.kapasite,
+SELECT m.id AS masa_id, m.masa_no, m.kapasite, m.kat,
        CASE WHEN t.id IS NULL THEN 'BOS' ELSE 'DOLU' END AS durum,
        t.id AS oturum_id, t.kisi_sayisi, t.acilis,
        og.oturum_oyun_id, og.oyun_id, og.ad AS oynanan_oyun, og.baslangic AS oyun_baslangic,

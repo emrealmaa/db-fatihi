@@ -26,6 +26,7 @@ const KISIT_MESAJLARI = {
     ck_oturum_kisi: 'Kişi sayısı en az 1 olmalı',
     uq_masa_no: 'Bu masa numarası zaten var',
     ck_masa_kapasite: 'Masa kapasitesi 1-20 arasında olmalı',
+    ck_masa_kat: 'Kat 1, 2 veya 3 olmalı',
     uq_oyun_ad: 'Bu adda bir oyun zaten var',
     ck_oyun_oyuncu: 'Oyuncu sayıları geçersiz (min > 0, max ≥ min)',
     ck_oyun_adet: 'Adet negatif olamaz',

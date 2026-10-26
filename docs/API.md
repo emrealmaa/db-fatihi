@@ -14,6 +14,10 @@ Taban adres: `http://localhost:3001/api`. Gövdeler JSON. Giriş dışındaki he
 Rol hiyerarşisi: **YONETICI ⊃ KASIYER ⊃ GARSON**. API her isteği personelin rolüne karşılık gelen
 veritabanı rolüyle (`garson_app`, `kasiyer_app`, `yonetici_app`) çalıştırır; asıl yetki kontrolü veritabanındadır.
 
+**Personel adına işlem:** Yönetici `X-Personel: <personel id>` başlığı gönderirse istek o (aktif) personelin
+rolü ve kimliğiyle çalışır — simülasyon garsonları böyle gerçek personel kayıtlarına işlem yazar. Yetki genişlemez:
+garson adına kasa işlemi yapılamaz (403). Yönetici olmayan bu başlığı kullanamaz (403).
+
 ## Giriş
 | Yöntem | Yol | Gövde | Yanıt |
 |---|---|---|---|

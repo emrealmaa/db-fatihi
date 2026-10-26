@@ -30,7 +30,9 @@ INSERT INTO oyun (ad, kategori_id, min_oyuncu, max_oyuncu, sure_dk, toplam_adet)
  ('Splendor',4,2,4,30,1),
  ('Uno',4,2,10,20,3);
 
-INSERT INTO masa (masa_no, kapasite) VALUES (1,4),(2,4),(3,6),(4,6),(5,8),(6,2);
+-- Kat 1: giriş & espresso bar (küçük masalar) · Kat 2: strateji salonu · Kat 3: VIP / FRP
+INSERT INTO masa (masa_no, kapasite, kat) VALUES
+ (1,4,1),(2,4,1),(3,6,2),(4,6,2),(5,8,3),(6,2,1),(7,2,1),(8,4,2),(9,4,2),(10,10,3);
 
 INSERT INTO urun_kategori (ad, sira) VALUES
  ('Sıcak İçecekler',1),('Soğuk İçecekler',2),('Yiyecekler',3),('Tatlılar',4);

@@ -70,7 +70,7 @@ export function yonetimRotalari() {
         tablo: 'urun', siralama: 'ad',
         sutunlar: ['ad', 'kategori_id', 'fiyat', 'stok', 'kritik_stok', 'aktif'] });
     tabloRotalari(r, '/yonetim/masalar', {
-        tablo: 'masa', sutunlar: ['masa_no', 'kapasite'], siralama: 'masa_no', silinebilir: true });
+        tablo: 'masa', sutunlar: ['masa_no', 'kapasite', 'kat'], siralama: 'kat, masa_no', silinebilir: true });
 
     r.post('/yonetim/urunler/:id/stok', async (req, res) => {
         await req.vt((q) => q('CALL sp_stok_ekle($1, $2)', [tamsayi(req.params.id, 'Ürün'), tamsayi(req.body.adet, 'Adet')]));

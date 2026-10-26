@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { gonder, guncelle, sil } from '../api.js';
 import { useUygulama } from '../baglam.jsx';
 import { useVeri } from '../kancalar.js';
-import { ROL_ADI, tarihBicim, tl } from '../bicim.js';
+import { KAT_ADI, ROL_ADI, tarihBicim, tl } from '../bicim.js';
 import { Durum, Etiket, Modal, SayfaBaslik } from '../bilesenler/ortak.jsx';
 
 const SEKMELER = [
@@ -252,6 +252,7 @@ function MasaYonetimi() {
     const alanlar = [
         { ad: 'masa_no', etiket: 'Masa numarası', tur: 'sayi', zorunlu: true },
         { ad: 'kapasite', etiket: 'Kapasite (kişi)', tur: 'sayi', zorunlu: true, varsayilan: 4 },
+        { ad: 'kat', etiket: 'Kat', tur: 'secim', zorunlu: true, varsayilan: 1, secenekler: Object.entries(KAT_ADI) },
     ];
     return (
         <>
@@ -261,11 +262,11 @@ function MasaYonetimi() {
             </div>
             <Durum yukleniyor={d.liste.yukleniyor && !d.liste.veri} hata={d.liste.hata} bos={!d.liste.veri?.length} bosMesaj="Masa yok">
                 <table className="tablo">
-                    <thead><tr><th>Masa</th><th className="sag">Kapasite</th><th /></tr></thead>
+                    <thead><tr><th>Masa</th><th>Kat</th><th className="sag">Kapasite</th><th /></tr></thead>
                     <tbody>
                         {d.liste.veri?.map((m) => (
                             <tr key={m.id}>
-                                <td>Masa {m.masa_no}</td><td className="sag">{m.kapasite} kişi</td>
+                                <td>Masa {m.masa_no}</td><td>{KAT_ADI[m.kat]}</td><td className="sag">{m.kapasite} kişi</td>
                                 <td className="sag eylemler">
                                     <button className="dugme dugme-hafif dugme-kucuk" onClick={() => d.setForm({ ilk: m })}>Düzenle</button>
                                     <button className="dugme dugme-hafif dugme-kucuk" onClick={() => d.kaldir(m)}>Sil</button>

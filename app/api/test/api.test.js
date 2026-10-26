@@ -27,10 +27,14 @@ after(async () => {
     await vt.kapat();
 });
 
-async function istek(yontem, yol, govde, kim) {
+async function istek(yontem, yol, govde, kim, adina) {
     const res = await fetch(adres + yol, {
         method: yontem,
-        headers: { 'Content-Type': 'application/json', ...(kim ? { Authorization: `Bearer ${token[kim]}` } : {}) },
+        headers: {
+            'Content-Type': 'application/json',
+            ...(kim ? { Authorization: `Bearer ${token[kim]}` } : {}),
+            ...(adina ? { 'X-Personel': String(adina) } : {}),
+        },
         body: govde ? JSON.stringify(govde) : undefined,
     });
     const metin = await res.text();
@@ -59,7 +63,8 @@ test('garson kasa ve yönetim uçlarına erişemez (403)', async () => {
 
 test('masalar ve oyunlar listelenir, sayılar JSON sayısıdır', async () => {
     const { govde: masalar } = await istek('GET', '/masalar', null, 'garson');
-    assert.equal(masalar.length, 6);
+    assert.equal(masalar.length, 10);
+    assert.deepEqual([...new Set(masalar.map((m) => m.kat))].sort(), [1, 2, 3]);
     assert.equal(typeof masalar[0].oturum_id, 'number');
     const { govde: oyunlar } = await istek('GET', '/oyunlar', null, 'garson');
     assert.equal(oyunlar.find((o) => o.ad === 'Catan').musait_adet, 0);
@@ -156,4 +161,20 @@ test('yönetici: ürün, personel ve ayar yönetimi', async () => {
     const kotuAyar = await istek('PATCH', '/yonetim/ayar', { secim_suresi_dk: 0 }, 'yonetici');
     assert.equal(kotuAyar.durum, 400);
     assert.match(kotuAyar.govde.hata, /1-60/);
+});
+
+test('yönetici personel adına işlem yapar; işlem o personelin rolü ve kimliğiyle kaydedilir', async () => {
+    const masa5 = (await istek('GET', '/masalar', null, 'garson')).govde.find((m) => m.masa_no === 5);
+    const ac = await istek('POST', `/masalar/${masa5.masa_id}/ac`, { kisiSayisi: 6, kullaniciId: 2 }, 'yonetici', 4);
+    assert.equal(ac.durum, 201);
+    await istek('POST', `/oturumlar/${ac.govde.oturumId}/siparisler`, { urunId: 3, adet: 2 }, 'yonetici', 4);
+    const [s] = (await istek('GET', `/oturumlar/${ac.govde.oturumId}/siparisler`, null, 'garson')).govde;
+    assert.equal(s.personel, 'Mert');
+
+    // Garson rolüyle (personel 4) kasiyer işlemi yapılamaz; kasiyer (2) adına yapılabilir
+    assert.equal((await istek('POST', `/oturumlar/${ac.govde.oturumId}/kapat`, { odemeTuru: 'NAKIT' }, 'yonetici', 4)).durum, 403);
+    assert.equal((await istek('POST', `/oturumlar/${ac.govde.oturumId}/kapat`, { odemeTuru: 'NAKIT' }, 'yonetici', 2)).durum, 200);
+
+    // Garson başkası adına işlem yapamaz
+    assert.equal((await istek('GET', '/masalar', null, 'garson', 4)).durum, 403);
 });

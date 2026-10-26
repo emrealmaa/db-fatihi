@@ -86,8 +86,10 @@ CREATE TABLE masa (
     id              smallint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     masa_no         smallint     NOT NULL,
     kapasite        smallint     NOT NULL,
+    kat             smallint     NOT NULL DEFAULT 1,   -- 1 giriş & espresso bar, 2 strateji salonu, 3 VIP/FRP
     CONSTRAINT uq_masa_no       UNIQUE (masa_no),
-    CONSTRAINT ck_masa_kapasite CHECK (kapasite BETWEEN 1 AND 20)
+    CONSTRAINT ck_masa_kapasite CHECK (kapasite BETWEEN 1 AND 20),
+    CONSTRAINT ck_masa_kat      CHECK (kat BETWEEN 1 AND 3)
 );
 
 -- ---------------------------------------------------------------- oturum

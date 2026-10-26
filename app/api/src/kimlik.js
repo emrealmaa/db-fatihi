@@ -19,8 +19,11 @@ export function kimlikModulu({ vt, gizliAnahtar, sure = '12h' }) {
         return { token, personel };
     }
 
-    // Token'ı doğrular, req.personel ve req.vt (personelin rolüyle transaction) ekler
-    function kimlikGerekli(req, res, next) {
+    // Token'ı doğrular, req.personel ve req.vt (personelin rolüyle transaction) ekler.
+    // Yönetici "X-Personel: <id>" başlığıyla başka bir aktif personel adına işlem yapabilir
+    // (simülasyon garsonları gerçek personel kayıtlarıyla çalışır). Bu durumda istek o personelin
+    // veritabanı rolüyle ve kimliğiyle çalışır; yetkiler genişlemez, yalnızca daralabilir.
+    async function kimlikGerekli(req, res, next) {
         const [tur, token] = (req.headers.authorization || '').split(' ');
         if (tur !== 'Bearer' || !token) return next(new HttpHata(401, 'Giriş yapmanız gerekiyor'));
         try {
@@ -28,6 +31,15 @@ export function kimlikModulu({ vt, gizliAnahtar, sure = '12h' }) {
             req.personel = { id, ad, soyad, rol };
         } catch {
             return next(new HttpHata(401, 'Oturumunuzun süresi doldu, tekrar giriş yapın'));
+        }
+        const adina = req.headers['x-personel'];
+        if (adina !== undefined && Number(adina) !== req.personel.id) {
+            if (req.personel.rol !== 'YONETICI') return next(new HttpHata(403, 'Başka personel adına yalnızca yönetici işlem yapabilir'));
+            const [p] = await vt.islem('yonetici', req.personel.id, (q) =>
+                q('SELECT id, ad, soyad, rol FROM personel WHERE id = $1 AND aktif', [Number(adina) || 0]));
+            if (!p) return next(new HttpHata(400, 'Adına işlem yapılacak personel bulunamadı veya aktif değil'));
+            req.yonetici = req.personel;
+            req.personel = p;
         }
         req.vt = (fn) => vt.islem(DB_ROLU[req.personel.rol], req.personel.id, fn);
         next();

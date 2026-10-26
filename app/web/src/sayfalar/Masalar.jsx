@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { al, gonder, sil } from '../api.js';
 import { useUygulama } from '../baglam.jsx';
 import { useSimdi, useVeri } from '../kancalar.js';
-import { gecenSure, kalanSure, saatBicim } from '../bicim.js';
+import { gecenSure, KAT_ADI, kalanSure, saatBicim } from '../bicim.js';
 import { Adet, Durum, Etiket, Modal, SayfaBaslik } from '../bilesenler/ortak.jsx';
 import OyunSecici from '../bilesenler/OyunSecici.jsx';
 import SiparisPaneli from '../bilesenler/SiparisPaneli.jsx';
@@ -30,8 +30,11 @@ export default function Masalar() {
         <>
             <SayfaBaslik baslik="Masalar" aciklama={veri ? `${dolu}/${veri.length} masa dolu · ${kisi} misafir` : ''} />
             <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!veri?.length} bosMesaj="Tanımlı masa yok">
+                {[1, 2, 3].filter((k) => veri?.some((m) => m.kat === k)).map((k) => (
+                <section key={k} className="kat-bolum">
+                <h2>{KAT_ADI[k]}</h2>
                 <div className="masa-izgara">
-                    {veri?.map((m) => {
+                    {veri.filter((m) => m.kat === k).map((m) => {
                         const d = masaDurumu(m);
                         return (
                             <button key={m.masa_id} className={`masa-kart masa-${d.tur}`} onClick={() => setSeciliNo(m.masa_no)}>
@@ -50,6 +53,8 @@ export default function Masalar() {
                         );
                     })}
                 </div>
+                </section>
+                ))}
             </Durum>
             {secili && <MasaPaneli masa={secili} kapat={() => setSeciliNo(null)} yenile={yenile} />}
         </>
