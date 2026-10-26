@@ -254,7 +254,7 @@ function Hud({ ozet, duraklat, hizAyarla }) {
             <div className="sim-kutu sim-saat">
                 {t.saat}
                 <span className={`sim-durum sim-durum-${ozet.calismaDurumu.toLowerCase()}`}>
-                    {{ ACIK: 'Açık · 10–22', KAPANIYOR: 'Kapanıyor', KAPALI: 'Kapalı' }[ozet.calismaDurumu]}
+                    {{ ACIK: ozet.saatDilimi, KAPANIYOR: 'Kapanıyor', KAPALI: 'Kapalı' }[ozet.calismaDurumu]}
                 </span>
             </div>
             <div className="sim-kutu"><span className="sim-etiket">Kasa (bugün)</span>{tl(ozet.ciro.bugun)}</div>

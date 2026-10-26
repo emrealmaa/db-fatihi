@@ -77,10 +77,10 @@ INSERT INTO oyun (ad, kategori_id, min_oyuncu, max_oyuncu, sure_dk, toplam_adet,
  ('Quacks of Quedlinburg',5,2,4,45,2,2,5),
  ('Dune: Imperium',1,1,4,120,1,4,5);
 
--- Kat 1: giriş & espresso bar (10 küçük masa) · Kat 2: strateji salonu (10 masa) · Kat 3: VIP / FRP (4 büyük masa)
+-- Kat 1: giriş & espresso bar (10 masa: bar/mutfak yakını 2'lik, iç kısım 4'lük) · Kat 2: strateji salonu (10 masa) · Kat 3: VIP / FRP (4 büyük masa)
 INSERT INTO masa (masa_no, kapasite, kat) VALUES
  (1,4,1),(2,4,1),(3,6,2),(4,6,2),(5,6,3),(6,2,1),(7,2,1),(8,4,2),(9,4,2),(10,8,3),
- (11,2,1),(12,2,1),(13,6,1),(14,4,1),(15,2,1),(16,6,1),
+ (11,2,1),(12,2,1),(13,4,1),(14,4,1),(15,2,1),(16,4,1),
  (17,4,2),(18,6,2),(19,4,2),(20,6,2),(21,4,2),(22,6,2),
  (23,8,3),(24,6,3);
 

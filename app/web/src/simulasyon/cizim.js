@@ -32,6 +32,7 @@ const ZEMIN = {
 const BOHEM = ['#a33b20', '#7b2d26', '#2b6cb0', '#c9772a'];
 const HALI = {
     mutfak: ['#e9eef2', '#a9bccb'],
+    arcade: ['#2a1f3d', '#33264a'],
     bekleme: ['#d9a65b', '#cf9a4f'], paspas: ['#6b8f5a', '#5f8250'],
     salon: ['#3f5a4a', '#385142'], vip: ['#3d2552', '#36204a'],
 };
@@ -82,6 +83,20 @@ function kutuR(c, P, r, h, renk, z = 0) {
         if (renk.kenar) { c.fillStyle = renk.kenar; c.fillRect(x, ust - h - z, 1, 1); }
     }
 }
+// Kutunun ekranda solda ve sağda görünen yan yüzlerinin dünya yönü (K/B/G/D): bir yüze bakan
+// ekran, kapı gibi ayrıntıları yalnızca o yüz görünüyorsa çizmek için
+function gorunenYuzler(d) {
+    const a = dondur(d, 0, 0);
+    const yuz = {};
+    for (const [ad, [nx, ny]] of Object.entries({ G: [0, 1], D: [1, 0], K: [0, -1], B: [-1, 0] })) {
+        const b = dondur(d, nx, ny);
+        const rx = b.x - a.x, ry = b.y - a.y;
+        if (Math.abs(rx) < 0.01 && ry > 0.5) yuz.sol = ad;
+        if (rx > 0.5 && Math.abs(ry) < 0.01) yuz.sag = ad;
+    }
+    return yuz;
+}
+
 // Dünya tabanlı kutu
 const kutu = (c, P, d, gx, gy, gw, gd, h, renk, z) => kutuR(c, P, dikdortgenDondur(d, gx, gy, gw, gd), h, renk, z);
 
@@ -125,6 +140,7 @@ function zeminVeDuvarlar(kat, d) {
             const kenar = gx === h.gx || gy === h.gy || gx === h.gx + h.gw - 1 || gy === h.gy + h.gd - 1;
             let renk0 = renk ? renk[(gx + gy) % 2] : null;
             if (h.renk === 'vip' && kenar) renk0 = '#b8892f';
+            if (h.renk === 'arcade' && kenar) renk0 = '#5ec8ff';
             if (h.renk === 'bohem') renk0 = kenar ? '#e3b23c' : BOHEM[(gx * 3 + gy * 5) % 4];
             elmasR(c, P, r.gx, r.gy, renk0);
         }
@@ -304,6 +320,86 @@ function nesneCiz(c, P, d, o, sahne = {}) {
             }
             K(o.gx + 0.1, o.gy + 0.45, o.gw - 0.2, 0.1, 2, renkler('#3b3b3b'), o.h + 34);    // lamba çubuğu
             for (let i = 0; i < o.gw; i++) { const q = W(o.gx + i + 0.5, o.gy + 0.5); c.fillStyle = 'rgba(255,170,70,.35)'; c.fillRect(q.x - 5, q.y - o.h - 32, 10, 30); }
+            break;
+        }
+        // -------------------------------------------------------- kat 2 eğlence: kitaplık, atari, tilt, stand
+        case 'kitaplik':
+            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#4a2c1a', rafDeseni));
+            K(o.gx - 0.06, o.gy - 0.03, o.gw + 0.12, o.gd + 0.06, 4, renkler('#6b3f22'), o.h);           // korniş
+            for (let i = 0; i < o.gw; i += 2) {                                                            // raf lambaları
+                const q = W(o.gx + i + 1, o.gy + o.gd);
+                c.fillStyle = 'rgba(255,214,140,.5)'; c.fillRect(q.x - 6, q.y - o.h - 1, 12, 2);
+            }
+            break;
+        case 'atari': {
+            // retro arcade kabini: üstte ışıklı başlık, ortada yanıp sönen ekran, altta kontrol paneli
+            const yz = gorunenYuzler(d);
+            const t = Math.floor(performance.now() / 180);
+            K(o.gx + 0.1, o.gy + 0.1, 0.8, 0.8, o.h, renkler(o.renk, (cc, x, y, h, sol, st) => {
+                if ((sol ? yz.sol : yz.sag) !== o.on) return;
+                cc.fillStyle = '#ffd166'; cc.fillRect(x, y + 3, 1, 5);
+                cc.fillStyle = '#111'; cc.fillRect(x, y + 10, 1, 16);
+                if (st > 1 && st < 16) { cc.fillStyle = ['#5ec8ff', '#ff5ea8', '#7cf29a', '#ffd166'][(Math.floor(st / 3) + t) % 4]; cc.fillRect(x, y + 12 + ((st + t) % 3), 1, 9); }
+                cc.fillStyle = '#2b2b2b'; cc.fillRect(x, y + 28, 1, 5);
+                if (st % 6 === 2) { cc.fillStyle = '#d94f3d'; cc.fillRect(x, y + 27, 1, 2); }
+            }));
+            K(o.gx + 0.06, o.gy + 0.06, 0.88, 0.88, 3, renkler('#1c1c1c'), o.h);
+            break;
+        }
+        case 'pinball': {
+            // tilt: ayaklar, eğik oyun alanı (lambalar, tamponlar), duvar tarafında ışıklı arka kutu
+            for (const v of [0.15, o.gd - 0.3]) K(o.gx + 0.15, o.gy + v, 0.1, 0.12, 10, renkler('#2b2b2b'));
+            K(o.gx + 0.1, o.gy + 0.08, 0.8, o.gd - 0.16, 6, renkler(o.renk), 10);
+            K(o.gx + 0.16, o.gy + 0.14, 0.68, o.gd - 0.28, 0, { ust: '#1f3f66' }, 16);
+            const t = Math.floor(performance.now() / 250);
+            [[0.3, 0.35], [0.6, 0.6], [0.35, 0.95], [0.62, 1.25]].forEach(([u, v], i) => {
+                K(o.gx + u, o.gy + v, 0.1, 0.1, 2, renkler(['#ffd166', '#ff5ea8', '#7cf29a', '#5ec8ff'][(i + t) % 4]), 16);
+            });
+            K(o.gx + 0.7, o.gy + 0.1, 0.2, o.gd - 0.2, 26, renkler('#1c1c1c', (cc, x, y, h, sol, st) => {
+                if (st % 4 < 2) { cc.fillStyle = ['#ff5ea8', '#ffd166'][(st + t) % 2]; cc.fillRect(x, y + 4, 1, 10); }
+            }), 16);
+            break;
+        }
+        case 'oyunstandi': {
+            K(o.gx + 0.15, o.gy + 0.15, 0.7, 0.7, 8, renkler('#3b2418'));
+            ['#d94f3d', '#3d7fd9', '#e3b23c', '#4caf6a'].forEach((r, i) => K(o.gx + 0.2 + (i % 2) * 0.3, o.gy + 0.22 + Math.floor(i / 2) * 0.3, 0.26, 0.26, 7 + (i % 2) * 3, renkler(r), 8));
+            const q = W(o.gx + 0.5, o.gy + 0.5);
+            c.fillStyle = '#ffd166'; c.fillRect(q.x - 9, q.y - o.h - 4, 18, 5);
+            c.fillStyle = '#2a1d16'; c.fillRect(q.x - 7, q.y - o.h - 3, 14, 1);
+            break;
+        }
+        // -------------------------------------------------------- kat 3 sahne ışıkları ve figür kaideleri
+        case 'spot': {
+            const q = W(o.gx + 0.1, o.gy + 0.1);
+            c.fillStyle = '#2b2b2b'; c.fillRect(q.x, q.y - o.h, 2, o.h);
+            c.fillStyle = o.renk; c.fillRect(q.x - 2, q.y - o.h - 4, 6, 4);
+            c.save(); c.globalAlpha = 0.16 + 0.06 * Math.sin(performance.now() / 300);
+            c.fillStyle = o.renk;
+            for (let i = 0; i < 30; i++) c.fillRect(q.x - 2 - i * 1.3, q.y - o.h + i * 1.4, 4 + i * 1.6, 2);
+            c.restore();
+            break;
+        }
+        case 'figurstandi': {
+            // boyalı nadir FRP figürü: beyaz kaide, cam fanus, figür
+            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#efe6d8'));
+            K(o.gx + 0.05, o.gy + 0.05, o.gw - 0.1, o.gd - 0.1, 2, renkler('#b8892f'), o.h);
+            const q = W(o.gx + o.gw / 2, o.gy + o.gd / 2);
+            const y0 = q.y - o.h - 2;
+            if (o.figur === 'ejderha') {
+                c.fillStyle = '#2e8b57'; c.fillRect(q.x - 4, y0 - 9, 8, 7); c.fillRect(q.x + 2, y0 - 13, 4, 5);
+                c.fillStyle = '#1f6b42'; c.fillRect(q.x - 7, y0 - 11, 4, 3); c.fillRect(q.x + 4, y0 - 9, 4, 2);
+                c.fillStyle = '#e3b23c'; c.fillRect(q.x + 4, y0 - 12, 1, 1);
+            } else if (o.figur === 'sovalye') {
+                c.fillStyle = '#9aa3ad'; c.fillRect(q.x - 2, y0 - 12, 4, 10);
+                c.fillStyle = '#c0392b'; c.fillRect(q.x - 3, y0 - 8, 6, 3);
+                c.fillStyle = '#e9ecef'; c.fillRect(q.x + 3, y0 - 15, 1, 12);
+            } else {
+                c.fillStyle = '#6b4a8a'; c.fillRect(q.x - 3, y0 - 10, 6, 8); c.fillRect(q.x - 1, y0 - 14, 3, 4);
+                c.fillStyle = '#5ec8ff'; c.fillRect(q.x + 4, y0 - 13, 2, 2);
+                c.fillStyle = '#7a5232'; c.fillRect(q.x + 4, y0 - 11, 1, 9);
+            }
+            c.fillStyle = 'rgba(210,235,245,.28)'; c.fillRect(q.x - 8, y0 - 17, 16, 16);
+            c.fillStyle = 'rgba(255,255,255,.55)'; c.fillRect(q.x - 6, y0 - 15, 1, 8);
             break;
         }
         // -------------------------------------------------------- kat 2 okuma köşesi

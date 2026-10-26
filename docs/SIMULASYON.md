@@ -8,10 +8,10 @@ veriyle dolar. Kurallar (kapasite, oyun sırası, stok, ödeme) veritabanında u
 ## Katlar
 | Kat | Konsept | Masa | İçerik |
 |---|---|---|---|
-| 1 | Giriş & Espresso Bar | 10 (2, 4 ve 6 kişilik) | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
+| 1 | Giriş & Espresso Bar | 10 (bar/mutfak yakını 2'lik, iç kısım 4'lük) | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
 | 1 | (ek) | – | **Mutfak**: ocak, fırın, buzdolabı, evye, hazırlık tezgahı, ısıtıcı lambalı servis tezgahı; şef ve yardımcı şef |
-| 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Üç duvarı kaplayan kutu oyunu kütüphanesi, 4 **yer minderli alçak sehpa** ve bohem kilimler, okuma köşesi (koltuk + kitap yığını), oyun barı, loş ışık |
-| 3 | VIP & FRP Özel Bölgesi | 4 ferah (6–8 kişilik) | FRP harita masaları ve örtülü masalar, deri koltuklar, **canlı müzik sahnesi** (şarkıcı, gitarist, piyanist), koleksiyon vitrinleri ve tablolar, sancaklar, ejderha heykeli, VIP ışığı |
+| 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Kuzey duvarında tek, şık kitaplık; batı duvarında neon halı üstünde 4 **retro atari kabini** (yanıp sönen ekran), doğu duvarında 2 **tilt (pinball)** makinesi, yeni oyunlar standı, okuma köşesi, oyun barı, loş ışık |
+| 3 | VIP & FRP Özel Bölgesi | 4 ferah (6–8 kişilik) | Batı duvarında (eski yerinin karşısı) **büyük VIP sahnesi**: şarkıcı, gitarist, piyanist, amfiler ve renkli spot ışıkları; boyalı nadir FRP figür kaideleri (ejderha, şövalye, büyücü), koleksiyon vitrinleri, tablolar; FRP harita masaları, deri koltuklar, VIP ışığı |
 
 Kat 1 ve 2 **organik** yerleşimlidir: masalar elle düzensiz konumlara yerleştirildi, her masanın sandalye halkası ile komşusununki
 arasında en az bir karo yürüme boşluğu vardır (yerleşim denetimi betikle doğrulandı). 1x1 masalar 2 veya 4, 2x1 masalar 6 kişiliktir;
@@ -37,6 +37,21 @@ GELIYOR ─► MASAYA_GIDIYOR ─► MASA_ACILIYOR ─► OYUN_SECIYOR ─┬─
 - **Sipariş:** oynarken baloncukla sipariş ister ("Kahve lazım!"); boştaki garson gelip alır (`POST siparisler`, o garson adına),
   bara gidip hazırlar, masaya getirir. Stok yetmezse veritabanı reddeder ve grup "Tükenmiş mi?!" der.
 - **Ödeme:** oyun bitince grup kasaya yürür, kasiyer adına `POST /oturumlar/:id/kapat` (nakit/kart). Masa kirli kalır; garson temizler.
+
+## Saatlik yoğunluk eğrisi
+`motor.js: saatProfili` geliş hızını ve müşteri karışımını saate göre değiştirir:
+
+| Saat | Dilim (HUD rozeti) | Geliş | Karakter |
+|---|---|---|---|
+| 10–13 | Sabah · kahve & kahvaltı | ×0,45 | Çok tek kişi ve izleyici; grupların ~%45'i oyunsuz kahvaltı/kahve grubu; yemek siparişi ağırlığı yüksek |
+| 13–14 | Öğle | ×0,6 | Kahvaltı/öğle yemeği devam eder |
+| 14–17 | Öğleden sonra · oyun grupları | ×0,9 | Oyun grupları gelir; **en az 3 masa boş kalacak** şekilde geliş kısılır |
+| 17–19 | Pik saatler | ×2,6 | Büyük gruplar; masalar dolar, kapıda uzun kuyruk, sabırsızlık zirvede |
+| 19–20 | Akşam | ×1,2 | Yoğun ama azalıyor |
+| 20–22 | Kapanışa doğru | ×0,4 | Gelen azalır, içeridekiler ödeyip çıkar |
+
+Kat 1'de masalar konuma göre boyutlanır: bar ve mutfağa yakın sıradakiler hızlı sirkülasyon için 2 kişilik, iç kısımdakiler
+uzun oyun ve yemek için 4 kişilik (yuvaların `tercih` kapasitesi; veritabanı masaları önce tercihi uyan yuvaya yerleşir).
 
 ## Çalışma saatleri ve gün sonu
 - Kafe her gün **10:00**'da açılır (açılışta yönetici adına **sabah tedariki**: stoğu azalan ürünler `sp_stok_ekle` ile tamamlanır).
