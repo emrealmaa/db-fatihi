@@ -1,28 +1,57 @@
 # Karavana – Kutu Oyunu Cafe İşletme Sistemi
 
-Veritabanı dersi dönem projesi (Enes Öztürk, Emre Alma). **Seçilen DB: PostgreSQL.** Diğer motorlar compose'ta profile olarak duruyor ama kullanılmıyor.
-Detaylar: `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `CLAUDE.md`.
+Veritabanı dersi dönem projesi (Enes Öztürk, Emre Alma). **Seçilen DB: PostgreSQL.**
+
+Masalar, kutu oyunu kopyaları ve bekleme sırası, menü ve stok, sipariş, hesap ve nakit/kart ödeme,
+personel ve rol bazlı yetki. İş kuralları veritabanında (kısıt, tetikleyici, prosedür); API ince, ön yüz React.
+
+## Hızlı başlangıç (kurulum gerektirmez)
+Node.js 20+ yeterli. Veritabanı olarak gömülü PostgreSQL (PGlite) kullanılır.
+```bash
+npm install
+npm run build -w app/web      # ön yüzü derle
+npm run api:lite              # http://localhost:3001  (veri db/.pglite içinde kalır)
+```
+Tarayıcıda `http://localhost:3001` → örnek personel: `yonetici`, `kasiyer`, `garson` (parola `06_seed.sql` içinde).
+
+## Gerçek PostgreSQL ile
+1. PostgreSQL 15+ kurun (Windows: `winget install PostgreSQL.PostgreSQL.17`, Mac: `brew install postgresql@17`)
+   **veya** Docker: `make up DB=postgres` (port 5433).
+2. `.env.example` → `.env` kopyalayın. Yerel kurulumda `POSTGRES_PORT=5432`, `PG_ADMIN_USER=postgres`,
+   `PG_ADMIN_PASSWORD=<kurulumda verdiğiniz parola>`.
+3. Kurun ve test edin:
+   ```bash
+   npm install
+   npm run db:kur        # veritabanını sıfırdan kurar (init betikleri + örnek veri)
+   npm test              # 44 veritabanı + 9 API testi
+   npm run api           # API (5173'teki ön yüz için)
+   npm run dev -w app/web   # ön yüz geliştirme sunucusu: http://localhost:5173
+   ```
+
+## Komutlar
+| Komut | Ne yapar |
+|---|---|
+| `npm run db:kur` | Veritabanını silip `db/postgres/init/*.sql` ile yeniden kurar |
+| `npm run db:test` / `db:test:lite` | Veritabanı testleri (PostgreSQL / PGlite) |
+| `npm test` / `test:lite` | Tüm testler |
+| `npm run db:performans` | 100k oturumluk veriyle index ölçümü → `docs/PERFORMANS.md` |
+| `npm run db:yetki` | Her rolle yetki/maskeleme denemesi → `docs/YETKI.md` |
+| `npm run api` / `api:lite` | API sunucusu (derlenmiş ön yüzü de verir) |
 
 ## Yapı
-- `docs/` – ödev yönergeleri, sunum
-- `db/<motor>/init/` – şema/seed betikleri (konteyner ilk açılışta çalıştırır; Neo4j hariç elle)
-- `app/` – uygulama ve ön yüz (stack seçilince kurulacak)
-- `docker-compose.yml` – profile bazlı veritabanları
-
-## Başlangıç
 ```
-docker compose --profile postgres up -d   # host portu 5433
+db/postgres/init/   01 şema · 02 fonksiyon/tetikleyici · 03 view · 04 prosedür · 05 güvenlik · 06 örnek veri
+db/lib/             ortak bağlantı katmanı (pg veya PGlite)
+db/scripts/         kurulum, performans ve yetki kanıtı betikleri
+db/tests/           veritabanı testleri
+app/api/            Express API
+app/web/            React + Vite ön yüz
+docs/               mimari, API, ER, normalizasyon, performans, yetki, sunum, yol haritası
 ```
-Profiller: `postgres`, `mysql`, `mongo`, `neo4j`, `mssql`, `all`.
-Parolalar `.env` dosyasında (git'e girmez; şablon: `.env.example`).
 
-## Seçim rehberi (yönergeye göre)
-| Yol | Öne çıkan gereksinimler |
-|---|---|
-| PostgreSQL / MySQL | ≥6 tablo, ≥5 constraint, ≥2 SP, ≥5 view, ≥2 UDF, yetki/maskeleme |
-| MSSQL | Veri ambarı + ≥5 SSIS paketi + SSAS küp (Windows araçları gerekir; Mac'te zor) |
-| MongoDB | ≥20 koleksiyon, ≥2 iç içe, ≥5 veri modeli |
-| Neo4j | ≥6 etiket, ≥20 düğüm, ≥20 ayrıt, çizge algoritmaları |
+## Dokümanlar
+- [Mimari](docs/ARCHITECTURE.md) · [ER diyagramı](docs/ER.md) · [Normalizasyon](docs/NORMALIZASYON.md)
+- [API](docs/API.md) · [Performans](docs/PERFORMANS.md) · [Yetki ve maskeleme](docs/YETKI.md)
+- [Yol haritası ve puan kriterleri](docs/ROADMAP.md) · [Sunum içeriği](docs/SUNUM.md)
 
-Not: M-serisi Mac'te MSSQL emülasyonla çalışır; SSIS/SSAS için Windows VM gerekir.
-Teslim: 27 Aralık 2026 23:59; sunumda herkese açık GitHub/Trello linki paylaşılmalı.
+Teslim: 27 Aralık 2026 23:59; sunumda herkese açık GitHub linki paylaşılır.
