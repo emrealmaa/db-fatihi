@@ -9,7 +9,7 @@ import { al } from '../api.js';
 import { tl } from '../bicim.js';
 import { Simulasyon as Motor } from '../simulasyon/motor.js';
 import {
-    arkaPlan, GOK_UST,
+    ARKA_RENK,
     DOGAL_G, DOGAL_Y, gorunurAlan, kapakCiz, nesneBul, pikselBaglami, ruhHali, sahneCiz, ustKatmanCiz,
 } from '../simulasyon/cizim.js';
 import { KATLAR } from '../simulasyon/harita.js';
@@ -121,12 +121,8 @@ export default function Simulasyon() {
                 const c = tuval.getContext('2d');
                 c.setTransform(dpr, 0, 0, dpr, 0, 0);
                 c.imageSmoothingEnabled = false;
-                // gökyüzü ve şehir silueti tuvalin dışına da yatayda tekrarlanarak uzar
-                const evre = sahne.evre || 'gun', bw = DOGAL_G * s, bh = DOGAL_Y * s;
-                c.fillStyle = GOK_UST[evre]; c.fillRect(0, 0, w, h);
-                c.fillStyle = '#0b0b12'; c.fillRect(0, oy + bh - 1, w, h);
-                const ap = arkaPlan(evre);
-                for (let x = ox - Math.ceil(ox / bw) * bw; x < w; x += bw) c.drawImage(ap, x, oy, bw, bh);
+                // tuvalin dışı arka planın kenar rengiyle doldurulur (vinyet bu renge karardığı için dikiş görünmez)
+                c.fillStyle = ARKA_RENK[sahne.evre || 'gun']; c.fillRect(0, 0, w, h);
                 c.drawImage(ara, ox, oy, DOGAL_G * s, DOGAL_Y * s);
                 ustKatmanCiz(c, s, (p) => ({ x: ox + p.x * s, y: oy + p.y * s }), sahne);
                 if (g.gecis) {                         // kat geçişi: kararma
