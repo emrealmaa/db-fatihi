@@ -8,7 +8,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { al } from '../api.js';
 import { tl } from '../bicim.js';
 import { Simulasyon as Motor } from '../simulasyon/motor.js';
-import { DOGAL_G, DOGAL_Y, kapakCiz, nesneBul, pikselBaglami, sahneCiz, ustKatmanCiz } from '../simulasyon/cizim.js';
+import {
+    DOGAL_G, DOGAL_Y, gorunurAlan, kapakCiz, nesneBul, pikselBaglami, ruhHali, sahneCiz, ustKatmanCiz,
+} from '../simulasyon/cizim.js';
 import { KATLAR } from '../simulasyon/harita.js';
 
 const HIZLAR = [1, 2, 4];
@@ -41,10 +43,12 @@ export default function Simulasyon() {
         const alan = alanRef.current;
         const k = kamera.current;
         const w = alan?.clientWidth || 800, h = alan?.clientHeight || 500;
-        const sigdir = Math.min(w / DOGAL_G, h / DOGAL_Y);
-        const s = sigdir * k.yakinlik;
-        const ox = (w - DOGAL_G * s) / 2 + k.panX;
-        let oy = (h - DOGAL_Y * s) / 2 + k.panY;
+        // Katın görünür kısmı (iç mekân; kat 1'de görünüyorsa dış mekân da) ekrana sığdırılır
+        const g0 = gorunurAlan(gorunum.current.kat, k.d);
+        const aw = g0.x1 - g0.x0, ah = g0.y1 - g0.y0;
+        const s = Math.min(w / aw, h / ah) * k.yakinlik;
+        const ox = (w - aw * s) / 2 - g0.x0 * s + k.panX;
+        let oy = (h - ah * s) / 2 - g0.y0 * s + k.panY;
         const g = gorunum.current.gecis;
         if (g) {                                       // kat geçişi: dikey kayma
             const t = Math.min(1, g.t / GECIS_SN);
@@ -253,6 +257,8 @@ function Hud({ ozet, duraklat, hizAyarla }) {
                 <span className="sim-etiket">Müşteri</span>{ozet.musteri}
                 {ozet.masaBekleyen > 0 && <small className="sim-uyari"> ({ozet.masaBekleyen} kişi masa bekliyor)</small>}
             </div>
+            <div className={`sim-kutu ${ozet.disarida ? 'sim-kutu-uyari' : ''}`}><span className="sim-etiket">Dışarıda sırada</span>{ozet.disarida} kişi</div>
+            <div className={`sim-kutu ${ozet.terkSayisi ? 'sim-kutu-uyari' : ''}`}><span className="sim-etiket">Terk eden grup</span>{ozet.terkSayisi}</div>
             <div className="sim-kutu sim-pop">
                 <span className="sim-etiket">Popülerlik</span>
                 <div className="sim-cubuk"><div style={{ width: `${ozet.populerlik}%` }} /></div>
@@ -396,6 +402,15 @@ function MasaDetay({ motor, masaId, kapat }) {
                         <span className="sim-etiket">Eğlence</span>
                         {b.eglence != null ? <><div className="sim-cubuk"><div style={{ width: `${b.eglence}%` }} /></div> {b.eglence}</> : '–'}
                     </div>
+                    {b.sabir != null && (
+                        <div className="sim-eglence">
+                            <span className="sim-etiket">Sabır</span>
+                            <div className="sim-cubuk sim-cubuk-sabir">
+                                <div style={{ width: `${b.sabir}%`, background: ruhHali(b.sabir).renk }} />
+                            </div>
+                            <span aria-hidden="true">{ruhHali(b.sabir).ikon}</span> {b.sabir}
+                        </div>
+                    )}
                 </div>
             </div>
             <dl className="sim-detay">

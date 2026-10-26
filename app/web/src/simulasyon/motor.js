@@ -5,13 +5,18 @@
 //
 // Zaman: oyun saati dakika cinsinden; 1x hızda 1 gerçek saniye = 1 oyun dakikası.
 import { adina, al } from '../api.js';
-import { KAPI, KATLAR, MERDIVEN, oturmaYerleri, yolBul, yurunebilir } from './harita.js';
+import {
+    DIS_SIRA, KAPI, KATLAR, MERDIVEN, oturmaYerleri, SOKAK_CIKIS, SOKAK_GIRIS, yolBul, yurunebilir,
+} from './harita.js';
 import { karakterPaleti, OYUN_RENK } from './cizim.js';
+import { oyunCumlesi, sabirsizCumle, servisCumlesi, siparisCumlesi, TERK_CUMLESI } from './diyalog.js';
 
 const ADLAR = ['Ayşe', 'Mehmet', 'Zeynep', 'Can', 'Elif', 'Burak', 'Deniz', 'Ece', 'Emre', 'Selin', 'Mert', 'Defne', 'Kerem', 'İrem', 'Onur', 'Ceren', 'Baran', 'Ada', 'Arda', 'Nil'];
 const SOYADLAR = ['Yılmaz', 'Kaya', 'Demir', 'Şahin', 'Çelik', 'Aydın', 'Öztürk', 'Arslan', 'Doğan', 'Kılıç', 'Koç', 'Kurt', 'Polat', 'Erdem', 'Tekin'];
-const OYUN_BALONLARI = ['Çok eğlenceli!', 'Bu tur benim!', 'Zar at!', 'Hadi bir tur daha!', 'Strateji zamanı', 'Kazanıyorum!', 'Hile yok ama!'];
 const KAT_TERCIHI = { 1: ['Kart', 'Aile', 'Parti'], 2: ['Strateji', 'Kooperatif'], 3: ['Parti', 'Kooperatif', 'Strateji'] };
+
+// Sabır (0–100): bekleme türüne göre dakikada azalma; oynarken toparlanma. 0'a inen grup kafeyi terk eder.
+const SABIR = { masa: 2.2, siparis: 1.8, oyun: 0.7, toparlanma: 0.6, servis: 15, siparisToleransDk: 4, vipCarpan: 1.3 };
 
 const rastgele = (a, b) => a + Math.random() * (b - a);
 const tamRastgele = (a, b) => Math.floor(rastgele(a, b + 1));
@@ -30,7 +35,7 @@ function yeniBirey(tur, kat, gx, gy, tohum = ++birimSayac) {
 }
 
 export const DURUM_METNI = {
-    GELIYOR: 'Geliyor', MASA_BEKLIYOR: 'Masa bekliyor', MASAYA_GIDIYOR: 'Masaya yürüyor', MASA_ACILIYOR: 'Oturuyor',
+    GELIYOR: 'Geliyor', DISARIDA: 'Dışarıda sırada', MASA_BEKLIYOR: 'Masa bekliyor', MASAYA_GIDIYOR: 'Masaya yürüyor', MASA_ACILIYOR: 'Oturuyor',
     OYUN_SECIYOR: 'Oyun seçiyor', OYNUYOR: 'Oynuyor', SIRADA: 'Oyun sırasında', HESAP: 'Kasaya gidiyor',
     ODUYOR: 'Ödüyor', CIKIYOR: 'Çıkıyor',
 };
@@ -55,6 +60,8 @@ export class Simulasyon {
         this.sonrakiGelis = this.dakika + 1;
         this.musteriHavuzu = [];
         this.beklemeYerleri = KATLAR[1].bekleme.map((y) => ({ ...y, birey: null }));
+        this.disKuyruk = [];                   // kaldırımda sırada bekleyen gruplar (geliş sırası)
+        this.terkSayisi = 0;
         this.esitlemeSayac = 0;
         this.zamanlayicilar = { masa: 0, oyun: 0, ciro: 0, menu: 0 };
         this.hazir = false;
@@ -264,6 +271,7 @@ export class Simulasyon {
             beklemeId: null, oyun: null, bekledigiOyun: null, oyunBitis: 0, memnuniyet: 70, gelis: this.dakika,
             masaBeklemeBas: null, sonrakiSiparis: 0, siparis: null, siparisSayisi: 0, oyunSayisi: 0, mesgul: false,
             sonIslemEsitleme: 0, karsilayan: null, garson: null, hakVar: false, secZamani: null, sonrakiDeneme: 0,
+            sabir: 100, sabirUyarisi: 100,
         };
     }
 
@@ -271,12 +279,13 @@ export class Simulasyon {
         const p = Math.max(this.populerlik, 10);
         this.sonrakiGelis = this.dakika + rastgele(2, 5) * (80 / (p + 20));
         // Bekleme alanı doluyken kapıda yığılma olmasın
-        const bekleyen = this.gruplar.filter((g) => g.durum === 'MASA_BEKLIYOR').reduce((t, g) => t + g.kisi, 0);
-        if (this.gruplar.length >= this.masalar.length + 3 || bekleyen >= 8) return;
+        const disarida = this.disKuyruk.reduce((t, g) => t + g.kisi, 0);
+        if (this.gruplar.length >= this.masalar.length + 8 || disarida >= DIS_SIRA.length) return;
         const kisi = agirlikliSec([1, 2, 3, 4, 5, 6, 8, 10, 12], (k) => ({ 1: 1, 2: 5, 3: 4, 4: 5, 5: 2, 6: 2, 8: 0.8, 10: 0.5, 12: 0.3 }[k]));
-        const g = this.grupOlustur(kisi, 1, KAPI);
+        const g = this.grupOlustur(kisi, 1, SOKAK_GIRIS);
         this.gruplar.push(g);
-        g.uyeler.forEach((b, i) => { b.gx = KAPI.gx; b.gy = KAPI.gy + (i % 2) * 0.3; b.yol = [{ gx: 1, gy: KAPI.gy }]; });
+        // Sokağın sağından yürüyerek gelir, kapı önünde karar verir
+        g.uyeler.forEach((b, i) => { b.gx = SOKAK_GIRIS.gx + i * 0.6; b.gy = SOKAK_GIRIS.gy; this.git(b, { kat: 1, ...KAPI }); });
         this.kaydet(`${kisi} kişilik grup geldi (${g.musteri.ad} ${g.musteri.soyad})`, 'bilgi');
     }
 
@@ -288,9 +297,35 @@ export class Simulasyon {
         const m = adaylar[0];
         m.grup = g; g.masa = m;
         this.beklemeYeriBirak(g);
+        this.disKuyruktanCikar(g);
         g.uyeler.forEach((b, i) => this.git(b, { kat: m.kat, ...m.yerler[i] }));
         g.durum = 'MASAYA_GIDIYOR';
         return m;
+    }
+
+    // Kaldırım kuyruğu: kapıya en yakın yerden başlayarak gruplar sırayla dizilir
+    disSirayaAl(g) {
+        const dolu = this.disKuyruk.reduce((t, x) => t + x.kisi, 0);
+        if (dolu + g.kisi > DIS_SIRA.length) return false;
+        this.disKuyruk.push(g);
+        g.durum = 'DISARIDA';
+        this.disSiraDuzenle();
+        return true;
+    }
+
+    disKuyruktanCikar(g) {
+        const i = this.disKuyruk.indexOf(g);
+        if (i < 0) return;
+        this.disKuyruk.splice(i, 1);
+        this.disSiraDuzenle();
+    }
+
+    disSiraDuzenle() {
+        let i = 0;
+        for (const g of this.disKuyruk) for (const b of g.uyeler) {
+            const y = DIS_SIRA[i++];
+            if (b.hedefSira !== y) { b.hedefSira = y; this.git(b, { kat: 1, ...y }); }
+        }
     }
 
     beklemeYeriBirak(g) {
@@ -316,33 +351,93 @@ export class Simulasyon {
         }
     }
 
+    // Hangi beklemenin içinde (yoksa null): masa, sipariş, oyun
+    beklemeTuru(g) {
+        if (g.durum === 'DISARIDA' || g.durum === 'MASA_BEKLIYOR') return 'masa';
+        if (g.siparis && this.dakika - g.siparis.zaman > SABIR.siparisToleransDk) return 'siparis';
+        if (g.durum === 'SIRADA') return 'oyun';
+        return null;
+    }
+
+    sabirGuncelle(g, dk) {
+        const tur = this.beklemeTuru(g);
+        if (tur) g.sabir -= dk * SABIR[tur] * (g.vip ? SABIR.vipCarpan : 1);
+        else if (g.durum === 'OYNUYOR') g.sabir += dk * SABIR.toparlanma;
+        g.sabir = Math.max(0, Math.min(100, g.sabir));
+        // Eşik geçişlerinde sabırsızlık cümlesi
+        for (const esik of [40, 20]) {
+            if (g.sabir < esik && g.sabirUyarisi >= esik && tur) { this.baloncuk(g.uyeler[0], sabirsizCumle(tur), 4); }
+        }
+        g.sabirUyarisi = g.sabir;
+        if (g.sabir <= 0 && tur && !g.terk) this.terket(g, tur);
+    }
+
+    // Öfkeyle terk: servis edilmemiş siparişler iptal edilir (stok geri döner), masadaysa hesap kapatılır
+    async terket(g, tur) {
+        g.terk = true;
+        this.terkSayisi++;
+        this.baloncuk(g.uyeler[0], TERK_CUMLESI, 5);
+        this.populerlik = Math.max(0, this.populerlik - 3);
+        this.populerlikGuncelle(0);
+        const yer = g.masa ? `Masa ${g.masa.masaNo}` : `${g.kisi} kişilik grup`;
+        this.kaydet(`${yer} çok bekledi (${{ masa: 'masa', siparis: 'servis', oyun: 'oyun' }[tur]}), kafeyi terk etti`, 'uyari');
+        if (!g.oturumId) {
+            this.disKuyruktanCikar(g);
+            this.beklemeYeriBirak(g);
+            if (g.masa) { g.masa.grup = null; g.masa = null; }
+            this.cikisaYolla(g);
+            return;
+        }
+        const idler = g.siparis?.durum === 'ALINDI' ? g.siparis.idler || [] : [];
+        if (idler.length) {
+            try {
+                await this.api(g, () => Promise.all(idler.map((id) => this.garsonApi(g).sil(`/siparisler/${id}`))));
+                this.kaydet(`Masa ${g.masa.masaNo}: servis edilmemiş ${idler.length} sipariş iptal edildi`, 'uyari');
+            } catch (e) {
+                this.kaydet(`Masa ${g.masa.masaNo} sipariş iptali: ${e.message}`, 'uyari');
+            }
+        }
+        g.memnuniyet = 0;
+        this.hesabaGec(g);
+    }
+
     grupAdim(g, dk) {
         for (const b of g.uyeler) if (b.baloncuk && this.zaman > b.balonBitis) b.baloncuk = null;
         if (g.mesgul) return;
         const lider = g.uyeler[0];
         const masaNo = g.masa?.masaNo;
+        if (!['GELIYOR', 'MASAYA_GIDIYOR', 'MASA_ACILIYOR', 'HESAP', 'ODUYOR', 'CIKIYOR'].includes(g.durum)) {
+            this.sabirGuncelle(g, dk);
+            if (g.terk) return;
+        }
 
         switch (g.durum) {
             case 'GELIYOR':
                 if (!this.vardi(lider)) return;
-                if (this.masaAyir(g)) return;
-                if (this.beklemeAlaninaAl(g)) { this.baloncuk(lider, 'Masa yok mu?'); this.kaydet(`Masa boş değil: ${g.kisi} kişi bekleme alanında`, 'uyari'); return; }
-                this.kaydet(`${g.kisi} kişilik grup yer bulamadı, ayrıldı`, 'uyari');
+                // Sırada bekleyen varsa önce onlar: yeni gelen doğrudan kuyruğun sonuna
+                if (!this.disKuyruk.length && this.masaAyir(g)) return;
+                if (!this.disKuyruk.length && this.beklemeAlaninaAl(g)) { this.baloncuk(lider, 'Masa yok mu?'); return; }
+                if (this.disSirayaAl(g)) {
+                    this.baloncuk(lider, 'Sıra varmış…');
+                    this.kaydet(`İçerisi dolu: ${g.kisi} kişi kapının önünde sıraya girdi`, 'uyari');
+                    return;
+                }
+                this.kaydet(`${g.kisi} kişilik grup kuyruk çok uzun diye gitti`, 'uyari');
                 this.baloncuk(lider, 'Çok kalabalık…');
                 this.populerlikGuncelle(25);
                 this.cikisaYolla(g);
                 return;
 
+            case 'DISARIDA':
+                // Yalnızca kuyruğun başındaki grup içeri girebilir: boş masa varsa masaya, yoksa bekleme alanına
+                if (this.disKuyruk[0] !== g || !this.hepsiVardi(g)) return;
+                if (this.masaAyir(g)) { this.baloncuk(lider, 'Sıra bizde!'); return; }
+                if (this.beklemeAlaninaAl(g)) { this.disKuyruktanCikar(g); this.baloncuk(lider, 'İçeri geçelim'); }
+                return;
+
             case 'MASA_BEKLIYOR':
                 // Gruplar geliş sırasıyla denenir: önce gelen, sığdığı ilk boş masayı alır
                 if (this.masaAyir(g)) { this.baloncuk(lider, 'Sonunda!'); return; }
-                if (this.dakika - g.masaBeklemeBas > 30) {
-                    this.kaydet(`${g.kisi} kişilik grup beklemekten sıkılıp gitti`, 'uyari');
-                    this.baloncuk(lider, 'Bir daha gelmem!');
-                    this.populerlikGuncelle(15);
-                    this.beklemeYeriBirak(g);
-                    this.cikisaYolla(g);
-                }
                 return;
 
             case 'MASAYA_GIDIYOR':
@@ -373,7 +468,7 @@ export class Simulasyon {
             case 'OYNUYOR':
                 g.memnuniyet = Math.min(100, g.memnuniyet + dk * 0.25);
                 this.siparisKontrol(g);
-                if (Math.random() < dk * 0.04) this.baloncuk(sec(g.uyeler), sec(OYUN_BALONLARI));
+                if (Math.random() < dk * 0.05) this.baloncuk(sec(g.uyeler), oyunCumlesi(g.oyun?.ad));
                 if (this.dakika >= g.oyunBitis) this.oyunBitir(g);
                 return;
 
@@ -516,7 +611,7 @@ export class Simulasyon {
         try {
             const r = await this.api(g, () => adina(this.kasiyerPersonel?.id).gonder(`/oturumlar/${g.oturumId}/kapat`, { odemeTuru: tur }));
             const tl = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(r.toplam);
-            this.baloncuk(g.uyeler[0], g.memnuniyet >= 60 ? `${tl} · Yine geleceğiz!` : `${tl} · Fena değil`, 4);
+            this.baloncuk(g.uyeler[0], g.terk ? `${tl} · Bir daha gelmeyiz!` : g.memnuniyet >= 60 ? `${tl} · Yine geleceğiz!` : `${tl} · Fena değil`, 4);
             this.kaydet(`Masa ${m.masaNo} ödedi: ${tl} (${tur === 'NAKIT' ? 'nakit' : 'kart'})`, 'para');
             this.ciro.bugun += r.toplam;
         } catch (e) {
@@ -536,7 +631,7 @@ export class Simulasyon {
 
     cikisaYolla(g) {
         g.durum = 'CIKIYOR';
-        g.uyeler.forEach((b) => this.git(b, { kat: 1, gx: KAPI.gx, gy: KAPI.gy }));
+        g.uyeler.forEach((b) => this.git(b, { kat: 1, ...SOKAK_CIKIS }));
     }
 
     populerlikGuncelle(memnuniyet) {
@@ -558,9 +653,7 @@ export class Simulasyon {
             if (var_) var_.adet++; else kalemler.push({ urunId: u.urun_id, adet: tamRastgele(1, g.vip ? 3 : 2), ad: u.ad, kategori: u.kategori });
         }
         g.siparis = { kalemler, durum: 'ISTENDI', zaman: this.dakika };
-        const k = kalemler[0].kategori;
-        const metin = /Sıcak/.test(k) ? 'Kahve lazım!' : /Soğuk/.test(k) ? 'Susadık!' : /Yiyecek/.test(k) ? 'Acıktık!' : /Tatlı/.test(k) ? 'Tatlı zamanı!' : 'Sipariş!';
-        this.baloncuk(g.uyeler[0], metin, 5);
+        this.baloncuk(g.uyeler[0], siparisCumlesi(kalemler), 5);
         this.gorevler.push({ tur: 'siparis', grup: g, masa: g.masa, zaman: this.dakika });
     }
 
@@ -619,7 +712,8 @@ export class Simulasyon {
                 g.sonrakiSiparis = this.dakika + (g.vip ? rastgele(15, 30) : rastgele(25, 50));
                 g.memnuniyet = Math.min(100, g.memnuniyet + 4 + w.stat.yetenek);
                 g.sonServis = { saat: this.saatMetni(), garson: w.ad };
-                this.baloncuk(sec(g.uyeler), sec(['Nefis!', 'Teşekkürler!', 'Harika!', 'Tam zamanında!']));
+                this.baloncuk(sec(g.uyeler), servisCumlesi());
+                g.sabir = Math.min(100, g.sabir + SABIR.servis);
                 w.tamamlanan++;
                 this.kaydet(`${w.ad} → Masa ${t.masa.masaNo} servis tamam`, 'bilgi');
                 this.garsonBosalt(w);
@@ -642,8 +736,10 @@ export class Simulasyon {
         w.mesgul = true;
         const kalemler = g.siparis.kalemler.map(({ urunId, adet }) => ({ urunId, adet }));
         try {
-            await this.api(g, () => adina(w.personel.id).gonder(`/oturumlar/${g.oturumId}/siparisler`, { kalemler }));
+            const r = await this.api(g, () => adina(w.personel.id).gonder(`/oturumlar/${g.oturumId}/siparisler`, { kalemler }));
+            if (!g.siparis) return;              // bu arada terk ettiyse
             g.siparis.durum = 'ALINDI';
+            g.siparis.idler = r.siparisIdleri;
             w.durum = 'BARA';
             this.git(w.birey, { kat: g.masa.kat, ...KATLAR[g.masa.kat].bar });
             this.kaydet(`${w.ad} → Masa ${g.masa.masaNo}: ${g.siparis.kalemler.map((k) => `${k.adet}× ${k.ad}`).join(', ')}`, 'bilgi');
@@ -710,7 +806,9 @@ export class Simulasyon {
                 if (b.kat !== kat) return;
                 const ikon = i === 0 && g.oyun && g.durum === 'OYNUYOR' ? { renk: g.oyun.renk, harf: g.oyun.ad[0] } : null;
                 const elKalkik = i === 0 && g.siparis?.durum === 'ISTENDI' && b.oturuyor;
-                bireyler.push({ ...b, ikon, elKalkik, hareketli: b.yol.length > 0 });
+                const ruh = i === 0 && !['CIKIYOR', 'GELIYOR'].includes(g.durum) && (this.beklemeTuru(g) || g.sabir < 70 || g.terk)
+                    ? { sabir: g.terk ? 0 : g.sabir } : null;
+                bireyler.push({ ...b, ikon, elKalkik, ruh, hareketli: b.yol.length > 0 });
             });
         }
         for (const w of this.garsonlar) {
@@ -728,6 +826,8 @@ export class Simulasyon {
             takvim: this.takvim(), hiz: this.hiz, calisiyor: this.calisiyor, populerlik: Math.round(this.populerlik),
             ciro: this.ciro, musteri: icerde.reduce((t, g) => t + g.kisi, 0),
             masaBekleyen: icerde.filter((g) => g.durum === 'MASA_BEKLIYOR').reduce((t, g) => t + g.kisi, 0),
+            disarida: this.disKuyruk.reduce((t, g) => t + g.kisi, 0),
+            terkSayisi: this.terkSayisi,
             katSayilari,
             garsonlar: this.garsonlar.map((w) => ({
                 id: w.personel.id, ad: w.ad, durum: this.garsonDurumu(w), stat: w.stat, tamamlanan: w.tamamlanan,
@@ -744,7 +844,7 @@ export class Simulasyon {
         return {
             masaNo: m.masaNo, kat: m.kat, kapasite: m.kapasite, durum: this.masaDurumu(m).metin, oturumId: g?.oturumId || null,
             kisi: g?.kisi, oyun: g?.oyun?.ad || null, oyunId: g?.oyun?.id ?? null, vip: m.kat === 3,
-            sonServis: g?.sonServis || null, bekledigiOyun: g?.durum === 'SIRADA' ? g.bekledigiOyun?.ad : null,
+            sonServis: g?.sonServis || null, sabir: g ? Math.round(g.sabir) : null, bekledigiOyun: g?.durum === 'SIRADA' ? g.bekledigiOyun?.ad : null,
             eglence: g ? Math.round(g.memnuniyet) : null, garson: g?.garson?.ad || g?.karsilayan?.ad || null,
             grupDurumu: g ? DURUM_METNI[g.durum] : null,
             kalisDk: g?.oturma != null ? Math.floor(this.dakika - g.oturma) : null,

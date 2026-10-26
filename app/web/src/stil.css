@@ -392,3 +392,5 @@ fieldset.bilgi-kutu { display: flex; flex-direction: column; gap: .75rem; }
 .sim-kat-secenek span { display: flex; flex-direction: column; }
 .sim-kat-secenek small { font-weight: normal; color: #8a6a4a; }
 .sim-kat-ok { font-size: 1.4rem; color: var(--sim-vurgu); }
+.sim-kutu-uyari { background: #ffe1d6; }
+.sim-cubuk-sabir div { background: #4caf6a; }

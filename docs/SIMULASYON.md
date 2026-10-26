@@ -32,6 +32,50 @@ GELIYOR ─► MASAYA_GIDIYOR ─► MASA_ACILIYOR ─► OYUN_SECIYOR ─┬─
   bara gidip hazırlar, masaya getirir. Stok yetmezse veritabanı reddeder ve grup "Tükenmiş mi?!" der.
 - **Ödeme:** oyun bitince grup kasaya yürür, kasiyer adına `POST /oturumlar/:id/kapat` (nakit/kart). Masa kirli kalır; garson temizler.
 
+## Sabır ve öfke
+Her grubun 0–100 arası **sabrı** vardır. Bekleme türüne göre dakikada azalır, oynarken toparlanır, servis gelince +15 artar:
+
+| Bekleme | Azalma (oyun dk başına) |
+|---|---|
+| Masa (kaldırımda veya bekleme alanında) | 2,2 |
+| Servis (sipariş 4 dakikadan uzun bekliyorsa) | 1,8 |
+| Oyun sırası | 0,7 |
+
+VIP gruplar (kat 3) 1,3 kat daha sabırsızdır. Liderin başında durum ikonu: 😊 (≥70) → 😐 (≥40) → 😠 ve kırmızılaşan
+öfke barı (≥20) → 😡 ve yanıp sönen kırmızı ünlem. 40 ve 20 eşiklerinde sabırsızlık cümlesi çıkar ("Garson nerede?").
+
+Sabır sıfırlanınca grup **"Çok bekledik, gidiyoruz!"** diyerek terk eder:
+- Masa bulamadan gidenler kuyruktan çıkıp sokaktan ayrılır.
+- Masadakilerin **servis edilmemiş siparişleri veritabanında iptal edilir** (`DELETE /siparisler/:id` → `sp_siparis_iptal`,
+  stok geri döner); tüketilen kadar hesap kasada kapatılır.
+- Popülerlik 3 puan düşer ve memnuniyet 0 olarak ortalamaya girer; HUD'da "Terk eden grup" sayacı artar.
+
+## Dış mekân ve kapı önü kuyruğu
+Kapı ön cephededir (güney duvarı). Kamera ön cepheye dönükken kat 1'in önünde **kaldırım, sokak, bordür, şerit çizgileri**,
+alçak cephe duvarı, kapı direkleri, çizgili **tente**, "KARAVANA" tabelası, tebeşir menü tahtası, saksılar, bank ve sokak lambası
+görünür (cephe kesit olarak alçak çizilir ki içerisi görünsün). Müşteriler sokağın sağından yürüyerek gelir:
+1. Kuyruk boşsa ve boş masa varsa doğrudan masaya, yoksa içerideki bekleme alanına (12 kişi) geçer.
+2. İçerisi doluysa kaldırımda **tek sıra** kuyruğa girer (15 kişilik, kapıya en yakın yer önce). Kuyruk sırayla ilerler:
+   yalnızca baştaki grup içeri girebilir; masa boşalınca masaya, bekleme alanında yer açılınca içeri yürür.
+3. Kuyruk da doluysa "Çok kalabalık…" deyip gider.
+
+## Diyaloglar
+`simulasyon/diyalog.js` havuzu: genel masa sohbetleri ("Sıra kimde?", "Zar atıyorum!", "Kural kitabına baksana",
+"Enkaz kartı bende kaldı!", "Sıramı pas geçiyorum", "Bu hamle oyunu bitirir!"...), **oyuna özel** cümleler (Catan'da saman/odun
+takası, Carcassonne'da meeple, Ticket to Ride rotaları, Codenames ipuçları, Pandemic salgını, Uno...), **siparişe göre**
+cümleler ("Bir filtre kahve daha söylesek mi?", "Zihnim açılsın diye Türk kahvesi alayım", "Masada içecek alanını
+daraltmayalım"), servis sonrası teşekkürler ve bekleme türüne göre sabırsızlık cümleleri.
+
+## Mobilya ve atmosfer
+- **Masalar:** dört ayak + köşeleri yumuşatılmış ahşap tabla (damarlı) + oyun matı: kat 1 krem örtü, kat 2 yeşil keçe,
+  kat 3 kırmızı örtü veya FRP harita masası. Oynanan oyunun kutusu, piyonlar ve zar masada görünür.
+- **Sandalyeler:** oturak + masaya ters yönde sırtlık; VIP'de kollu deri koltuk. Sırtlık kameraya dönükse oturanın
+  önünde çizilir (ayrı derinlik öğesi).
+- **Bar:** fincan ısıtıcılı espresso makinesi (grup başlığı, portafiltre, buhar çubuğu, damlama tepsisi, buhar), arkada şişe ve
+  kavanoz rafı, fanuslu pasta standı, vitrin, kasa cihazı.
+- **Posterler:** Catan (altıgen ada), Carcassonne (kale ve yollar), Ticket to Ride (tren hatları), Dixit (ay ve yıldızlar),
+  Pandemic (salgın haritası) ve FRP haritaları; kat 2'de kütüphane raflarının üstünde.
+
 ## Garsonlar
 Garsonlar veritabanındaki **aktif GARSON** personeldir. Hız, sipariş alma hızı ve servis yeteneği personel kimliğinden türetilir
 (her açılışta aynı). Görev sırası: kendi katındaki en eski istek önce. Yan panel her garsonun anlık görevini, bu oturumdaki servis
@@ -79,7 +123,8 @@ dışarıdan kapatılan hesabın müşterileri kalkar.
 |---|---|
 | `simulasyon/harita.js` | Kat yerleşimleri (20×16 karo), masa yuvaları, duvar dekorları, döndürme dönüşümleri, A* yol bulma |
 | `simulasyon/cizim.js` | Piksel-art izometrik çizim: döndürülebilir izdüşüm, önbellekli zemin/duvar, desenli kutular, sprite üretimi ve önbelleği, ışık, seçim (tıklama) — harici görsel yok |
-| `simulasyon/motor.js` | Durum makineleri, görev kuyruğu, veritabanı eşitlemesi, API çağrıları |
+| `simulasyon/motor.js` | Durum makineleri, sabır zamanlayıcıları, kapı önü kuyruğu, görev kuyruğu, veritabanı eşitlemesi, API çağrıları |
+| `simulasyon/diyalog.js` | Genel, oyuna özel, siparişe özel ve sabırsızlık cümle havuzu |
 | `sayfalar/Simulasyon.jsx` | Kamera (yakınlaştırma, döndürme, kaydırma), kat geçişi, HUD, paneller, merdiven penceresi, masa detayı, oyun kütüphanesi |
 
 ## Sunumda
