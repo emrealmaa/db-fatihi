@@ -3,7 +3,7 @@
 -- 1) Oyun kataloğu ve müsait adetler. musait_adet: masada olmayan kopya;
 --    alinabilir_adet: sıradaki masalara ayrılmamış olanlar (yeni bir masanın alabileceği)
 CREATE VIEW v_musait_oyunlar AS
-SELECT o.id AS oyun_id, o.ad, k.ad AS kategori, o.min_oyuncu, o.max_oyuncu, o.sure_dk,
+SELECT o.id AS oyun_id, o.ad, k.ad AS kategori, o.min_oyuncu, o.max_oyuncu, o.sure_dk, o.zorluk, o.talep,
        o.toplam_adet, fn_musait_adet(o.id) AS musait_adet,
        fn_musait_adet(o.id) - fn_ayrilan_adet(o.id) AS alinabilir_adet,
        (SELECT count(*) FROM bekleme b WHERE b.oyun_id = o.id AND b.durum IN ('BEKLIYOR','SECIM_HAKKI')) AS bekleyen_masa

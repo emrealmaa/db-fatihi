@@ -203,6 +203,8 @@ function OyunYonetimi() {
         { ad: 'max_oyuncu', etiket: 'En çok oyuncu', tur: 'sayi', zorunlu: true, varsayilan: 4 },
         { ad: 'sure_dk', etiket: 'Ortalama süre (dk)', tur: 'sayi', zorunlu: true, varsayilan: 45 },
         { ad: 'toplam_adet', etiket: 'Kopya sayısı', tur: 'sayi', zorunlu: true, varsayilan: 1 },
+        { ad: 'zorluk', etiket: 'Zorluk (1 kolay – 5 ağır)', tur: 'sayi', zorunlu: true, varsayilan: 2 },
+        { ad: 'talep', etiket: 'Talep (1–10, müşterilerin isteme ağırlığı)', tur: 'sayi', zorunlu: true, varsayilan: 5 },
         { ad: 'aktif', etiket: 'Rafta (oynanabilir)', tur: 'onay', varsayilan: true },
     ];
     return (
@@ -216,12 +218,13 @@ function OyunYonetimi() {
             </div>
             <Durum yukleniyor={d.liste.yukleniyor && !d.liste.veri} hata={d.liste.hata} bos={!d.liste.veri?.length} bosMesaj="Oyun yok">
                 <table className="tablo">
-                    <thead><tr><th>Oyun</th><th>Kategori</th><th>Kişi</th><th>Süre</th><th className="sag">Kopya</th><th>Durum</th><th /></tr></thead>
+                    <thead><tr><th>Oyun</th><th>Kategori</th><th>Kişi</th><th>Süre</th><th>Zorluk</th><th className="sag">Talep</th><th className="sag">Kopya</th><th>Durum</th><th /></tr></thead>
                     <tbody>
                         {d.liste.veri?.map((o) => (
                             <tr key={o.id} className={o.aktif ? '' : 'pasif'}>
                                 <td>{o.ad}</td><td>{katAd[o.kategori_id]}</td><td>{o.min_oyuncu}–{o.max_oyuncu}</td>
-                                <td>{o.sure_dk} dk</td><td className="sag">{o.toplam_adet}</td><td>{o.aktif ? 'Rafta' : 'Kaldırıldı'}</td>
+                                <td>{o.sure_dk} dk</td><td>{'★'.repeat(o.zorluk)}</td><td className="sag">{o.talep}</td>
+                                <td className="sag">{o.toplam_adet}</td><td>{o.aktif ? 'Rafta' : 'Kaldırıldı'}</td>
                                 <td className="sag eylemler">
                                     <button className="dugme dugme-hafif dugme-kucuk" onClick={() => d.setForm({ ilk: o })}>Düzenle</button>
                                     <button className="dugme dugme-hafif dugme-kucuk" onClick={() => d.aktifDegistir(o)}>{o.aktif ? 'Raftan kaldır' : 'Rafa koy'}</button>

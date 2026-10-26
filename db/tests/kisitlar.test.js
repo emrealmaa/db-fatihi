@@ -58,7 +58,7 @@ test('oyuncu sayısı oyuna uygun olmalı', async () => {
 
 test('müsait kopyası kalmayan oyun başlatılamaz', async () => {
     const id = await masaAc(4, 4);
-    // Catan'ın iki kopyası seed'de masa 1 ve 2'de
+    // Root'un iki kopyası seed'de masa 1 ve 2'de
     await hataBekle(vt.garson('CALL sp_oyun_baslat($1, 1, NULL)', [id]), { kod: CHECK_IHLALI, mesaj: /müsait kopya yok/ });
 });
 
@@ -104,4 +104,15 @@ test('personel rolü ve kullanıcı adı CHECK ile denetlenir', async () => {
         { kod: CHECK_IHLALI });
     await hataBekle(vt.yonetici("CALL sp_personel_ekle('A', 'B', '05301119999', 'GARSON', 'A B', 'parola12', NULL, NULL)"),
         { kod: CHECK_IHLALI });
+});
+
+test('örnek veri: 50 oyun; popüler devler 8 kopya ve en yüksek talepte; zorluk/talep sınırları', async () => {
+    const [say] = await vt.admin('SELECT count(*)::int AS n, sum(toplam_adet)::int AS kopya FROM oyun');
+    assert.equal(say.n, 50);
+    const devler = await vt.admin(`SELECT ad, toplam_adet, talep FROM oyun WHERE ad IN
+        ('Catan','Ticket to Ride','Carcassonne','Dixit','Uno','Codenames','Monopoly','Splendor')`);
+    assert.equal(devler.length, 8);
+    assert.ok(devler.every((o) => o.toplam_adet === 8 && o.talep >= 8));
+    await hataBekle(vt.admin('UPDATE oyun SET zorluk = 6 WHERE id = 2'), { kod: CHECK_IHLALI });
+    await hataBekle(vt.admin('UPDATE oyun SET talep = 0 WHERE id = 2'), { kod: CHECK_IHLALI });
 });

@@ -20,26 +20,69 @@ INSERT INTO kullanici (ad, soyad, email, telefon, dogum_tarihi, ogrenci) VALUES
  ('Elif','Arslan','elif.arslan@mail.com','05064445566','2003-09-09', true),
  ('Burak','Çelik','burak.celik@mail.com','05378889900','1997-06-17', false);
 
-INSERT INTO kategori (ad) VALUES ('Strateji'),('Parti'),('Kooperatif'),('Kart'),('Aile');
+INSERT INTO kategori (ad) VALUES ('Strateji'),('Parti'),('Kooperatif'),('Kart'),('Aile'),('Geleneksel'),('Soyut'),('Zar');
 
-INSERT INTO oyun (ad, kategori_id, min_oyuncu, max_oyuncu, sure_dk, toplam_adet) VALUES
- ('Catan',1,3,4,90,2),
- ('Carcassonne',1,2,5,45,1),
- ('Ticket to Ride',5,2,5,60,2),
- ('Codenames',2,4,8,30,2),
- ('Dixit',2,3,6,30,1),
- ('Pandemic',3,2,4,60,1),
- ('7 Wonders',4,3,7,40,1),
- ('Azul',5,2,4,40,2),
- ('Splendor',4,2,4,30,1),
- ('Uno',4,2,10,20,3);
+-- 50 oyun: Türkiye'de kafelerde en çok oynananlar + BGG'de en çok oynanan/istenenler.
+-- Popüler devler (talep 8–10) 8 kopya; orta seviye 2–4; ağır/niş strateji 1–2 kopya.
+-- id 1 (Root, 2 kopya) örnek senaryodaki bekleme sırası için; testler 1, 6, 8, 9, 10 id'lerine dayanır.
+INSERT INTO oyun (ad, kategori_id, min_oyuncu, max_oyuncu, sure_dk, toplam_adet, zorluk, talep) VALUES
+ ('Root',1,2,4,90,2,4,4),
+ ('Carcassonne',5,2,5,45,8,2,9),
+ ('Ticket to Ride',5,2,5,60,8,2,10),
+ ('Codenames',2,4,8,20,8,1,9),
+ ('Dixit',2,3,6,30,8,1,9),
+ ('Pandemic',3,2,4,45,4,3,7),
+ ('7 Wonders',4,3,7,35,4,3,7),
+ ('Azul',7,2,4,40,4,2,7),
+ ('Splendor',4,2,4,30,8,2,8),
+ ('Uno',4,2,10,20,8,1,9),
+ ('Catan',1,3,4,75,8,3,10),
+ ('Monopoly',5,2,8,120,8,1,8),
+ ('Okey',6,4,4,45,6,2,9),
+ ('Tavla',6,2,2,30,6,2,8),
+ ('Rummikub',6,2,4,45,4,2,7),
+ ('Mangala',6,2,2,20,3,1,5),
+ ('Satranç',7,2,2,45,4,4,5),
+ ('Tabu',2,4,10,30,4,1,8),
+ ('Jenga',2,2,8,15,4,1,7),
+ ('Risk',1,2,6,120,3,3,6),
+ ('Scrabble',5,2,4,60,3,2,6),
+ ('Exploding Kittens',4,2,5,15,4,1,8),
+ ('Kingdomino',5,2,4,20,3,1,6),
+ ('King of Tokyo',8,2,6,30,3,2,7),
+ ('Sushi Go!',4,2,5,15,3,1,6),
+ ('Love Letter',4,2,6,20,3,1,6),
+ ('The Mind',3,2,4,20,3,1,6),
+ ('Coup',2,2,6,15,3,2,6),
+ ('Avalon',2,5,10,30,3,2,7),
+ ('Vampir Köylü',2,6,18,30,3,1,8),
+ ('Bang!',4,4,7,40,2,2,5),
+ ('Hanabi',3,2,5,25,2,2,5),
+ ('Patchwork',7,2,2,30,2,2,5),
+ ('Jaipur',4,2,2,30,2,2,5),
+ ('Terraforming Mars',1,1,5,120,3,4,7),
+ ('Scythe',1,1,5,115,2,4,6),
+ ('Wingspan',1,1,5,70,3,3,7),
+ ('Gloomhaven',3,1,4,120,1,5,4),
+ ('Brass: Birmingham',1,2,4,120,1,5,4),
+ ('Everdell',1,1,4,80,2,3,5),
+ ('Cascadia',5,1,4,45,2,2,6),
+ ('Concordia',1,2,5,100,1,3,4),
+ ('Agricola',1,1,4,120,1,4,4),
+ ('Puerto Rico',1,3,5,90,1,4,4),
+ ('Dominion',4,2,4,30,2,2,5),
+ ('Small World',1,2,5,80,2,2,6),
+ ('Takenoko',5,2,4,45,2,2,5),
+ ('İstanbul',1,2,5,60,2,3,6),
+ ('Quacks of Quedlinburg',5,2,4,45,2,2,5),
+ ('Dune: Imperium',1,1,4,120,1,4,5);
 
 -- Kat 1: giriş & espresso bar (10 küçük masa) · Kat 2: strateji salonu (10 masa) · Kat 3: VIP / FRP (4 büyük masa)
 INSERT INTO masa (masa_no, kapasite, kat) VALUES
- (1,4,1),(2,4,1),(3,6,2),(4,6,2),(5,8,3),(6,2,1),(7,2,1),(8,4,2),(9,4,2),(10,10,3),
+ (1,4,1),(2,4,1),(3,6,2),(4,6,2),(5,6,3),(6,2,1),(7,2,1),(8,4,2),(9,4,2),(10,8,3),
  (11,2,1),(12,2,1),(13,6,1),(14,4,1),(15,2,1),(16,6,1),
  (17,4,2),(18,6,2),(19,4,2),(20,6,2),(21,4,2),(22,6,2),
- (23,12,3),(24,8,3);
+ (23,8,3),(24,6,3);
 
 INSERT INTO urun_kategori (ad, sira) VALUES
  ('Sıcak İçecekler',1),('Soğuk İçecekler',2),('Yiyecekler',3),('Tatlılar',4);
@@ -50,7 +93,7 @@ INSERT INTO urun (kategori_id, ad, fiyat, stok, kritik_stok) VALUES
  (3,'Tost',120,40,5),(3,'Patates Kızartması',110,30,5),
  (4,'Cheesecake',140,20,5),(4,'Brownie',120,3,5);
 
--- Demo senaryo: masa 1 ve 2 Catan'ın iki kopyasını oynuyor, masa 3 de Catan istiyor -> Catan sırasına girer.
+-- Demo senaryo: masa 1 ve 2 Root'un iki kopyasını oynuyor, masa 3 de Root istiyor -> Root sırasına girer.
 -- Masa 3 açılırken müşteri yeni kaydediliyor (masada hızlı kayıt akışı).
 DO $$
 DECLARE o1 bigint; o2 bigint; o3 bigint; yeni bigint; oo bigint; b bigint; s bigint;
@@ -62,7 +105,7 @@ BEGIN
     CALL sp_oturum_ac(3, 4, yeni, o3);
     CALL sp_oyun_baslat(o1, 1, oo);
     CALL sp_oyun_baslat(o2, 1, oo);
-    CALL sp_bekleme_ekle(o3, 1, b);   -- Catan sırası
+    CALL sp_bekleme_ekle(o3, 1, b);   -- Root sırası
     CALL sp_siparis_ver(o1, 1, 2, s);
     CALL sp_siparis_ver(o1, 7, 1, s);
     CALL sp_siparis_ver(o2, 3, 3, s);

@@ -30,6 +30,8 @@ const KISIT_MESAJLARI = {
     uq_oyun_ad: 'Bu adda bir oyun zaten var',
     ck_oyun_oyuncu: 'Oyuncu sayıları geçersiz (min > 0, max ≥ min)',
     ck_oyun_adet: 'Adet negatif olamaz',
+    ck_oyun_zorluk: 'Zorluk 1 ile 5 arasında olmalı',
+    ck_oyun_talep: 'Talep 1 ile 10 arasında olmalı',
     ck_oyun_sure: 'Süre 0\'dan büyük olmalı',
     uq_urun_ad: 'Bu adda bir ürün zaten var',
     ck_urun_fiyat: 'Fiyat negatif olamaz',

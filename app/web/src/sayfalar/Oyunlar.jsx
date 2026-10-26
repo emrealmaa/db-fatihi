@@ -38,7 +38,7 @@ export default function Oyunlar() {
             </div>
             <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!liste.length} bosMesaj="Filtreye uyan oyun yok">
                 <table className="tablo">
-                    <thead><tr><th>Oyun</th><th>Kategori</th><th>Kişi</th><th>Süre</th><th className="sag">Müsait</th></tr></thead>
+                    <thead><tr><th>Oyun</th><th>Kategori</th><th>Kişi</th><th>Süre</th><th>Zorluk</th><th className="sag">Müsait</th></tr></thead>
                     <tbody>
                         {liste.map((o) => (
                             <tr key={o.oyun_id}>
@@ -46,6 +46,7 @@ export default function Oyunlar() {
                                 <td>{o.kategori}</td>
                                 <td>{o.min_oyuncu}–{o.max_oyuncu}</td>
                                 <td>{o.sure_dk} dk</td>
+                                <td title={`${o.zorluk} / 5`}>{'★'.repeat(o.zorluk)}<span className="soluk">{'★'.repeat(5 - o.zorluk)}</span></td>
                                 <td className="sag">
                                     {o.musait_adet > 0
                                         ? <Etiket tur="basari">{o.musait_adet}/{o.toplam_adet}</Etiket>

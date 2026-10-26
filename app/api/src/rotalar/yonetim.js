@@ -63,7 +63,7 @@ export function yonetimRotalari() {
         tablo: 'kategori', sutunlar: ['ad'], siralama: 'ad', silinebilir: true });
     tabloRotalari(r, '/yonetim/oyunlar', {
         tablo: 'oyun', siralama: 'ad',
-        sutunlar: ['ad', 'kategori_id', 'min_oyuncu', 'max_oyuncu', 'sure_dk', 'toplam_adet', 'aktif'] });
+        sutunlar: ['ad', 'kategori_id', 'min_oyuncu', 'max_oyuncu', 'sure_dk', 'toplam_adet', 'zorluk', 'talep', 'aktif'] });
     tabloRotalari(r, '/yonetim/urun-kategorileri', {
         tablo: 'urun_kategori', sutunlar: ['ad', 'sira'], siralama: 'sira, ad', silinebilir: true });
     tabloRotalari(r, '/yonetim/urunler', {

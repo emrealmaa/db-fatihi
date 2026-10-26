@@ -68,7 +68,7 @@ test('masalar ve oyunlar listelenir, sayılar JSON sayısıdır', async () => {
     assert.deepEqual([...new Set(masalar.map((m) => m.kat))].sort(), [1, 2, 3]);
     assert.equal(typeof masalar[0].oturum_id, 'number');
     const { govde: oyunlar } = await istek('GET', '/oyunlar', null, 'garson');
-    assert.equal(oyunlar.find((o) => o.ad === 'Catan').musait_adet, 0);
+    assert.equal(oyunlar.find((o) => o.ad === 'Root').musait_adet, 0);
 });
 
 test('müşteri telefonla aranır (maskeli), yoksa 404', async () => {
@@ -106,13 +106,13 @@ test('kısıt ihlalleri anlaşılır Türkçe mesaja çevrilir', async () => {
 test('tam akış: oyun, sıra, seçim, sipariş, hesap ve ödeme', async () => {
     const masa = async (no) => (await istek('GET', '/masalar', null, 'garson')).govde.find((m) => m.masa_no === no);
 
-    // Masa 1 Catan'ı iade eder -> Catan sırasındaki masa 3'e seçim hakkı
+    // Masa 1 Root'u iade eder -> Root sırasındaki masa 3'e seçim hakkı
     assert.equal((await istek('POST', `/oturum-oyunlar/${(await masa(1)).oturum_oyun_id}/bitir`, null, 'garson')).durum, 204);
     const [hak] = (await istek('GET', '/bekleme', null, 'garson')).govde;
     assert.equal(hak.masa_no, 3);
     assert.equal(hak.durum, 'SECIM_HAKKI');
 
-    // Masa 4 ayrılan Catan kopyasını alamaz, başka oyunu alabilir
+    // Masa 4 ayrılan Root kopyasını alamaz, başka oyunu alabilir
     const atla = await istek('POST', `/oturumlar/${(await masa(4)).oturum_id}/oyun`, { oyunId: 1 }, 'garson');
     assert.equal(atla.durum, 400);
     assert.match(atla.govde.hata, /masa 3 için ayrıldı/);
@@ -121,9 +121,9 @@ test('tam akış: oyun, sıra, seçim, sipariş, hesap ve ödeme', async () => {
     assert.equal((await istek('POST', `/oturumlar/${(await masa(4)).oturum_id}/oyun`, { oyunId: 9 }, 'garson')).durum, 201);
     assert.equal((await masa(4)).oynanan_oyun, 'Splendor');
 
-    // Masa 3 kendisine ayrılan Catan'ı alır
+    // Masa 3 kendisine ayrılan Root'u alır
     assert.equal((await istek('POST', `/bekleme/${hak.bekleme_id}/sec`, {}, 'garson')).durum, 201);
-    assert.equal((await masa(3)).oynanan_oyun, 'Catan');
+    assert.equal((await masa(3)).oynanan_oyun, 'Root');
 
     // Çok kalemli sipariş: biri stok yetersizse hiçbiri yazılmaz
     const m4 = (await masa(4)).oturum_id;

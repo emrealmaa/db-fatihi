@@ -76,8 +76,12 @@ CREATE TABLE oyun (
     max_oyuncu     smallint     NOT NULL,
     sure_dk        smallint     NOT NULL,
     toplam_adet    int          NOT NULL DEFAULT 1,
+    zorluk         smallint     NOT NULL DEFAULT 2,     -- 1 (çok kolay) .. 5 (çok ağır)
+    talep          smallint     NOT NULL DEFAULT 5,     -- 1 .. 10: müşterilerin bu oyunu isteme ağırlığı
     aktif          boolean      NOT NULL DEFAULT true,
     CONSTRAINT uq_oyun_ad       UNIQUE (ad),
+    CONSTRAINT ck_oyun_zorluk   CHECK (zorluk BETWEEN 1 AND 5),
+    CONSTRAINT ck_oyun_talep    CHECK (talep BETWEEN 1 AND 10),
     CONSTRAINT ck_oyun_oyuncu   CHECK (min_oyuncu > 0 AND max_oyuncu >= min_oyuncu),
     CONSTRAINT ck_oyun_sure     CHECK (sure_dk > 0),
     CONSTRAINT ck_oyun_adet     CHECK (toplam_adet >= 0)
