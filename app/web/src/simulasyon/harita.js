@@ -4,7 +4,7 @@
 // K (y = 0), B (x = 0), G (y = IC_DERINLIK, ön cephe), D (x = GENISLIK). Kamera döndükçe arkada kalan iki duvar çizilir.
 
 export const GENISLIK = 20;      // x
-export const DERINLIK = 20;      // y (dünya)
+export const DERINLIK = 22;      // y (dünya): 16 cephe, 17–18 kaldırım, 19–20 yol, 21 karşı kaldırım
 export const IC_DERINLIK = 16;   // iç mekân derinliği
 
 // Asansör her katta aynı yerde (eski merdivenin yeri); katlar arası geçiş kapısının önündeki karodan yapılır
@@ -30,7 +30,9 @@ export const KAPI = { gx: 2, gy: 17 };
 export const KAPI_IC = { gx: 2, gy: 15 };
 export const KAPI_ARALIK = { bas: 2, son: 4 };
 export const KALDIRIM_Y = 17;
-export const SOKAK_Y = 18;
+export const SOKAK_Y = 18;        // kafenin önündeki yürüme sırası (kaldırımın dış kenarı)
+export const YOL_SERITLERI = [19.25, 20.25];   // arabalar: 0 doğuya, 1 batıya
+export const KARSI_KALDIRIM_Y = 21;
 export const SOKAK_GIRIS = { gx: 19, gy: SOKAK_Y };   // müşteriler sağdan gelir,
 export const SOKAK_CIKIS = { gx: 0, gy: SOKAK_Y };    // soldan gider
 // Kaldırımdaki tek sıra kuyruk: kapıya en yakın yer önce
@@ -108,7 +110,11 @@ export const KATLAR = {
         dis: [
             { tur: 'saksi', gx: 5, gy: 16.35, gw: 0.6, gd: 0.5, h: 8 }, { tur: 'bank', gx: 8, gy: 16.35, gw: 2, gd: 0.5, h: 7 },
             { tur: 'saksi', gx: 12, gy: 16.35, gw: 0.6, gd: 0.5, h: 8 }, { tur: 'menutahta', gx: 4.2, gy: 16.4, gw: 0.5, gd: 0.4, h: 18 },
-            { tur: 'lamba', gx: 16, gy: 16.4, gw: 1, gd: 0.5, h: 44 },
+            { tur: 'sokaklambasi', gx: 16, gy: 16.45, gw: 0.3, gd: 0.3, h: 52 },
+            // karşı kaldırım: ağaçlar ve sokak lambaları
+            { tur: 'agac', gx: 3.2, gy: 21.2, gw: 0.6, gd: 0.6, h: 10 }, { tur: 'agac', gx: 11.2, gy: 21.2, gw: 0.6, gd: 0.6, h: 10 },
+            { tur: 'agac', gx: 17.6, gy: 21.2, gw: 0.6, gd: 0.6, h: 10 },
+            { tur: 'sokaklambasi', gx: 7.3, gy: 21.3, gw: 0.3, gd: 0.3, h: 52 }, { tur: 'sokaklambasi', gx: 14.3, gy: 21.3, gw: 0.3, gd: 0.3, h: 52 },
         ],
     },
     2: {

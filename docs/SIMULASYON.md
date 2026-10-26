@@ -98,6 +98,22 @@ görünür (cephe kesit olarak alçak çizilir ki içerisi görünsün). Müşte
    yalnızca baştaki grup içeri girebilir; masa boşalınca masaya, bekleme alanında yer açılınca içeri yürür.
 3. Kuyruk da doluysa "Çok kalabalık…" deyip gider.
 
+### Canlı cadde ve gün evreleri
+Düz renkli arka plan yoktur: sahnenin arkasında saate göre değişen **gökyüzü ve şehir silueti** çizilir (ekranın kenarlarına kadar uzar).
+
+| Oyun saati | Evre | Görünüm |
+|---|---|---|
+| 10–17 | Gündüz | Mavi gökyüzü, açık pencereler, ağaçlar yeşil |
+| 17–19 | Gün batımı | Mor-turuncu gökyüzü, batan güneş, binalarda ilk ışıklar, pencereler turuncu |
+| 19–22 | Gece | Yıldızlar ve hilal, ışıklı gökdelen pencereleri, kafe camlarından kaldırıma süzülen sıcak ışık |
+
+Kafenin önü: cephe şeridi, iki sıra kaldırım (kuyruk sırası + yürüme yolu), iki şeritli yol ve karşı kaldırım (ağaçlar, sokak lambaları).
+`motor.js: ortamAdim` simülasyon hızından bağımsız, gerçek zamanla çalışır:
+- **Arabalar** iki şeritte zıt yönlerde geçer; akşam ve gece **farları yanar**, önlerine ışık konisi düşer, stop lambaları kırmızıdır.
+- **Yayalar** her iki kaldırımda yürüyüp geçer (müşteri değildir, kafeye girmez).
+- **Sevimli bir köpek** kaldırımlarda dolaşır, ara sıra oturup koklanır, kuyruğunu sallar.
+- **Sokak lambaları** 18:00'den sonra yanar ve altlarına ışık havuzu düşer.
+
 ## Diyaloglar
 `simulasyon/diyalog.js` havuzu: genel masa sohbetleri ("Sıra kimde?", "Zar atıyorum!", "Kural kitabına baksana",
 "Enkaz kartı bende kaldı!", "Sıramı pas geçiyorum", "Bu hamle oyunu bitirir!"...), **oyuna özel** cümleler (Catan'da saman/odun

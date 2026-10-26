@@ -25,7 +25,7 @@ export function saatProfili(dakika) {
 
 const SON_CIKIS = 22 * 60 + 15;   // bu saatte hâlâ içeride olan zorla uğurlanır (fiş ~22:15–22:30)
 import {
-    ASANSOR, DIS_SIRA, KAPI, KATLAR, MUTFAK, MUZISYENLER, oturmaYerleri, SAHNE_Z, SOKAK_CIKIS, SOKAK_GIRIS, yolBul, yurunebilir,
+    ASANSOR, DIS_SIRA, KAPI, KARSI_KALDIRIM_Y, KATLAR, MUTFAK, MUZISYENLER, oturmaYerleri, SAHNE_Z, SOKAK_CIKIS, SOKAK_GIRIS, yolBul, yurunebilir,
 } from './harita.js';
 import { karakterPaleti, OYUN_RENK } from './cizim.js';
 import {
@@ -89,6 +89,9 @@ export class Simulasyon {
         this.sefler = [];
         this.muzisyenler = [];
         this.asansorKapi = { 1: 0, 2: 0, 3: 0 };   // kapının açık kalacağı zaman (gerçek sn)
+        // dış mekân ortamı (simülasyon hızından bağımsız, gerçek zamanla hareket eder)
+        this.ortam = { arabalar: [], yayalar: [], kopek: { x: 6, y: KARSI_KALDIRIM_Y + 0.4, yon: 1, hedef: 9, bekle: 0, oturuyor: false, kare: 0 },
+            sonrakiAraba: 0, sonrakiYaya: 0 };
         this.terkSayisi = 0;
         this.esitlemeSayac = 0;
         this.zamanlayicilar = { masa: 0, oyun: 0, ciro: 0, menu: 0 };
@@ -180,6 +183,7 @@ export class Simulasyon {
         dtSn = Math.min(dtSn, 0.25);
         this.zaman += dtSn;
         this.esitle(dtSn);
+        this.ortamAdim(dtSn);
         if (!this.calisiyor) return;
         const dk = dtSn * this.hiz;
         this.dakika += dk;
@@ -197,6 +201,43 @@ export class Simulasyon {
         for (const sf of this.sefler) this.sefAdim(sf);
         this.muzikAdim(dk);
         if (this.kapanisBasladi && !this.gruplar.length && !this.gunSonu && !this.gunSonuBekleniyor) this.gunuKapat();
+    }
+
+    // ------------------------------------------------------------------ dış mekân ortamı
+    ortamAdim(dt) {
+        const o = this.ortam;
+        o.sonrakiAraba -= dt; o.sonrakiYaya -= dt;
+        if (o.sonrakiAraba <= 0) {
+            o.sonrakiAraba = rastgele(1.5, 5);
+            const serit = Math.random() < 0.5 ? 0 : 1;
+            o.arabalar.push({ id: ++birimSayac, serit, x: serit === 0 ? -2 : 24, hiz: rastgele(3.5, 6.5),
+                renk: sec(['#c0392b', '#2b6cb0', '#e3b23c', '#f4efe6', '#2b2b2b', '#3f8f4f', '#7b2d8b']) });
+        }
+        for (const a of o.arabalar) a.x += (a.serit === 0 ? 1 : -1) * a.hiz * dt;
+        o.arabalar = o.arabalar.filter((a) => a.x > -3 && a.x < 25);
+        if (o.sonrakiYaya <= 0) {
+            o.sonrakiYaya = rastgele(2.5, 7);
+            const yon = Math.random() < 0.5 ? 1 : -1;
+            const b = yeniBirey('musteri', 1, yon > 0 ? -1 : 21, Math.random() < 0.5 ? 18 : KARSI_KALDIRIM_Y);
+            Object.assign(b, { vx: yon, vy: 0, yayaYon: yon, yayaHiz: rastgele(0.9, 1.5) });
+            o.yayalar.push(b);
+        }
+        for (const b of o.yayalar) { b.gx += b.yayaYon * b.yayaHiz * dt; b.animT += dt; b.kare = Math.floor(b.animT * 6) % 4; }
+        o.yayalar = o.yayalar.filter((b) => b.gx > -2 && b.gx < 22);
+        // köpek: kaldırımlarda dolaşır, ara sıra oturup koklar
+        const k = o.kopek;
+        if (k.bekle > 0) { k.bekle -= dt; k.oturuyor = true; return; }
+        k.oturuyor = false;
+        const dx = k.hedef - k.x;
+        if (Math.abs(dx) < 0.1) {
+            k.bekle = rastgele(1.5, 4);
+            k.hedef = rastgele(1, 19);
+            if (Math.random() < 0.3) k.y = k.y > 20 ? 18.4 : KARSI_KALDIRIM_Y + 0.4;
+            return;
+        }
+        k.yon = Math.sign(dx);
+        k.x += k.yon * Math.min(Math.abs(dx), 1.8 * dt);
+        k.kare = Math.floor(this.zaman * 8) % 2;
     }
 
     // ------------------------------------------------------------------ gün döngüsü
@@ -1126,7 +1167,12 @@ export class Simulasyon {
             pisiyor: this.sefler.some((x) => x.durum === 'PISIRIYOR'),
             hazir: this.mutfakFisleri.filter((f) => f.durum === 'HAZIR').length,
         } : null;
+        const saat = this.dakika % 1440;
+        const evre = saat < 17 * 60 ? 'gun' : saat < 19 * 60 ? 'aksam' : 'gece';
+        if (kat === 1) for (const b of this.ortam.yayalar) bireyler.push({ ...b, hareketli: true });
         return { kat, d, masalar, bireyler, seciliMasaId, mutfak, asansorAcik: this.asansorKapi[kat] > this.zaman,
+            evre, lambalar: saat >= 18 * 60,
+            arabalar: kat === 1 ? this.ortam.arabalar : null, kopek: kat === 1 ? this.ortam.kopek : null,
             muzik: kat === 3 && calan ? this.muzisyenler.map((m) => ({ gx: m.gx, gy: m.gy })) : null };
     }
 
