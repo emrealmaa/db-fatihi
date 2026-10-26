@@ -41,7 +41,7 @@ INSERT INTO urun (kategori_id, ad, fiyat, stok, kritik_stok) VALUES
  (3,'Tost',120,40,5),(3,'Patates Kızartması',110,30,5),
  (4,'Cheesecake',140,20,5),(4,'Brownie',120,3,5);
 
--- Demo senaryo: masa 1 ve 2 Catan'ın iki kopyasını oynuyor, masa 3 de Catan istiyor -> sıraya girer.
+-- Demo senaryo: masa 1 ve 2 Catan'ın iki kopyasını oynuyor, masa 3 de Catan istiyor -> Catan sırasına girer.
 -- Masa 3 açılırken müşteri yeni kaydediliyor (masada hızlı kayıt akışı).
 DO $$
 DECLARE o1 bigint; o2 bigint; o3 bigint; yeni bigint; oo bigint; b bigint; s bigint;
@@ -53,7 +53,7 @@ BEGIN
     CALL sp_oturum_ac(3, 4, yeni, o3);
     CALL sp_oyun_baslat(o1, 1, oo);
     CALL sp_oyun_baslat(o2, 1, oo);
-    CALL sp_bekleme_ekle(o3, b);
+    CALL sp_bekleme_ekle(o3, 1, b);   -- Catan sırası
     CALL sp_siparis_ver(o1, 1, 2, s);
     CALL sp_siparis_ver(o1, 7, 1, s);
     CALL sp_siparis_ver(o2, 3, 3, s);

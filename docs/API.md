@@ -28,12 +28,12 @@ veritabanı rolüyle (`garson_app`, `kasiyer_app`, `yonetici_app`) çalıştır�
 | POST | `/masalar/:masaId/ac` | `{ kisiSayisi, kullaniciId? , musteri?: { ad, soyad, telefon, email?, ogrenci? } }` | `sp_musteri_kaydet` + `sp_oturum_ac` (tek transaction) |
 | GET | `/musteriler/ara?telefon=` | – | `fn_musteri_bul` (maskeli) |
 | POST | `/musteriler` | `{ ad, soyad, telefon, email?, ogrenci? }` | `sp_musteri_kaydet` |
-| GET | `/oyunlar` | – | `v_musait_oyunlar` |
+| GET | `/oyunlar` | – | `v_musait_oyunlar` (`alinabilir_adet`: sıraya ayrılmamış kopya, `bekleyen_masa`) |
 | POST | `/oturumlar/:oturumId/oyun` | `{ oyunId }` | `sp_oyun_baslat` |
 | POST | `/oturum-oyunlar/:id/bitir` | – | `sp_oyun_bitir` |
-| GET | `/bekleme` | – | `v_bekleme_sirasi` (`secim_bitis` geri sayım için) |
-| POST | `/oturumlar/:oturumId/bekleme` | – | `sp_bekleme_ekle` |
-| POST | `/bekleme/:id/sec` | `{ oyunId }` | `sp_oyun_sec` |
+| GET | `/bekleme` | – | `v_bekleme_sirasi` (`oyun`, `oyun_sira`, `secim_bitis` geri sayım için) |
+| POST | `/oturumlar/:oturumId/bekleme` | `{ oyunId }` (beklenen oyun) | `sp_bekleme_ekle` |
+| POST | `/bekleme/:id/sec` | – (ayrılan oyunu masaya verir) | `sp_oyun_sec` |
 | DELETE | `/bekleme/:id` | – | `sp_bekleme_iptal` |
 | GET | `/menu` | – | `v_menu` |
 | GET | `/oturumlar/:oturumId/siparisler` | – | `v_oturum_siparisleri` |

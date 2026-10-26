@@ -23,7 +23,7 @@ Tarayıcıda `http://localhost:3001` → örnek personel: `yonetici`, `kasiyer`,
    ```bash
    npm install
    npm run db:kur        # veritabanını sıfırdan kurar (init betikleri + örnek veri)
-   npm test              # 44 veritabanı + 9 API testi
+   npm test              # 46 veritabanı + 9 API testi
    npm run api           # API (5173'teki ön yüz için)
    npm run dev -w app/web   # ön yüz geliştirme sunucusu: http://localhost:5173
    ```

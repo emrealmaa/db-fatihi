@@ -8,7 +8,7 @@ Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum 
 - [x] 13 tablo, kısıtlar, 3 tetikleyici, kısmi indexler
 - [x] 10 fonksiyon, 15 prosedür, 13 view
 - [x] Roller (giriş/garson/kasiyer/yönetici), yetkiler, maskeleme
-- [x] 44 otomatik test (kısıt, kuyruk, hesap/ödeme, yetki) — `npm run db:test`
+- [x] 46 otomatik test (kısıt, kuyruk, hesap/ödeme, yetki) — `npm run db:test`
 
 ## Faz 2 – Uygulama ve ön yüz (TAMAM, gerçek veriyle deneme bekliyor)
 - [x] Node.js + Express API, personel girişi (JWT), rol bazlı DB bağlantısı, 9 API testi
@@ -39,4 +39,4 @@ Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum 
 | Kullanıcı tanımlı fonksiyon | ≥ 2 | 10 | `02_functions.sql` |
 | Yetkilendirme ve maskeleme | – | 4 grup rol + 4 login rolü, SECURITY DEFINER, maskeli view'lar, bcrypt | `05_security.sql`, `docs/YETKI.md` |
 | Ön yüz | – | React uygulaması, rol bazlı ekranlar | `app/web` |
-| Test | – | 44 DB + 9 API testi | `db/tests`, `app/api/test` |
+| Test | – | 46 DB + 9 API testi | `db/tests`, `app/api/test` |

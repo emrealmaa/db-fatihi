@@ -16,14 +16,14 @@
    (müsait adet, hesap toplamı); bilinçli anlık görüntüler (birim fiyat, giriş ücreti).
 7. **Kısıtlar** — CHECK (telefon formatı, rol, ödeme türü, stok ≥ 0...), kısmi UNIQUE index'ler
    ("masada tek açık oturum", "sistemde tek seçim hakkı"), tetikleyiciler (kapasite, sıra atlama, müsait kopya — satır kilidiyle).
-8. **Bekleme sırası algoritması** — Oyun iade → `sp_sirayi_ilerlet` → kişi sayısına uygun oyun bulunan ilk masaya
-   SECIM_HAKKI; hak başkasındayken kimse oyun başlatamaz; 5 dk dolunca sıranın sonuna. (Akış şeması)
+8. **Bekleme sırası algoritması** — Her oyunun kendi sırası. Kopya iade → `sp_sirayi_ilerlet` → o oyunu bekleyen ilk masaya
+   kopya ayrılır (SECIM_HAKKI); ayrılan kopyayı başkası alamaz ama diğer oyunlar serbest; 5 dk dolunca o oyunun sırasının sonuna. (Akış şeması)
 9. **Prosedür / fonksiyon / view** — 15 / 10 / 13. Örnek: `sp_oturum_kapat` tek transaction'da oyunu iade eder,
    sırayı iptal eder, toplamı hesaplar, ödemeyi kaydeder, sırayı ilerletir.
 10. **Yetki ve maskeleme** — docs/YETKI.md matrisi. Aynı müşteri: yönetici `05321234567`, garson `0532*****67`.
     Parolalar bcrypt; giriş rolü yalnızca doğrulama fonksiyonunu çalıştırabilir.
 11. **Performans** — docs/PERFORMANS.md tablosu: 100k oturum / 400k sipariş; index'li vs index'siz (Seq Scan → Index Scan).
-12. **Test** — 44 veritabanı + 9 API testi; her test temiz veritabanıyla; kurulumsuz PGlite ile de çalışır.
+12. **Test** — 46 veritabanı + 9 API testi; her test temiz veritabanıyla; kurulumsuz PGlite ile de çalışır.
 13. **Demo** (aşağıdaki akış)
 14. **Kapanış** — Öğrenilenler, geliştirme fikirleri (öğrenci indirimi, rezervasyon, çoklu şube).
 
@@ -33,8 +33,8 @@ Hazırlık: `npm run db:kur` (temiz seed), `npm run api`, iki tarayıcı pencere
 1. **Garson girişi** → Masa panosu: masa 1 ve 2 Catan oynuyor, masa 3 sırada.
 2. **Yeni müşteri, yeni masa:** Masa 4 → telefon ara → bulunamadı → ad/soyad gir → masa açılır (müşteri aynı adımda kaydedildi).
 3. **Sıra atlama engeli:** Masa 1'in Catan'ını iade et → masa 3 nabız gibi atan "Seçim hakkı" kartına döner, geri sayım başlar.
-   Masa 4'ten oyun başlatmayı dene → "Sıra masa 3'te" hatası (tetikleyici).
-4. **Seçim:** Bekleme sırası ekranından masa 3 için Catan seç → masa 4 artık oyun başlatabilir.
+   Masa 4'ten Catan başlatmayı dene → "Catan kopyası sıradaki masa 3 için ayrıldı" (tetikleyici). Masa 4 Azul'u başlatabilir.
+4. **Seçim:** Bekleme sırası ekranından masa 3'e "Oyunu ver" → Catan masa 3'te.
 5. **Sipariş ve stok:** Masa 4'e 2 kahve + 1 brownie → brownie "Son 2" uyarısı; stoktan fazlasını sipariş etmeye çalış → hata.
 6. **Kasiyer:** Kasa → masa 4 hesabı (giriş × kişi + siparişler) → Kart ile al → masa boşalır, günlük ciroya yansır.
 7. **Yetki kanıtı (psql):** `psql -U garson_app karavana -c "SELECT * FROM kullanici"` → *permission denied*;

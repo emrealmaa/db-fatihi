@@ -24,7 +24,7 @@ GRANT EXECUTE ON FUNCTION fn_personel_giris(text, text) TO rol_giris;
 -- (View'daki fonksiyonların çalıştırma izni çağıran role göre kontrol edilir, bu yüzden açıkça verilir.)
 GRANT SELECT ON v_musait_oyunlar, v_masa_durumu, v_bekleme_sirasi, v_musteri_maskeli,
                 v_menu, v_oturum_siparisleri TO rol_garson;
-GRANT EXECUTE ON FUNCTION fn_musait_adet(int), fn_ad_maskele(text), fn_email_maskele(text),
+GRANT EXECUTE ON FUNCTION fn_musait_adet(int), fn_ayrilan_adet(int), fn_ad_maskele(text), fn_email_maskele(text),
                           fn_telefon_maskele(text), fn_musteri_bul(text), fn_aktif_personel()
                           TO rol_garson;
 GRANT EXECUTE ON PROCEDURE sp_musteri_kaydet, sp_oturum_ac, sp_bekleme_ekle, sp_bekleme_iptal,

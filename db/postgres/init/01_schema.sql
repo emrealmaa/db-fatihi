@@ -129,11 +129,13 @@ CREATE UNIQUE INDEX uq_oturum_oyun_aktif ON oturum_oyun (oturum_id) WHERE bitis 
 CREATE INDEX ix_oturum_oyun_aktif_oyun ON oturum_oyun (oyun_id) WHERE bitis IS NULL;
 
 -- ---------------------------------------------------------------- bekleme
--- Oyun bekleyen masalar. Sıra = id sırası. Uygun bir kopya boşalınca sıradaki
--- masaya SECIM_HAKKI verilir, o masa müsait oyunlar arasından seçer.
+-- Dolu bir oyunu bekleyen masalar; her oyunun kendi sırası vardır (sıra = id sırası).
+-- O oyunun bir kopyası boşalınca sıradaki masaya SECIM_HAKKI verilir: kopya o masa için
+-- ayrılır, başka masa alamaz; hak sahibi oyunu alır (sp_oyun_sec) veya süresi dolar.
 CREATE TABLE bekleme (
     id                 bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     oturum_id          bigint      NOT NULL REFERENCES oturum(id) ON DELETE CASCADE,
+    oyun_id            int         NOT NULL REFERENCES oyun(id)   ON DELETE RESTRICT,  -- beklenen oyun
     durum              varchar(12) NOT NULL DEFAULT 'BEKLIYOR',
     olusturma          timestamptz NOT NULL DEFAULT clock_timestamp(),
     secim_hakki_zamani timestamptz,
@@ -142,9 +144,9 @@ CREATE TABLE bekleme (
 );
 -- Bir oturum kuyrukta tek kez bulunabilir
 CREATE UNIQUE INDEX uq_bekleme_oturum_aktif ON bekleme (oturum_id) WHERE durum IN ('BEKLIYOR','SECIM_HAKKI');
--- Aynı anda tek masa seçim hakkına sahiptir
-CREATE UNIQUE INDEX uq_bekleme_tek_hak ON bekleme ((true)) WHERE durum = 'SECIM_HAKKI';
-CREATE INDEX ix_bekleme_sira ON bekleme (id) WHERE durum = 'BEKLIYOR';
+-- Bir oyunun sırasındaki ilk masa (sp_sirayi_ilerlet) ve ayrılmış kopyalar (fn_ayrilan_adet)
+CREATE INDEX ix_bekleme_sira ON bekleme (oyun_id, id) WHERE durum = 'BEKLIYOR';
+CREATE INDEX ix_bekleme_hak  ON bekleme (oyun_id) WHERE durum = 'SECIM_HAKKI';
 
 -- ---------------------------------------------------------------- urun_kategori / urun / siparis
 CREATE TABLE urun_kategori (

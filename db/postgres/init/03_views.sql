@@ -1,9 +1,12 @@
 -- View'lar. Uygulama rolleri tablolara değil bunlara erişir.
 
--- 1) Oyun kataloğu ve müsait adetler
+-- 1) Oyun kataloğu ve müsait adetler. musait_adet: masada olmayan kopya;
+--    alinabilir_adet: sıradaki masalara ayrılmamış olanlar (yeni bir masanın alabileceği)
 CREATE VIEW v_musait_oyunlar AS
 SELECT o.id AS oyun_id, o.ad, k.ad AS kategori, o.min_oyuncu, o.max_oyuncu, o.sure_dk,
-       o.toplam_adet, fn_musait_adet(o.id) AS musait_adet
+       o.toplam_adet, fn_musait_adet(o.id) AS musait_adet,
+       fn_musait_adet(o.id) - fn_ayrilan_adet(o.id) AS alinabilir_adet,
+       (SELECT count(*) FROM bekleme b WHERE b.oyun_id = o.id AND b.durum IN ('BEKLIYOR','SECIM_HAKKI')) AS bekleyen_masa
 FROM oyun o JOIN kategori k ON k.id = o.kategori_id
 WHERE o.aktif;
 
@@ -13,7 +16,8 @@ SELECT m.id AS masa_id, m.masa_no, m.kapasite,
        CASE WHEN t.id IS NULL THEN 'BOS' ELSE 'DOLU' END AS durum,
        t.id AS oturum_id, t.kisi_sayisi, t.acilis,
        og.oturum_oyun_id, og.oyun_id, og.ad AS oynanan_oyun, og.baslangic AS oyun_baslangic,
-       b.id AS bekleme_id, b.durum AS bekleme_durumu, b.secim_hakki_zamani,
+       b.id AS bekleme_id, b.durum AS bekleme_durumu, b.oyun_id AS beklenen_oyun_id,
+       (SELECT ad FROM oyun WHERE id = b.oyun_id) AS beklenen_oyun, b.secim_hakki_zamani,
        b.secim_hakki_zamani + make_interval(mins => (SELECT secim_suresi_dk FROM ayar)) AS secim_bitis
 FROM masa m
 LEFT JOIN oturum t ON t.masa_id = m.id AND t.kapanis IS NULL
@@ -22,15 +26,18 @@ LEFT JOIN LATERAL (SELECT oo.id AS oturum_oyun_id, o.id AS oyun_id, o.ad, oo.bas
                    WHERE oo.oturum_id = t.id AND oo.bitis IS NULL) og ON true
 LEFT JOIN bekleme b ON b.oturum_id = t.id AND b.durum IN ('BEKLIYOR','SECIM_HAKKI');
 
--- 3) Bekleme sırası (1 = sıradaki). Seçim hakkının bitiş zamanı ayardan hesaplanır.
+-- 3) Bekleme sırası: her oyunun kendi sırası (oyun_sira 1 = o oyunda sıradaki).
+--    Seçim hakkının bitiş zamanı ayardan hesaplanır.
 CREATE VIEW v_bekleme_sirasi AS
 SELECT row_number() OVER (ORDER BY (b.durum = 'SECIM_HAKKI') DESC, b.id) AS sira,
-       b.id AS bekleme_id, t.id AS oturum_id, m.masa_no, t.kisi_sayisi, b.durum, b.olusturma,
+       row_number() OVER (PARTITION BY b.oyun_id ORDER BY (b.durum = 'SECIM_HAKKI') DESC, b.id) AS oyun_sira,
+       b.id AS bekleme_id, t.id AS oturum_id, m.masa_no, t.kisi_sayisi, b.oyun_id, o.ad AS oyun, b.durum, b.olusturma,
        b.secim_hakki_zamani,
        b.secim_hakki_zamani + make_interval(mins => (SELECT secim_suresi_dk FROM ayar)) AS secim_bitis
 FROM bekleme b
 JOIN oturum t ON t.id = b.oturum_id
 JOIN masa m   ON m.id = t.masa_id
+JOIN oyun o   ON o.id = b.oyun_id
 WHERE b.durum IN ('BEKLIYOR','SECIM_HAKKI');
 
 -- 4) Maskelenmiş müşteri listesi (garson/kasiyer bunu görür)

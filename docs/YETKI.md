@@ -2,7 +2,7 @@
 
 > Bu dosya `npm run db:yetki` ile otomatik üretilir: her satır, ilgili rolle veritabanına bağlanıp
 > gerçekten çalıştırılan bir sorgunun sonucudur. Yazma denemeleri geri alınır.
-> Son çalıştırma: 26.10.2026 16:29:34 · PGlite
+> Son çalıştırma: 26.10.2026 21:48:43 · PGlite
 
 ## Özet matris
 ✅ izin verildi · ⛔ veritabanı reddetti
@@ -71,7 +71,7 @@ SELECT kullanici_adi, parola_hash FROM personel LIMIT 1
 - **giris_app:** ⛔ permission denied for table personel
 - **garson_app:** ⛔ permission denied for table personel
 - **kasiyer_app:** ⛔ permission denied for table personel
-- **yonetici_app:** `{"kullanici_adi":"yonetici","parola_hash":"$2a$06$Ic8.W/wRfzqqoiTCvJDtm.CPY5OUreLB..zWiiyDFovF8oyx/dOby"}`
+- **yonetici_app:** `{"kullanici_adi":"yonetici","parola_hash":"$2a$06$hGC4VEjTsWSHy2jUxli.o.gpB7qwPSoA52DAG06TitVH6acsfoMLW"}`
 
 ### Masa durumu
 ```sql

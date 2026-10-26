@@ -1,6 +1,6 @@
 # Sorgu performansı: index kanıtları
 
-> Bu dosya `npm run db:performans` ile otomatik üretilir. Son çalıştırma: 26.10.2026 16:26:52
+> Bu dosya `npm run db:performans` ile otomatik üretilir. Son çalıştırma: 26.10.2026 21:48:39
 > Ortam: PGlite (WebAssembly, tek iş parçacığı). Süreler gerçek PostgreSQL'den farklıdır; oranlar ve planlar göstergedir.
 
 ## Veri hacmi
@@ -20,12 +20,12 @@ düşürülüp ölçüm sonrası geri alındı (`DROP INDEX` + `ROLLBACK`).
 ## Özet
 | Sorgu | Index | Index'li (ms) | Index'siz (ms) | Kat |
 |---|---|---:|---:|---:|
-| Bir oyunun masadaki kopyaları (fn_musait_adet) | `ix_oturum_oyun_aktif_oyun`, `uq_oturum_oyun_aktif` | 0.103 | 17.882 | 173.6× |
-| Masanın açık oturumu | `uq_oturum_masa_acik` | 0.057 | 24.276 | 425.9× |
-| Bir hesabın siparişleri | `ix_siparis_oturum` | 0.108 | 71.718 | 664.1× |
-| Son 7 günün cirosu | `ix_odeme_zaman` | 5.158 | 56.582 | 11.0× |
-| Bekleme sırasındaki ilk masa | `ix_bekleme_sira`, `uq_bekleme_oturum_aktif`, `uq_bekleme_tek_hak` | 0.036 | 8.669 | 240.8× |
-| Müşterinin geçmiş ziyaretleri | `ix_oturum_kullanici` | 0.199 | 18.546 | 93.2× |
+| Bir oyunun masadaki kopyaları (fn_musait_adet) | `ix_oturum_oyun_aktif_oyun`, `uq_oturum_oyun_aktif` | 0.160 | 20.431 | 127.7× |
+| Masanın açık oturumu | `uq_oturum_masa_acik` | 0.050 | 18.747 | 374.9× |
+| Bir hesabın siparişleri | `ix_siparis_oturum` | 0.084 | 54.186 | 645.1× |
+| Son 7 günün cirosu | `ix_odeme_zaman` | 4.031 | 43.596 | 10.8× |
+| Bir oyunun sırasındaki ilk masa | `ix_bekleme_sira`, `uq_bekleme_oturum_aktif` | 0.037 | 6.617 | 178.8× |
+| Müşterinin geçmiş ziyaretleri | `ix_oturum_kullanici` | 0.121 | 15.670 | 129.5× |
 
 ## Ayrıntı
 ### Bir oyunun masadaki kopyaları (fn_musait_adet)
@@ -33,7 +33,7 @@ düşürülüp ölçüm sonrası geri alındı (`DROP INDEX` + `ROLLBACK`).
 SELECT count(*) FROM oturum_oyun WHERE oyun_id = 1 AND bitis IS NULL
 ```
 - **Neden önemli:** Her oyun listesinde her oyun için çalışır; geçmiş kayıtlar büyüdükçe tam tarama pahalılaşır. Kısmi index yalnızca aktif (bitis IS NULL) satırları içerir.
-- **Index'li plan:** Index Only Scan (ix_oturum_oyun_aktif_oyun)
+- **Index'li plan:** Index Scan (uq_oturum_oyun_aktif)
 - **Index'siz plan:** Seq Scan (oturum_oyun)
 
 ### Masanın açık oturumu
@@ -60,9 +60,9 @@ SELECT zaman::date, sum(tutar) FROM odeme WHERE zaman >= now() - interval '7 day
 - **Index'li plan:** Index Scan (ix_odeme_zaman)
 - **Index'siz plan:** Seq Scan (odeme)
 
-### Bekleme sırasındaki ilk masa
+### Bir oyunun sırasındaki ilk masa
 ```sql
-SELECT id FROM bekleme WHERE durum = 'BEKLIYOR' ORDER BY id LIMIT 1
+SELECT id FROM bekleme WHERE oyun_id = 1 AND durum = 'BEKLIYOR' ORDER BY id LIMIT 1
 ```
 - **Neden önemli:** Her oyun iadesinde çalışır (sp_sirayi_ilerlet). Geçmiş kayıtlar binlerce olsa da aktif sıra birkaç satırdır.
 - **Index'li plan:** Index Only Scan (ix_bekleme_sira)

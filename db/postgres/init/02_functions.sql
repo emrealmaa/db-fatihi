@@ -45,12 +45,11 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     FROM oyun o WHERE o.id = p_oyun_id;
 $$;
 
--- Bu kişi sayısıyla oynanabilecek müsait bir oyun var mı (seçim hakkı vermeden önce bakılır)
-CREATE FUNCTION fn_uygun_oyun_var(p_kisi int) RETURNS boolean
+-- Sıradaki masalar için ayrılmış (seçim hakkı verilmiş) kopya sayısı.
+-- Başka masaların alabileceği kopya = fn_musait_adet - fn_ayrilan_adet
+CREATE FUNCTION fn_ayrilan_adet(p_oyun_id int) RETURNS int
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-    SELECT EXISTS (SELECT 1 FROM oyun o
-                   WHERE o.aktif AND p_kisi BETWEEN o.min_oyuncu AND o.max_oyuncu
-                     AND fn_musait_adet(o.id) > 0);
+    SELECT count(*)::int FROM bekleme WHERE oyun_id = p_oyun_id AND durum = 'SECIM_HAKKI';
 $$;
 
 -- Hesap dökümü: kişi başı giriş ücreti + siparişler - indirim
@@ -122,18 +121,11 @@ DECLARE
     v_oyun  oyun%ROWTYPE;
     v_kisi  smallint;
     v_masa  smallint;
+    v_ayrilan int;
 BEGIN
     SELECT kisi_sayisi INTO v_kisi FROM oturum WHERE id = NEW.oturum_id AND kapanis IS NULL;
     IF NOT FOUND THEN
         RAISE EXCEPTION 'Açık oturum bulunamadı: %', NEW.oturum_id USING ERRCODE = 'check_violation';
-    END IF;
-
-    SELECT m.masa_no INTO v_masa
-      FROM bekleme b JOIN oturum t ON t.id = b.oturum_id JOIN masa m ON m.id = t.masa_id
-     WHERE b.durum = 'SECIM_HAKKI' AND b.oturum_id <> NEW.oturum_id;
-    IF FOUND THEN
-        RAISE EXCEPTION 'Sıra masa %''da: seçim hakkı onda. Bu masayı bekleme sırasına ekleyin', v_masa
-            USING ERRCODE = 'check_violation';
     END IF;
 
     SELECT * INTO v_oyun FROM oyun WHERE id = NEW.oyun_id FOR UPDATE;
@@ -145,6 +137,18 @@ BEGIN
     END IF;
     IF fn_musait_adet(NEW.oyun_id) < 1 THEN
         RAISE EXCEPTION '% için müsait kopya yok', v_oyun.ad USING ERRCODE = 'check_violation';
+    END IF;
+
+    -- Sıra atlanamaz: boş kopya, bu oyunu bekleyen başka bir masa için ayrılmışsa alınamaz
+    v_ayrilan := (SELECT count(*) FROM bekleme
+                  WHERE oyun_id = NEW.oyun_id AND durum = 'SECIM_HAKKI' AND oturum_id <> NEW.oturum_id);
+    IF fn_musait_adet(NEW.oyun_id) - v_ayrilan < 1 THEN
+        SELECT m.masa_no INTO v_masa
+          FROM bekleme b JOIN oturum t ON t.id = b.oturum_id JOIN masa m ON m.id = t.masa_id
+         WHERE b.oyun_id = NEW.oyun_id AND b.durum = 'SECIM_HAKKI' AND b.oturum_id <> NEW.oturum_id
+         ORDER BY b.id LIMIT 1;
+        RAISE EXCEPTION '% kopyası sıradaki masa % için ayrıldı. Bu masayı % sırasına ekleyin',
+            v_oyun.ad, v_masa, v_oyun.ad USING ERRCODE = 'check_violation';
     END IF;
     IF v_kisi NOT BETWEEN v_oyun.min_oyuncu AND v_oyun.max_oyuncu THEN
         RAISE EXCEPTION '% % - % oyuncu için uygun (masada % kişi var)',

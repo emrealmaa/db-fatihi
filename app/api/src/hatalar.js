@@ -23,7 +23,6 @@ const KISIT_MESAJLARI = {
     uq_oturum_masa_acik: 'Masa zaten dolu',
     uq_oturum_oyun_aktif: 'Masa zaten bir oyun oynuyor; önce oyunu iade edin',
     uq_bekleme_oturum_aktif: 'Masa zaten bekleme sırasında',
-    uq_bekleme_tek_hak: 'Seçim hakkı başka bir masada',
     ck_oturum_kisi: 'Kişi sayısı en az 1 olmalı',
     uq_masa_no: 'Bu masa numarası zaten var',
     ck_masa_kapasite: 'Masa kapasitesi 1-20 arasında olmalı',

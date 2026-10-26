@@ -233,13 +233,13 @@ fieldset.bilgi-kutu { display: flex; flex-direction: column; gap: .75rem; }
 .oyun-secici .satir input[type="search"] { flex: 1; min-width: 180px; }
 .oyun-listesi, .menu-listesi, .sira-listesi { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .4rem; }
 .oyun-listesi { max-height: 360px; overflow-y: auto; }
-.oyun-satir {
-    font: inherit; color: inherit; width: 100%; text-align: left; cursor: pointer;
-    display: grid; grid-template-columns: 1fr auto; gap: 0 1rem; padding: .6rem .8rem;
+.oyun-satir-kap {
+    display: flex; align-items: center; gap: .75rem; padding: .55rem .8rem;
     background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: 8px;
 }
-.oyun-satir:hover:not(:disabled) { border-color: var(--ana); }
-.oyun-satir:disabled { opacity: .5; cursor: not-allowed; }
+.oyun-satir { flex: 1; display: grid; grid-template-columns: 1fr auto; gap: 0 1rem; }
+.oyun-satir.pasif { opacity: .5; }
+.oyun-satir-kap .dugme { min-width: 6.5rem; }
 .oyun-ad { font-weight: 600; }
 .oyun-satir .soluk { grid-column: 1; font-size: .85rem; }
 .oyun-adet { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-weight: 600; color: var(--basari); font-size: .85rem; }
@@ -250,11 +250,15 @@ fieldset.bilgi-kutu { display: flex; flex-direction: column; gap: .75rem; }
 .menu-listesi .etiket { margin-left: .4rem; }
 .sepet { position: sticky; bottom: -1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: .75rem; padding: .75rem 0; background: var(--yuzey); border-top: 1px solid var(--cizgi); }
 
+.sira-grup + .sira-grup { margin-top: 1.25rem; }
+.sira-grup h2 { margin-top: 0; }
 .sira-listesi li { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 1rem; padding: .8rem 1rem; background: var(--yuzey); border-radius: var(--yaricap); box-shadow: var(--golge); border-left: 4px solid var(--bilgi); }
 .sira-listesi li.hak { border-left-color: var(--vurgu); background: var(--uyari-zemin); }
 .sira-no { font-size: 1.4rem; font-weight: 700; color: var(--soluk); min-width: 2ch; text-align: center; }
 .sira-bilgi { display: flex; flex-direction: column; }
-@media (max-width: 760px) { .sira-listesi li { grid-template-columns: auto 1fr; } }
+@media (max-width: 760px) { .sira-grup + .sira-grup { margin-top: 1.25rem; }
+.sira-grup h2 { margin-top: 0; }
+.sira-listesi li { grid-template-columns: auto 1fr; } }
 
 /* ------------------------------------------------------------ hesap */
 .hesap { display: flex; flex-direction: column; gap: 1rem; }

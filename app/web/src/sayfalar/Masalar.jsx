@@ -181,7 +181,9 @@ function MasaOyun({ masa, yenile }) {
     }
 
     const oyunBaslat = (o) => calistir(() => gonder(`/oturumlar/${masa.oturum_id}/oyun`, { oyunId: o.oyun_id }), `${o.ad} başladı`);
-    const oyunSec = (o) => calistir(() => gonder(`/bekleme/${masa.bekleme_id}/sec`, { oyunId: o.oyun_id }), `${o.ad} seçildi`);
+    const siraya = (o) => calistir(() => gonder(`/oturumlar/${masa.oturum_id}/bekleme`, { oyunId: o.oyun_id }), `${o.ad} sırasına eklendi`);
+    const oyunuAl = () => calistir(() => gonder(`/bekleme/${masa.bekleme_id}/sec`), `${masa.beklenen_oyun} masaya verildi`);
+    const siradanCik = () => calistir(() => sil(`/bekleme/${masa.bekleme_id}`), 'Sıradan çıkarıldı');
 
     return (
         <div className="masa-oyun-paneli">
@@ -202,34 +204,33 @@ function MasaOyun({ masa, yenile }) {
             )}
 
             {masa.bekleme_durumu === 'SECIM_HAKKI' && (
-                <>
-                    <div className="bilgi-kutu vurgulu">
-                        Sıra bu masada! Seçim için kalan süre: <strong className="geri-sayim">{kalanSure(masa.secim_bitis, simdi)}</strong>
+                <div className="bilgi-kutu vurgulu satir">
+                    <span>
+                        <strong>{masa.beklenen_oyun}</strong> bu masa için ayrıldı. Kalan süre:{' '}
+                        <strong className="geri-sayim">{kalanSure(masa.secim_bitis, simdi)}</strong>
+                    </span>
+                    <div className="satir">
+                        <button className="dugme dugme-hafif" disabled={bekliyor} onClick={siradanCik}>Vazgeç</button>
+                        <button className="dugme dugme-ana" disabled={bekliyor} onClick={oyunuAl}>Oyunu al</button>
                     </div>
-                    <OyunSecici kisiSayisi={masa.kisi_sayisi} sec={oyunSec} bekliyor={bekliyor} />
-                </>
+                </div>
             )}
 
             {masa.bekleme_durumu === 'BEKLIYOR' && (
                 <div className="bilgi-kutu satir">
-                    <span>Bekleme sırasında{benim ? `: ${benim.sira}. sıra` : ''}. Uygun bir oyun boşalınca seçim hakkı gelecek.</span>
-                    <button className="dugme dugme-hafif" disabled={bekliyor}
-                            onClick={() => calistir(() => sil(`/bekleme/${masa.bekleme_id}`), 'Sıradan çıkarıldı')}>
-                        Sıradan çık
-                    </button>
+                    <span>
+                        <strong>{masa.beklenen_oyun}</strong> sırasında{benim ? `: ${benim.oyun_sira}. sıra` : ''}.
+                        Bir kopya boşalınca bu masaya ayrılacak.
+                    </span>
+                    <button className="dugme dugme-hafif" disabled={bekliyor} onClick={siradanCik}>Sıradan çık</button>
                 </div>
             )}
 
-            {!masa.oynanan_oyun && !masa.bekleme_durumu && (
+            {!masa.oynanan_oyun && masa.bekleme_durumu !== 'SECIM_HAKKI' && (
                 <>
-                    <div className="satir arasi">
-                        <h3>Oyun başlat</h3>
-                        <button className="dugme dugme-hafif" disabled={bekliyor}
-                                onClick={() => calistir(() => gonder(`/oturumlar/${masa.oturum_id}/bekleme`), 'Bekleme sırasına eklendi')}>
-                            İstediği oyun dolu: sıraya ekle
-                        </button>
-                    </div>
-                    <OyunSecici kisiSayisi={masa.kisi_sayisi} sec={oyunBaslat} bekliyor={bekliyor} />
+                    <h3>{masa.bekleme_durumu ? 'Beklerken başka bir oyun başlat' : 'Oyun başlat'}</h3>
+                    <OyunSecici kisiSayisi={masa.kisi_sayisi} sec={oyunBaslat}
+                                siraya={masa.bekleme_durumu ? null : siraya} bekliyor={bekliyor} />
                 </>
             )}
         </div>

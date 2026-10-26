@@ -54,9 +54,9 @@ await vt.islem('admin', null, async (q) => {
              FROM oturum t WHERE t.kapanis IS NOT NULL`);
     // Gerçekte aktif sıra en yeni kayıtlardır: seed'deki aktif kaydı geçmişin arkasına taşı
     await q(`UPDATE bekleme SET durum = 'IPTAL', secim_hakki_zamani = NULL WHERE durum IN ('BEKLIYOR', 'SECIM_HAKKI')`);
-    await q(`INSERT INTO bekleme (oturum_id, durum, olusturma)
-             SELECT t.id, 'TAMAMLANDI', t.acilis FROM oturum t WHERE t.kapanis IS NOT NULL AND t.id % 4 = 0`);
-    await q(`INSERT INTO bekleme (oturum_id) SELECT id FROM oturum WHERE kapanis IS NULL ORDER BY id LIMIT 1`);
+    await q(`INSERT INTO bekleme (oturum_id, oyun_id, durum, olusturma)
+             SELECT t.id, 1 + t.id % 10, 'TAMAMLANDI', t.acilis FROM oturum t WHERE t.kapanis IS NOT NULL AND t.id % 4 = 0`);
+    await q(`INSERT INTO bekleme (oturum_id, oyun_id) SELECT id, 1 FROM oturum WHERE kapanis IS NULL ORDER BY id LIMIT 1`);
 
     await q('ALTER TABLE oturum ENABLE TRIGGER USER');
     await q('ALTER TABLE oturum_oyun ENABLE TRIGGER USER');
@@ -96,9 +96,9 @@ const OLCUMLER = [
         neden: 'Kasa ekranı ve ciro raporu; tarih aralığı index ile doğrudan bulunur.',
     },
     {
-        ad: 'Bekleme sırasındaki ilk masa',
-        index: ['ix_bekleme_sira', 'uq_bekleme_oturum_aktif', 'uq_bekleme_tek_hak'],
-        sql: "SELECT id FROM bekleme WHERE durum = 'BEKLIYOR' ORDER BY id LIMIT 1",
+        ad: 'Bir oyunun sırasındaki ilk masa',
+        index: ['ix_bekleme_sira', 'uq_bekleme_oturum_aktif'],
+        sql: "SELECT id FROM bekleme WHERE oyun_id = 1 AND durum = 'BEKLIYOR' ORDER BY id LIMIT 1",
         neden: 'Her oyun iadesinde çalışır (sp_sirayi_ilerlet). Geçmiş kayıtlar binlerce olsa da aktif sıra birkaç satırdır.',
     },
     {

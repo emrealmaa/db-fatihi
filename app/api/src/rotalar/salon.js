@@ -72,13 +72,13 @@ export function salonRotalari() {
     });
 
     r.post('/oturumlar/:oturumId/bekleme', async (req, res) => {
-        const [b] = await req.vt((q) => q('CALL sp_bekleme_ekle($1, NULL)', [tamsayi(req.params.oturumId, 'Oturum')]));
+        const [b] = await req.vt((q) => q('CALL sp_bekleme_ekle($1, $2, NULL)', [
+            tamsayi(req.params.oturumId, 'Oturum'), tamsayi(req.body.oyunId, 'Oyun')]));
         res.status(201).json({ beklemeId: b.p_bekleme_id });
     });
 
     r.post('/bekleme/:id/sec', async (req, res) => {
-        const [o] = await req.vt((q) => q('CALL sp_oyun_sec($1, $2, NULL)', [
-            tamsayi(req.params.id, 'Bekleme kaydı'), tamsayi(req.body.oyunId, 'Oyun')]));
+        const [o] = await req.vt((q) => q('CALL sp_oyun_sec($1, NULL)', [tamsayi(req.params.id, 'Bekleme kaydı')]));
         res.status(201).json({ oturumOyunId: o.p_oturum_oyun_id });
     });
 

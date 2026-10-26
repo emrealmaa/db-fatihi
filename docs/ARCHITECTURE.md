@@ -34,24 +34,25 @@ rolüne karşılık gelen veritabanı rolüyle bağlanır ve her transaction ba�
 
 Müsait adet saklanmaz, `fn_musait_adet` ile hesaplanır (tutarsızlık riski yok).
 
-## Seçim hakkı akışı
-1. Masa istediği oyun doluysa `sp_bekleme_ekle` ile kuyruğa girer (`BEKLIYOR`).
-2. Bir masa oyunu iade edince (`sp_oyun_bitir`), oyun başlatınca veya hesabı kapatınca `sp_sirayi_ilerlet`
-   çalışır: kişi sayısına uygun müsait oyun bulunan **ilk** bekleyen masaya `SECIM_HAKKI` verilir.
-   Aynı anda tek masa hakka sahiptir (kısmi UNIQUE index).
-3. Seçim hakkı başka masadayken hiçbir masa oyun başlatamaz (tetikleyici) — sıra atlanamaz.
-4. Hak sahibi masa `sp_oyun_sec` ile seçer; kayıt `TAMAMLANDI` olur.
+## Seçim hakkı akışı (her oyunun kendi sırası)
+1. Masa istediği oyunun alınabilir kopyası yoksa `sp_bekleme_ekle(oturum, oyun)` ile **o oyunun** sırasına girer (`BEKLIYOR`).
+   Müsait oyun için ve kişi sayısına uymayan oyun için sıraya girilemez.
+2. Bir kopya boşalınca (`sp_oyun_bitir`, `sp_oturum_kapat`, sıradan çıkma) `sp_sirayi_ilerlet` çalışır: her oyun için,
+   ayrılmamış boş kopya kaldıkça o oyunun sırasındaki ilk masaya `SECIM_HAKKI` verilir — kopya o masaya **ayrılır**.
+3. Ayrılmış kopyayı başka masa alamaz (tetikleyici: müsait − ayrılan ≥ 1) — sıra atlanamaz. Diğer oyunlar serbesttir;
+   bu sayede bir masanın beklemesi kafeyi kilitlemez.
+4. Hak sahibi masa `sp_oyun_sec` ile ayrılan oyunu alır (`TAMAMLANDI`); başka bir oyun başlatırsa kaydı `IPTAL` olur ve kopya sıradakine geçer.
 5. `sp_secim_suresi_doldur` (API zamanlayıcısı çağırır) süreyi (`ayar.secim_suresi_dk`, 5 dk) aşanı
-   `ATLANDI` yapıp sıranın sonuna ekler.
+   `ATLANDI` yapıp o oyunun sırasının sonuna ekler.
 
 ## Kısıtlar
 - PK/FK: tüm tablolar. UNIQUE: müşteri e-posta/telefon, personel kullanıcı adı/telefon, masa_no, oyun/ürün/kategori adı, ödeme başına tek oturum.
 - CHECK: telefon/e-posta/kullanıcı adı formatı, personel rolü, ödeme türü, adet/stok/fiyat ≥ 0, oyuncu aralığı, kapanış ≥ açılış, bekleme durumu, ayar tek satır.
-- Kısmi UNIQUE index: masada tek açık oturum, oturumda tek aktif oyun, kuyrukta tek aktif kayıt, tek seçim hakkı.
-- Tetikleyici: kişi ≤ masa kapasitesi; oyun başlarken oturum açık, sıra atlanmıyor, oyun aktif, müsait kopya var ve oyuncu sayısı uygun (satır kilidiyle yarış koşulu önlenir); kapanmış oturuma sipariş eklenemez.
+- Kısmi UNIQUE index: masada tek açık oturum, oturumda tek aktif oyun, kuyrukta tek aktif kayıt.
+- Tetikleyici: kişi ≤ masa kapasitesi; oyun başlarken oturum açık, oyun aktif, müsait kopya var, kopya sıradaki masaya ayrılmamış ve oyuncu sayısı uygun (satır kilidiyle yarış koşulu önlenir); kapanmış oturuma sipariş eklenemez.
 
 ## Fonksiyonlar, prosedürler, view'lar
-- Fonksiyon (10): `fn_aktif_personel`, `fn_musait_adet`, `fn_uygun_oyun_var`, `fn_hesap_detay`, `fn_hesap_hesapla`, `fn_musteri_bul`, `fn_personel_giris`, `fn_telefon_maskele`, `fn_email_maskele`, `fn_ad_maskele`
+- Fonksiyon (10): `fn_aktif_personel`, `fn_musait_adet`, `fn_ayrilan_adet`, `fn_hesap_detay`, `fn_hesap_hesapla`, `fn_musteri_bul`, `fn_personel_giris`, `fn_telefon_maskele`, `fn_email_maskele`, `fn_ad_maskele`
 - Prosedür (15): `sp_musteri_kaydet`, `sp_oturum_ac`, `sp_sirayi_ilerlet`, `sp_bekleme_ekle`, `sp_bekleme_iptal`, `sp_oyun_baslat`, `sp_oyun_sec`, `sp_oyun_bitir`, `sp_secim_suresi_doldur`, `sp_siparis_ver`, `sp_siparis_iptal`, `sp_oturum_kapat`, `sp_personel_ekle`, `sp_personel_parola`, `sp_stok_ekle`
 - View (13): `v_musait_oyunlar`, `v_masa_durumu`, `v_bekleme_sirasi`, `v_musteri_maskeli`, `v_menu`, `v_oturum_siparisleri`, `v_acik_hesaplar`, `v_gunluk_ciro`, `v_oyun_populerlik`, `v_personel_maskeli`, `v_personel_performans`, `v_kritik_stok`, `v_urun_satis`
 

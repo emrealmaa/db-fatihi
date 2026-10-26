@@ -36,40 +36,56 @@ BEGIN
 END $$;
 
 -- ------------------------------------------------------------ bekleme sırası
--- Sıradaki uygun masaya seçim hakkı ver. Aynı anda tek masa hakka sahiptir; hak yalnızca
--- masanın kişi sayısına uygun müsait bir oyun varsa verilir (yoksa sıradaki uygun masaya geçilir).
+-- Bekleyeni olan her oyun için: ayrılmamış boş kopya kaldıkça o oyunun sırasındaki ilk masaya
+-- seçim hakkı ver (kopya o masaya ayrılır). Başka oyunlar etkilenmez.
 CREATE PROCEDURE sp_sirayi_ilerlet()
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_id bigint;
+DECLARE r record;
 BEGIN
-    IF EXISTS (SELECT 1 FROM bekleme WHERE durum = 'SECIM_HAKKI') THEN
-        RETURN;
-    END IF;
-    SELECT b.id INTO v_id
-      FROM bekleme b JOIN oturum t ON t.id = b.oturum_id
-     WHERE b.durum = 'BEKLIYOR' AND fn_uygun_oyun_var(t.kisi_sayisi)
-     ORDER BY b.id LIMIT 1
-       FOR UPDATE OF b SKIP LOCKED;
-    IF v_id IS NOT NULL THEN
-        UPDATE bekleme SET durum = 'SECIM_HAKKI', secim_hakki_zamani = clock_timestamp() WHERE id = v_id;
-    END IF;
+    FOR r IN SELECT DISTINCT b.oyun_id FROM bekleme b JOIN oyun o ON o.id = b.oyun_id
+              WHERE b.durum = 'BEKLIYOR' AND o.aktif ORDER BY b.oyun_id
+    LOOP
+        PERFORM 1 FROM oyun WHERE id = r.oyun_id FOR UPDATE;   -- aynı oyunun kopyalarını eşzamanlı dağıtma
+        WHILE fn_musait_adet(r.oyun_id) - fn_ayrilan_adet(r.oyun_id) > 0 LOOP
+            UPDATE bekleme SET durum = 'SECIM_HAKKI', secim_hakki_zamani = clock_timestamp()
+             WHERE id = (SELECT id FROM bekleme WHERE oyun_id = r.oyun_id AND durum = 'BEKLIYOR'
+                         ORDER BY id LIMIT 1);
+            EXIT WHEN NOT FOUND;
+        END LOOP;
+    END LOOP;
 END $$;
 
--- İstediği oyun dolu olan masa sıraya girer
-CREATE PROCEDURE sp_bekleme_ekle(p_oturum_id bigint, INOUT p_bekleme_id bigint DEFAULT NULL)
+-- İstediği oyunun boş kopyası olmayan masa o oyunun sırasına girer
+CREATE PROCEDURE sp_bekleme_ekle(p_oturum_id bigint, p_oyun_id int, INOUT p_bekleme_id bigint DEFAULT NULL)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+    v_kisi smallint;
+    v_oyun oyun%ROWTYPE;
 BEGIN
     PERFORM fn_aktif_personel();
-    IF NOT EXISTS (SELECT 1 FROM oturum WHERE id = p_oturum_id AND kapanis IS NULL) THEN
+    SELECT kisi_sayisi INTO v_kisi FROM oturum WHERE id = p_oturum_id AND kapanis IS NULL;
+    IF NOT FOUND THEN
         RAISE EXCEPTION 'Açık oturum bulunamadı: %', p_oturum_id USING ERRCODE = 'no_data_found';
     END IF;
     IF EXISTS (SELECT 1 FROM oturum_oyun WHERE oturum_id = p_oturum_id AND bitis IS NULL) THEN
         RAISE EXCEPTION 'Masa zaten oyun oynuyor; önce oyunu iade edin' USING ERRCODE = 'check_violation';
     END IF;
-    INSERT INTO bekleme (oturum_id) VALUES (p_oturum_id) RETURNING id INTO p_bekleme_id;
+    SELECT * INTO v_oyun FROM oyun WHERE id = p_oyun_id AND aktif;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Oyun bulunamadı veya aktif değil: %', p_oyun_id USING ERRCODE = 'no_data_found';
+    END IF;
+    IF v_kisi NOT BETWEEN v_oyun.min_oyuncu AND v_oyun.max_oyuncu THEN
+        RAISE EXCEPTION '% % - % oyuncu için uygun (masada % kişi var)',
+            v_oyun.ad, v_oyun.min_oyuncu, v_oyun.max_oyuncu, v_kisi USING ERRCODE = 'check_violation';
+    END IF;
+    IF fn_musait_adet(p_oyun_id) - fn_ayrilan_adet(p_oyun_id) > 0 THEN
+        RAISE EXCEPTION '% şu an müsait; sıraya gerek yok, doğrudan başlatın', v_oyun.ad
+            USING ERRCODE = 'check_violation';
+    END IF;
+    INSERT INTO bekleme (oturum_id, oyun_id) VALUES (p_oturum_id, p_oyun_id) RETURNING id INTO p_bekleme_id;
 END $$;
 
--- Masa sıradan çıkar
+-- Masa sıradan çıkar (ayrılmış kopya varsa sıradakine geçer)
 CREATE PROCEDURE sp_bekleme_iptal(p_bekleme_id bigint)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -83,31 +99,33 @@ BEGIN
 END $$;
 
 -- ------------------------------------------------------------ oyun
--- Oyun başlat (müsaitse ve sıra atlanmıyorsa; kontrol tetikleyicide). Kuyruktaki kaydı tamamlar.
+-- Oyun başlat (müsaitse ve ayrılmış kopyaya dokunmuyorsa; kontrol tetikleyicide).
+-- Masanın sıra kaydı kapanır: beklediği oyunu aldıysa TAMAMLANDI, başka oyuna geçtiyse IPTAL.
 CREATE PROCEDURE sp_oyun_baslat(p_oturum_id bigint, p_oyun_id int, INOUT p_oturum_oyun_id bigint DEFAULT NULL)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
     PERFORM fn_aktif_personel();
     INSERT INTO oturum_oyun (oturum_id, oyun_id) VALUES (p_oturum_id, p_oyun_id)
     RETURNING id INTO p_oturum_oyun_id;
-    UPDATE bekleme SET durum = 'TAMAMLANDI'
+    UPDATE bekleme SET durum = CASE WHEN oyun_id = p_oyun_id THEN 'TAMAMLANDI' ELSE 'IPTAL' END,
+                       secim_hakki_zamani = CASE WHEN oyun_id = p_oyun_id THEN secim_hakki_zamani END
      WHERE oturum_id = p_oturum_id AND durum IN ('BEKLIYOR','SECIM_HAKKI');
-    CALL sp_sirayi_ilerlet();   -- başka uygun oyun varsa sıradaki masaya hak geçer
+    CALL sp_sirayi_ilerlet();   -- bıraktığı ayrılmış kopya varsa sıradakine geçer
 END $$;
 
--- Seçim hakkı olan masa müsait oyunlar arasından seçer
-CREATE PROCEDURE sp_oyun_sec(p_bekleme_id bigint, p_oyun_id int, INOUT p_oturum_oyun_id bigint DEFAULT NULL)
+-- Seçim hakkı olan masa kendisi için ayrılan oyunu alır
+CREATE PROCEDURE sp_oyun_sec(p_bekleme_id bigint, INOUT p_oturum_oyun_id bigint DEFAULT NULL)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
-DECLARE v_oturum bigint;
+DECLARE v_bekleme bekleme%ROWTYPE;
 BEGIN
-    SELECT oturum_id INTO v_oturum FROM bekleme WHERE id = p_bekleme_id AND durum = 'SECIM_HAKKI' FOR UPDATE;
-    IF v_oturum IS NULL THEN
+    SELECT * INTO v_bekleme FROM bekleme WHERE id = p_bekleme_id AND durum = 'SECIM_HAKKI' FOR UPDATE;
+    IF NOT FOUND THEN
         RAISE EXCEPTION 'Bu kayıt için seçim hakkı yok (bekleme: %)', p_bekleme_id USING ERRCODE = 'check_violation';
     END IF;
-    CALL sp_oyun_baslat(v_oturum, p_oyun_id, p_oturum_oyun_id);
+    CALL sp_oyun_baslat(v_bekleme.oturum_id, v_bekleme.oyun_id, p_oturum_oyun_id);
 END $$;
 
--- Oyunu iade et; sıradaki uygun masaya seçim hakkı gider
+-- Oyunu iade et; o oyunu bekleyen sıradaki masaya seçim hakkı gider
 CREATE PROCEDURE sp_oyun_bitir(p_oturum_oyun_id bigint)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
@@ -126,12 +144,12 @@ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE r record;
 BEGIN
     p_dakika := COALESCE(p_dakika, (SELECT secim_suresi_dk FROM ayar));
-    FOR r IN SELECT id, oturum_id FROM bekleme
+    FOR r IN SELECT id, oturum_id, oyun_id FROM bekleme
               WHERE durum = 'SECIM_HAKKI' AND secim_hakki_zamani < clock_timestamp() - make_interval(mins => p_dakika)
               FOR UPDATE SKIP LOCKED
     LOOP
         UPDATE bekleme SET durum = 'ATLANDI', secim_hakki_zamani = NULL WHERE id = r.id;
-        INSERT INTO bekleme (oturum_id) VALUES (r.oturum_id);
+        INSERT INTO bekleme (oturum_id, oyun_id) VALUES (r.oturum_id, r.oyun_id);
     END LOOP;
     CALL sp_sirayi_ilerlet();
 END $$;
