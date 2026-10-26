@@ -31,7 +31,8 @@ export class ApiHatasi extends Error {
     }
 }
 
-export async function api(yontem, yol, govde) {
+// personel: yönetici başka bir personel adına işlem yapıyorsa o personelin id'si (X-Personel)
+export async function api(yontem, yol, govde, { personel } = {}) {
     let res;
     try {
         res = await fetch(`/api${yol}`, {
@@ -39,6 +40,7 @@ export async function api(yontem, yol, govde) {
             headers: {
                 ...(govde !== undefined ? { 'Content-Type': 'application/json' } : {}),
                 ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(personel ? { 'X-Personel': String(personel) } : {}),
             },
             body: govde !== undefined ? JSON.stringify(govde) : undefined,
         });
@@ -59,3 +61,12 @@ export const al = (yol) => api('GET', yol);
 export const gonder = (yol, govde = {}) => api('POST', yol, govde);
 export const guncelle = (yol, govde) => api('PATCH', yol, govde);
 export const sil = (yol) => api('DELETE', yol);
+
+// Belirli bir personel adına istek yapan istemci (simülasyon garsonları)
+export function adina(personel) {
+    return {
+        al: (yol) => api('GET', yol, undefined, { personel }),
+        gonder: (yol, govde = {}) => api('POST', yol, govde, { personel }),
+        sil: (yol) => api('DELETE', yol, undefined, { personel }),
+    };
+}

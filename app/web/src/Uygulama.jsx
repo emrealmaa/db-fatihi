@@ -9,6 +9,7 @@ import Bekleme from './sayfalar/Bekleme.jsx';
 import Kasa from './sayfalar/Kasa.jsx';
 import Raporlar from './sayfalar/Raporlar.jsx';
 import Yonetim from './sayfalar/Yonetim.jsx';
+import Simulasyon from './sayfalar/Simulasyon.jsx';
 
 const SAYFALAR = [
     { yol: 'masalar', ad: 'Masalar', rol: 'GARSON', bilesen: Masalar },
@@ -17,6 +18,7 @@ const SAYFALAR = [
     { yol: 'kasa', ad: 'Kasa', rol: 'KASIYER', bilesen: Kasa },
     { yol: 'raporlar', ad: 'Raporlar', rol: 'YONETICI', bilesen: Raporlar },
     { yol: 'yonetim', ad: 'Yönetim', rol: 'YONETICI', bilesen: Yonetim },
+    { yol: 'simulasyon', ad: 'Simülasyon', rol: 'YONETICI', bilesen: Simulasyon, tamEkran: true },
 ];
 
 function useHash() {
@@ -62,7 +64,7 @@ export default function Uygulama() {
                     <button className="dugme dugme-hafif" onClick={cikis}>Çıkış</button>
                 </div>
             </header>
-            <main className="icerik">
+            <main className={sayfa.tamEkran ? 'icerik-tam' : 'icerik'}>
                 <Sayfa parametreler={parametreler} />
             </main>
         </div>

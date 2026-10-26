@@ -1,0 +1,737 @@
+// Simülasyon motoru: müşteri grupları ve garsonlar için durum makineleri.
+// Her kritik adım gerçek API çağrısıdır (masa aç, oyun başlat, sıraya gir, sipariş, ödeme);
+// kurallar (kapasite, sıra, stok) veritabanında uygulanır, motor yalnızca sonuca göre davranır.
+// Garson işlemleri o personel adına yapılır (X-Personel), böylece raporlar gerçek kişiye yazılır.
+//
+// Zaman: oyun saati dakika cinsinden; 1x hızda 1 gerçek saniye = 1 oyun dakikası.
+import { adina, al } from '../api.js';
+import { KAPI, KATLAR, MERDIVEN, oturmaYerleri, yolBul, yurunebilir } from './harita.js';
+import { karakterPaleti, OYUN_RENK } from './cizim.js';
+
+const ADLAR = ['Ayşe', 'Mehmet', 'Zeynep', 'Can', 'Elif', 'Burak', 'Deniz', 'Ece', 'Emre', 'Selin', 'Mert', 'Defne', 'Kerem', 'İrem', 'Onur', 'Ceren', 'Baran', 'Ada', 'Arda', 'Nil'];
+const SOYADLAR = ['Yılmaz', 'Kaya', 'Demir', 'Şahin', 'Çelik', 'Aydın', 'Öztürk', 'Arslan', 'Doğan', 'Kılıç', 'Koç', 'Kurt', 'Polat', 'Erdem', 'Tekin'];
+const OYUN_BALONLARI = ['Çok eğlenceli!', 'Bu tur benim!', 'Zar at!', 'Hadi bir tur daha!', 'Strateji zamanı', 'Kazanıyorum!', 'Hile yok ama!'];
+const KAT_TERCIHI = { 1: ['Kart', 'Aile', 'Parti'], 2: ['Strateji', 'Kooperatif'], 3: ['Parti', 'Kooperatif', 'Strateji'] };
+
+const rastgele = (a, b) => a + Math.random() * (b - a);
+const tamRastgele = (a, b) => Math.floor(rastgele(a, b + 1));
+const sec = (dizi) => dizi[Math.floor(Math.random() * dizi.length)];
+function agirlikliSec(dizi, agirlik) {
+    const t = dizi.reduce((s, x) => s + agirlik(x), 0);
+    let r = Math.random() * t;
+    for (const x of dizi) { r -= agirlik(x); if (r <= 0) return x; }
+    return dizi[dizi.length - 1];
+}
+
+let birimSayac = 0;
+function yeniBirey(tur, kat, gx, gy, tohum = ++birimSayac) {
+    return { id: ++birimSayac, tur, kat, gx, gy, yol: [], hiz: tur === 'garson' ? 2.6 : 2, palet: karakterPaleti(tohum, tur),
+        kare: 0, animT: 0, oturuyor: false, baloncuk: null, balonBitis: 0 };
+}
+
+export const DURUM_METNI = {
+    GELIYOR: 'Geliyor', MASA_BEKLIYOR: 'Masa bekliyor', MASAYA_GIDIYOR: 'Masaya yürüyor', MASA_ACILIYOR: 'Oturuyor',
+    OYUN_SECIYOR: 'Oyun seçiyor', OYNUYOR: 'Oynuyor', SIRADA: 'Oyun sırasında', HESAP: 'Kasaya gidiyor',
+    ODUYOR: 'Ödüyor', CIKIYOR: 'Çıkıyor',
+};
+
+export class Simulasyon {
+    constructor() {
+        this.hiz = 1;
+        this.calisiyor = true;
+        this.dakika = 9 * 60;                 // oyun saati
+        this.zaman = 0;                       // gerçek saniye (baloncuklar, eşitleme)
+        this.gruplar = [];
+        this.garsonlar = [];
+        this.masalar = [];
+        this.yerlesmeyen = [];
+        this.gorevler = [];
+        this.kayitlar = [];
+        this.oyunlar = [];
+        this.menu = [];
+        this.populerlik = 60;
+        this.ciro = { bugun: 0, nakit: 0, kart: 0, acik: 0 };
+        this.dbSiparis = {};
+        this.sonrakiGelis = this.dakika + 1;
+        this.musteriHavuzu = [];
+        this.beklemeYerleri = KATLAR[1].bekleme.map((y) => ({ ...y, birey: null }));
+        this.esitlemeSayac = 0;
+        this.zamanlayicilar = { masa: 0, oyun: 0, ciro: 0, menu: 0 };
+        this.hazir = false;
+    }
+
+    // ------------------------------------------------------------------ kurulum
+    async baslat() {
+        const [personel, masalar, oyunlar, menu] = await Promise.all([
+            al('/yonetim/personel'), al('/masalar'), al('/oyunlar'), al('/menu')]);
+        this.oyunlar = oyunlar;
+        this.menu = menu;
+
+        const aktif = personel.filter((p) => p.aktif);
+        const garsonlar = aktif.filter((p) => p.rol === 'GARSON');
+        this.kasiyerPersonel = aktif.find((p) => p.rol === 'KASIYER') || aktif.find((p) => p.rol === 'YONETICI');
+        const kasiyerYeri = KATLAR[1].kasiyer;
+        this.kasiyer = yeniBirey('kasiyer', 1, kasiyerYeri.gx, kasiyerYeri.gy, 7);
+
+        // Masaları kat yuvalarına yerleştir (masa_no sırasıyla)
+        for (const kat of [1, 2, 3]) {
+            const katMasalari = masalar.filter((m) => m.kat === kat).sort((a, b) => a.masa_no - b.masa_no);
+            katMasalari.forEach((db, i) => {
+                const yuva = KATLAR[kat].masalar[i];
+                if (!yuva) { this.yerlesmeyen.push(db.masa_no); return; }
+                const yerler = oturmaYerleri(yuva).filter((y) => yurunebilir(kat, y.gx, y.gy));
+                const kullanilan = yerler.slice(0, db.kapasite);
+                this.masalar.push({
+                    masaId: db.masa_id, masaNo: db.masa_no, kat, kapasite: db.kapasite, yuva, db,
+                    yerler: kullanilan, sandalyeler: kullanilan,
+                    servisYeri: yerler[db.kapasite] || kullanilan[0] || { gx: yuva.gx - 1, gy: yuva.gy },
+                    grup: null, kirli: false,
+                });
+            });
+        }
+        if (this.yerlesmeyen.length) this.kaydet(`Yerleşim planında yer olmayan masalar: ${this.yerlesmeyen.join(', ')}`, 'uyari');
+
+        // Garsonlar: gerçek personel; istatistikler kimliğe göre sabit
+        const katlar = [...new Set(this.masalar.map((m) => m.kat))];
+        this.garsonlar = garsonlar.map((p, i) => {
+            const r = (n) => Math.abs(Math.sin(p.id * 7919 + n * 104729)) % 1;
+            const kat = katlar[i % katlar.length] || 1;
+            const ev = KATLAR[kat].bar;
+            const b = yeniBirey('garson', kat, ev.gx, ev.gy, p.id * 31);
+            const stat = { hiz: 2 + r(1) * 1.5, siparis: 1 + r(2) * 2, yetenek: 1 + Math.floor(r(3) * 5) };
+            b.hiz = stat.hiz;
+            return { personel: p, ad: `${p.ad} ${p.soyad[0]}.`, birey: b, durum: 'BOSTA', gorev: null, stat, ev: { kat, ...ev }, tamamlanan: 0, bitis: 0 };
+        });
+        if (!this.garsonlar.length) this.kaydet('Aktif garson yok: siparişler alınamayacak. Yönetim > Personel\'den garson ekleyin.', 'uyari');
+
+        this.masaGuncelle(masalar, ++this.esitlemeSayac);
+        this.kaydet(`Karavana açıldı · ${this.masalar.length} masa, ${this.garsonlar.length} garson`, 'bilgi');
+        this.hazir = true;
+    }
+
+    // ------------------------------------------------------------------ döngü
+    tick(dtSn) {
+        if (!this.hazir) return;
+        dtSn = Math.min(dtSn, 0.25);
+        this.zaman += dtSn;
+        this.esitle(dtSn);
+        if (!this.calisiyor) return;
+        const dk = dtSn * this.hiz;
+        this.dakika += dk;
+
+        for (const g of this.gruplar) for (const b of g.uyeler) this.hareket(b, dtSn);
+        for (const w of this.garsonlar) this.hareket(w.birey, dtSn);
+
+        if (this.dakika >= this.sonrakiGelis) this.gelisPlanla();
+        for (const g of [...this.gruplar]) this.grupAdim(g, dk);
+        for (const w of this.garsonlar) this.garsonAdim(w);
+    }
+
+    // Veritabanıyla eşitleme (gerçek zamanlı aralıklar; hızdan bağımsız)
+    esitle(dtSn) {
+        const z = this.zamanlayicilar;
+        for (const k of Object.keys(z)) z[k] -= dtSn;
+        if (z.masa <= 0) {
+            z.masa = 2;
+            const no = ++this.esitlemeSayac;
+            al('/masalar').then((m) => this.masaGuncelle(m, no)).catch((e) => this.kaydet(e.message, 'uyari'));
+        }
+        if (z.oyun <= 0) { z.oyun = 3; al('/oyunlar').then((o) => { this.oyunlar = o; }).catch(() => {}); }
+        if (z.menu <= 0) { z.menu = 8; al('/menu').then((m) => { this.menu = m; }).catch(() => {}); }
+        if (z.ciro <= 0) {
+            z.ciro = 5;
+            Promise.all([al('/raporlar/ciro'), al('/hesaplar'), al('/raporlar/personel-performans')]).then(([c, h, p]) => {
+                const d = new Date();
+                const bugun = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                const g = c.find((x) => x.gun === bugun);
+                this.ciro = { bugun: g?.ciro || 0, nakit: g?.nakit || 0, kart: g?.kart || 0, acik: h.reduce((t, x) => t + x.toplam, 0) };
+                this.dbSiparis = Object.fromEntries(p.map((x) => [x.personel_id, x.siparis_sayisi]));
+            }).catch(() => {});
+        }
+    }
+
+    masaGuncelle(satirlar, no) {
+        for (const s of satirlar) {
+            const m = this.masalar.find((x) => x.masaId === s.masa_id);
+            if (!m) continue;
+            m.db = s;
+            const g = m.grup;
+            // Bu eşitleme, grubun son işleminden önce başladıysa eski veridir: atla
+            if (g && (g.mesgul || no <= g.sonIslemEsitleme)) continue;
+            if (g && g.oturumId && ['OYUN_SECIYOR', 'OYNUYOR', 'SIRADA'].includes(g.durum)) {
+                if (s.oturum_id !== g.oturumId) {                      // hesap dışarıdan kapatıldı
+                    this.kaydet(`Masa ${m.masaNo}: hesap personel tarafından kapatıldı`, 'bilgi');
+                    this.ayril(g, { odendi: true });
+                    continue;
+                }
+                if (s.oturum_oyun_id && g.oturumOyunId !== s.oturum_oyun_id) {   // oyun dışarıdan başlatıldı
+                    g.oturumOyunId = s.oturum_oyun_id;
+                    g.oyun = this.oyunBilgisi(s.oyun_id, s.oynanan_oyun);
+                    g.durum = 'OYNUYOR';
+                    g.oyunBitis = this.dakika + rastgele(20, 50);
+                }
+                if (!s.oturum_oyun_id && g.durum === 'OYNUYOR') {            // oyun dışarıdan iade edildi
+                    g.oturumOyunId = null; g.oyun = null; g.durum = 'OYUN_SECIYOR';
+                }
+                if (g.durum === 'SIRADA') g.hakVar = s.bekleme_durumu === 'SECIM_HAKKI';
+            }
+            // Personelin arayüzden açtığı masa: simülasyon devralır
+            if (!m.grup && s.durum === 'DOLU' && s.oturum_id) this.devral(m, s);
+        }
+    }
+
+    devral(m, s) {
+        const g = this.grupOlustur(s.kisi_sayisi, 1, m.yerler[0]);
+        g.masa = m; m.grup = g; m.kirli = false;
+        g.oturumId = s.oturum_id;
+        g.oturma = this.dakika;
+        g.karsilayan = this.garsonlar.length ? sec(this.garsonlar) : null;
+        g.uyeler.forEach((b, i) => {
+            const y = m.yerler[i] || m.yerler[0];
+            Object.assign(b, { kat: m.kat, gx: y.gx, gy: y.gy, oturuyor: true, yol: [] });
+        });
+        if (s.oturum_oyun_id) {
+            g.durum = 'OYNUYOR'; g.oturumOyunId = s.oturum_oyun_id;
+            g.oyun = this.oyunBilgisi(s.oyun_id, s.oynanan_oyun);
+            g.oyunBitis = this.dakika + rastgele(15, 50);
+        } else if (s.bekleme_id) {
+            g.durum = 'SIRADA'; g.beklemeId = s.bekleme_id; g.beklemeBas = this.dakika;
+            g.bekledigiOyun = this.oyunBilgisi(s.beklenen_oyun_id, s.beklenen_oyun);
+            g.hakVar = s.bekleme_durumu === 'SECIM_HAKKI';
+        } else {
+            g.durum = 'OYUN_SECIYOR';
+        }
+        g.sonrakiSiparis = this.dakika + rastgele(2, 8);
+        this.gruplar.push(g);
+    }
+
+    // ------------------------------------------------------------------ hareket
+    git(b, hedef) {
+        const yol = [];
+        let kat = b.kat;
+        let bas = { gx: Math.round(b.gx), gy: Math.round(b.gy) };
+        if (kat !== hedef.kat) {
+            yol.push(...yolBul(kat, bas, MERDIVEN), { katDegis: hedef.kat });
+            kat = hedef.kat; bas = MERDIVEN;
+        }
+        yol.push(...yolBul(kat, bas, hedef));
+        b.yol = yol;
+        b.oturuyor = false;
+    }
+
+    hareket(b, dtSn) {
+        if (!b.yol.length) { b.kare = 0; return; }
+        const h = b.yol[0];
+        if (h.katDegis) { b.kat = h.katDegis; b.yol.shift(); return; }
+        const dx = h.gx - b.gx, dy = h.gy - b.gy, d = Math.hypot(dx, dy);
+        const adim = b.hiz * dtSn * this.hiz;
+        if (d <= adim) { b.gx = h.gx; b.gy = h.gy; b.yol.shift(); }
+        else { b.gx += (dx / d) * adim; b.gy += (dy / d) * adim; }
+        b.animT += dtSn * this.hiz;
+        b.kare = Math.floor(b.animT * 6) % 2;
+    }
+
+    vardi = (b) => b.yol.length === 0;
+    hepsiVardi = (g) => g.uyeler.every(this.vardi);
+
+    baloncuk(b, metin, sure = 3.5) {
+        b.baloncuk = metin;
+        b.balonBitis = this.zaman + sure;
+    }
+
+    // ------------------------------------------------------------------ müşteri grupları
+    grupOlustur(kisi, kat, yer) {
+        const eski = this.musteriHavuzu.length > 5 && Math.random() < 0.3;
+        const musteri = eski ? sec(this.musteriHavuzu) : {
+            ad: sec(ADLAR), soyad: sec(SOYADLAR),
+            telefon: `053${String(Math.floor(Math.random() * 1e8)).padStart(8, '0')}`,
+            ogrenci: Math.random() < 0.3,
+        };
+        if (!eski) this.musteriHavuzu.push(musteri);
+        const uyeler = Array.from({ length: kisi }, () => yeniBirey('musteri', kat, yer.gx, yer.gy));
+        return {
+            id: ++birimSayac, kisi, uyeler, musteri, durum: 'GELIYOR', masa: null, oturumId: null, oturumOyunId: null,
+            beklemeId: null, oyun: null, bekledigiOyun: null, oyunBitis: 0, memnuniyet: 70, gelis: this.dakika,
+            masaBeklemeBas: null, sonrakiSiparis: 0, siparis: null, siparisSayisi: 0, oyunSayisi: 0, mesgul: false,
+            sonIslemEsitleme: 0, karsilayan: null, garson: null, hakVar: false, secZamani: null, sonrakiDeneme: 0,
+        };
+    }
+
+    gelisPlanla() {
+        const p = Math.max(this.populerlik, 10);
+        this.sonrakiGelis = this.dakika + rastgele(3, 8) * (80 / (p + 20));
+        // Bekleme alanı doluyken kapıda yığılma olmasın
+        const bekleyen = this.gruplar.filter((g) => g.durum === 'MASA_BEKLIYOR').reduce((t, g) => t + g.kisi, 0);
+        if (this.gruplar.length >= this.masalar.length + 3 || bekleyen >= 8) return;
+        const kisi = agirlikliSec([1, 2, 3, 4, 5, 6, 8, 10], (k) => ({ 1: 1, 2: 5, 3: 4, 4: 5, 5: 2, 6: 2, 8: 0.7, 10: 0.3 }[k]));
+        const g = this.grupOlustur(kisi, 1, KAPI);
+        this.gruplar.push(g);
+        g.uyeler.forEach((b, i) => { b.gx = KAPI.gx; b.gy = KAPI.gy + (i % 2) * 0.3; b.yol = [{ gx: 1, gy: KAPI.gy }]; });
+        this.kaydet(`${kisi} kişilik grup geldi (${g.musteri.ad} ${g.musteri.soyad})`, 'bilgi');
+    }
+
+    masaAyir(g) {
+        const tercihKat = g.kisi >= 7 ? 3 : g.kisi >= 3 ? 2 : 1;
+        const adaylar = this.masalar.filter((m) => !m.grup && !m.kirli && m.db?.durum === 'BOS' && m.kapasite >= g.kisi);
+        if (!adaylar.length) return null;
+        adaylar.sort((a, b) => (a.kapasite - g.kisi + (a.kat !== tercihKat) * 2) - (b.kapasite - g.kisi + (b.kat !== tercihKat) * 2));
+        const m = adaylar[0];
+        m.grup = g; g.masa = m;
+        this.beklemeYeriBirak(g);
+        g.uyeler.forEach((b, i) => this.git(b, { kat: m.kat, ...m.yerler[i] }));
+        g.durum = 'MASAYA_GIDIYOR';
+        return m;
+    }
+
+    beklemeYeriBirak(g) {
+        for (const y of this.beklemeYerleri) if (g.uyeler.includes(y.birey)) y.birey = null;
+    }
+
+    beklemeAlaninaAl(g) {
+        const bos = this.beklemeYerleri.filter((y) => !y.birey);
+        if (bos.length < g.kisi) return false;
+        g.uyeler.forEach((b, i) => { bos[i].birey = b; this.git(b, { kat: 1, gx: bos[i].gx, gy: bos[i].gy }); });
+        g.durum = 'MASA_BEKLIYOR';
+        g.masaBeklemeBas = this.dakika;
+        return true;
+    }
+
+    async api(g, fn) {
+        g.mesgul = true;
+        try {
+            return await fn();
+        } finally {
+            g.mesgul = false;
+            g.sonIslemEsitleme = this.esitlemeSayac;
+        }
+    }
+
+    grupAdim(g, dk) {
+        for (const b of g.uyeler) if (b.baloncuk && this.zaman > b.balonBitis) b.baloncuk = null;
+        if (g.mesgul) return;
+        const lider = g.uyeler[0];
+        const masaNo = g.masa?.masaNo;
+
+        switch (g.durum) {
+            case 'GELIYOR':
+                if (!this.vardi(lider)) return;
+                if (this.masaAyir(g)) return;
+                if (this.beklemeAlaninaAl(g)) { this.baloncuk(lider, 'Masa yok mu?'); this.kaydet(`Masa boş değil: ${g.kisi} kişi bekleme alanında`, 'uyari'); return; }
+                this.kaydet(`${g.kisi} kişilik grup yer bulamadı, ayrıldı`, 'uyari');
+                this.baloncuk(lider, 'Çok kalabalık…');
+                this.populerlikGuncelle(25);
+                this.cikisaYolla(g);
+                return;
+
+            case 'MASA_BEKLIYOR':
+                // Gruplar geliş sırasıyla denenir: önce gelen, sığdığı ilk boş masayı alır
+                if (this.masaAyir(g)) { this.baloncuk(lider, 'Sonunda!'); return; }
+                if (this.dakika - g.masaBeklemeBas > 30) {
+                    this.kaydet(`${g.kisi} kişilik grup beklemekten sıkılıp gitti`, 'uyari');
+                    this.baloncuk(lider, 'Bir daha gelmem!');
+                    this.populerlikGuncelle(15);
+                    this.beklemeYeriBirak(g);
+                    this.cikisaYolla(g);
+                }
+                return;
+
+            case 'MASAYA_GIDIYOR':
+                if (!this.hepsiVardi(g)) return;
+                g.durum = 'MASA_ACILIYOR';
+                this.masaAc(g);
+                return;
+
+            case 'OYUN_SECIYOR':
+                if (this.dakika < g.sonrakiDeneme) return;
+                this.oyunSec(g);
+                this.siparisKontrol(g);
+                return;
+
+            case 'SIRADA':
+                this.siparisKontrol(g);
+                g.memnuniyet -= dk * 0.08;
+                if (g.hakVar && g.secZamani == null) g.secZamani = this.dakika + rastgele(0.5, 2);
+                if (g.secZamani != null && this.dakika >= g.secZamani) { g.secZamani = null; this.sirayiKullan(g); return; }
+                if (this.dakika - g.beklemeBas > 35 && !g.hakVar) {
+                    this.baloncuk(lider, 'Başka oyun seçelim');
+                    this.api(g, () => this.garsonApi(g).sil(`/bekleme/${g.beklemeId}`))
+                        .then(() => { g.beklemeId = null; g.reddedilen = g.bekledigiOyun?.id; g.durum = 'OYUN_SECIYOR'; })
+                        .catch((e) => this.kaydet(`Masa ${masaNo}: ${e.message}`, 'uyari'));
+                }
+                return;
+
+            case 'OYNUYOR':
+                g.memnuniyet = Math.min(100, g.memnuniyet + dk * 0.25);
+                this.siparisKontrol(g);
+                if (Math.random() < dk * 0.04) this.baloncuk(sec(g.uyeler), sec(OYUN_BALONLARI));
+                if (this.dakika >= g.oyunBitis) this.oyunBitir(g);
+                return;
+
+            case 'HESAP':
+                if (!this.vardi(lider)) return;
+                g.durum = 'ODUYOR';
+                this.ode(g);
+                return;
+
+            case 'CIKIYOR':
+                if (!this.hepsiVardi(g)) return;
+                this.gruplar.splice(this.gruplar.indexOf(g), 1);
+                return;
+            default:
+        }
+    }
+
+    // Grubun karşılayan garsonu adına (yoksa yönetici olarak) istek
+    garsonApi(g) {
+        return adina(g.karsilayan?.personel.id);
+    }
+
+    async masaAc(g) {
+        const m = g.masa;
+        g.karsilayan = this.garsonlar.length ? sec(this.garsonlar) : null;
+        try {
+            const r = await this.api(g, () => this.garsonApi(g).gonder(`/masalar/${m.masaId}/ac`, { kisiSayisi: g.kisi, musteri: g.musteri }));
+            g.oturumId = r.oturumId;
+            g.oturma = this.dakika;
+            g.uyeler.forEach((b) => { b.oturuyor = true; });
+            g.durum = 'OYUN_SECIYOR';
+            g.sonrakiSiparis = this.dakika + rastgele(2, 6);
+            this.kaydet(`Masa ${m.masaNo} açıldı: ${g.kisi} kişi${g.karsilayan ? ` · karşılayan ${g.karsilayan.ad}` : ''}`, 'bilgi');
+        } catch (e) {
+            this.kaydet(`Masa ${m.masaNo} açılamadı: ${e.message}`, 'uyari');
+            m.grup = null; g.masa = null;
+            if (!this.beklemeAlaninaAl(g)) this.cikisaYolla(g);
+        }
+    }
+
+    oyunBilgisi(id, ad) {
+        const o = this.oyunlar.find((x) => x.oyun_id === id);
+        return { id, ad: ad || o?.ad || 'Oyun', renk: OYUN_RENK[(id || 0) % OYUN_RENK.length], sure: o?.sure_dk || 45 };
+    }
+
+    oyunSec(g) {
+        const uygun = this.oyunlar.filter((o) => g.kisi >= o.min_oyuncu && g.kisi <= o.max_oyuncu && o.oyun_id !== g.reddedilen);
+        if (!uygun.length) {
+            // Kişi sayısına uygun oyun yok: sohbet edip ayrılırlar
+            g.oyun = null; g.durum = 'OYNUYOR'; g.oyunBitis = this.dakika + rastgele(20, 40);
+            this.baloncuk(g.uyeler[0], 'Sohbet edelim');
+            return;
+        }
+        const tercih = KAT_TERCIHI[g.masa.kat] || [];
+        const istenen = agirlikliSec(uygun, (o) => (tercih.includes(o.kategori) ? 3 : 1));
+        if (istenen.alinabilir_adet > 0) return this.oyunBaslat(g, istenen);
+        const alternatif = uygun.filter((o) => o.alinabilir_adet > 0);
+        if (Math.random() < 0.55 || !alternatif.length) return this.siraya(g, istenen);
+        return this.oyunBaslat(g, sec(alternatif));
+    }
+
+    async oyunBaslat(g, o) {
+        try {
+            const r = await this.api(g, () => this.garsonApi(g).gonder(`/oturumlar/${g.oturumId}/oyun`, { oyunId: o.oyun_id }));
+            g.oturumOyunId = r.oturumOyunId;
+            g.oyun = this.oyunBilgisi(o.oyun_id, o.ad);
+            g.durum = 'OYNUYOR';
+            g.oyunSayisi++;
+            g.oyunBitis = this.dakika + o.sure_dk * rastgele(0.6, 1.0);
+            this.baloncuk(g.uyeler[0], `${o.ad}!`);
+            this.kaydet(`Masa ${g.masa.masaNo}: ${o.ad} başladı`, 'bilgi');
+        } catch (e) {
+            g.sonrakiDeneme = this.dakika + 1;    // kopya başkasına gittiyse yeniden seçer
+            this.kaydet(`Masa ${g.masa.masaNo}: ${e.message}`, 'uyari');
+        }
+    }
+
+    async siraya(g, o) {
+        try {
+            const r = await this.api(g, () => this.garsonApi(g).gonder(`/oturumlar/${g.oturumId}/bekleme`, { oyunId: o.oyun_id }));
+            g.beklemeId = r.beklemeId;
+            g.bekledigiOyun = this.oyunBilgisi(o.oyun_id, o.ad);
+            g.durum = 'SIRADA'; g.beklemeBas = this.dakika; g.hakVar = false;
+            this.baloncuk(g.uyeler[0], `${o.ad} bekliyoruz`);
+            this.kaydet(`Masa ${g.masa.masaNo}: ${o.ad} dolu, sıraya girdi`, 'bilgi');
+        } catch (e) {
+            if (/müsait/.test(e.message)) return this.oyunBaslat(g, o);
+            g.sonrakiDeneme = this.dakika + 1;
+            this.kaydet(`Masa ${g.masa.masaNo}: ${e.message}`, 'uyari');
+        }
+    }
+
+    async sirayiKullan(g) {
+        try {
+            const r = await this.api(g, () => this.garsonApi(g).gonder(`/bekleme/${g.beklemeId}/sec`));
+            g.oturumOyunId = r.oturumOyunId;
+            g.oyun = g.bekledigiOyun;
+            g.durum = 'OYNUYOR'; g.oyunSayisi++; g.beklemeId = null;
+            g.oyunBitis = this.dakika + g.oyun.sure * rastgele(0.6, 1.0);
+            g.memnuniyet = Math.min(100, g.memnuniyet + 8);
+            this.baloncuk(g.uyeler[0], 'Sıra bizde!');
+            this.kaydet(`Masa ${g.masa.masaNo}: sırası geldi, ${g.oyun.ad} aldı`, 'bilgi');
+        } catch (e) {
+            g.hakVar = false;
+            this.kaydet(`Masa ${g.masa.masaNo}: ${e.message}`, 'uyari');
+        }
+    }
+
+    async oyunBitir(g) {
+        try {
+            if (g.oturumOyunId) await this.api(g, () => this.garsonApi(g).gonder(`/oturum-oyunlar/${g.oturumOyunId}/bitir`));
+        } catch (e) {
+            this.kaydet(`Masa ${g.masa.masaNo}: ${e.message}`, 'uyari');
+        }
+        g.oturumOyunId = null;
+        const ad = g.oyun?.ad;
+        g.oyun = null;
+        if (ad && g.oyunSayisi < 2 && Math.random() < 0.35) {
+            g.durum = 'OYUN_SECIYOR';
+            this.baloncuk(g.uyeler[0], 'Bir oyun daha!');
+            return;
+        }
+        this.hesabaGec(g);
+    }
+
+    hesabaGec(g) {
+        // Alınmamış siparişi iptal et; yoldaki sipariş garson tarafından bırakılır
+        this.gorevler = this.gorevler.filter((t) => t.grup !== g);
+        g.siparis = null;
+        g.durum = 'HESAP';
+        g.masa.kirli = true;
+        const kasa = KATLAR[1].kasa;
+        g.uyeler.forEach((b, i) => this.git(b, { kat: 1, gx: kasa.gx + (i % 3), gy: kasa.gy + Math.floor(i / 3) % 3 }));
+    }
+
+    async ode(g) {
+        const m = g.masa;
+        const tur = Math.random() < 0.4 ? 'NAKIT' : 'KART';
+        try {
+            const r = await this.api(g, () => adina(this.kasiyerPersonel?.id).gonder(`/oturumlar/${g.oturumId}/kapat`, { odemeTuru: tur }));
+            const tl = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(r.toplam);
+            this.baloncuk(g.uyeler[0], g.memnuniyet >= 60 ? `${tl} · Yine geleceğiz!` : `${tl} · Fena değil`, 4);
+            this.kaydet(`Masa ${m.masaNo} ödedi: ${tl} (${tur === 'NAKIT' ? 'nakit' : 'kart'})`, 'para');
+            this.ciro.bugun += r.toplam;
+        } catch (e) {
+            this.kaydet(`Masa ${m.masaNo} ödeme: ${e.message}`, 'uyari');
+        }
+        this.ayril(g, { odendi: true });
+    }
+
+    ayril(g, { odendi }) {
+        const m = g.masa;
+        if (m) { m.grup = null; m.kirli = true; this.gorevler.push({ tur: 'temizlik', masa: m, zaman: this.dakika }); }
+        this.gorevler = this.gorevler.filter((t) => t.grup !== g);
+        g.siparis = null;
+        if (odendi) this.populerlikGuncelle(g.memnuniyet);
+        this.cikisaYolla(g);
+    }
+
+    cikisaYolla(g) {
+        g.durum = 'CIKIYOR';
+        g.uyeler.forEach((b) => this.git(b, { kat: 1, gx: KAPI.gx, gy: KAPI.gy }));
+    }
+
+    populerlikGuncelle(memnuniyet) {
+        this.populerlik = Math.max(0, Math.min(100, this.populerlik * 0.9 + memnuniyet * 0.1));
+    }
+
+    // ------------------------------------------------------------------ siparişler
+    siparisKontrol(g) {
+        if (!g.oturumId || g.siparis || g.siparisSayisi >= 3 || this.dakika < g.sonrakiSiparis) return;
+        const menu = this.menu.filter((u) => u.stok > 0);
+        if (!menu.length) return;
+        const agirlik = (u) => /Sıcak/.test(u.kategori) ? 3 : /Soğuk/.test(u.kategori) ? 2
+            : /Yiyecek/.test(u.kategori) ? (g.masa.kat === 3 ? 2.5 : 1.5) : 1;
+        const kalemler = [];
+        for (let i = 0; i < Math.ceil(g.kisi / 2); i++) {
+            const u = agirlikliSec(menu, agirlik);
+            const var_ = kalemler.find((k) => k.urunId === u.urun_id);
+            if (var_) var_.adet++; else kalemler.push({ urunId: u.urun_id, adet: tamRastgele(1, 2), ad: u.ad, kategori: u.kategori });
+        }
+        g.siparis = { kalemler, durum: 'ISTENDI', zaman: this.dakika };
+        const k = kalemler[0].kategori;
+        const metin = /Sıcak/.test(k) ? 'Kahve lazım!' : /Soğuk/.test(k) ? 'Susadık!' : /Yiyecek/.test(k) ? 'Acıktık!' : /Tatlı/.test(k) ? 'Tatlı zamanı!' : 'Sipariş!';
+        this.baloncuk(g.uyeler[0], metin, 5);
+        this.gorevler.push({ tur: 'siparis', grup: g, masa: g.masa, zaman: this.dakika });
+    }
+
+    // ------------------------------------------------------------------ garsonlar
+    garsonAdim(w) {
+        if (w.mesgul) return;
+        const b = w.birey;
+        const t = w.gorev;
+        const g = t?.grup;
+        const grupGitti = t?.tur === 'siparis' && (!this.gruplar.includes(g) || g.masa !== t.masa || !['OYUN_SECIYOR', 'OYNUYOR', 'SIRADA'].includes(g.durum));
+
+        switch (w.durum) {
+            case 'BOSTA': {
+                if (!this.gorevler.length) {
+                    if (this.vardi(b) && (b.kat !== w.ev.kat || Math.round(b.gx) !== w.ev.gx || Math.round(b.gy) !== w.ev.gy)) this.git(b, w.ev);
+                    return;
+                }
+                // Önce kendi katındaki en eski görev
+                const sirali = [...this.gorevler].sort((a, c) => ((a.masa.kat !== b.kat) - (c.masa.kat !== b.kat)) || a.zaman - c.zaman);
+                w.gorev = sirali[0];
+                this.gorevler.splice(this.gorevler.indexOf(w.gorev), 1);
+                w.gorev.garson = w;
+                if (w.gorev.grup) w.gorev.grup.garson = w;
+                this.git(b, { kat: w.gorev.masa.kat, ...w.gorev.masa.servisYeri });
+                w.durum = w.gorev.tur === 'siparis' ? 'MASAYA' : 'TEMIZLIGE';
+                return;
+            }
+            case 'MASAYA':
+                if (grupGitti) return this.garsonBosalt(w);
+                if (!this.vardi(b)) return;
+                w.durum = 'SIPARIS_ALIYOR';
+                w.bitis = this.dakika + w.stat.siparis;
+                this.baloncuk(b, 'Ne alırsınız?', 2);
+                return;
+            case 'SIPARIS_ALIYOR':
+                if (grupGitti) return this.garsonBosalt(w);
+                if (this.dakika < w.bitis) return;
+                this.siparisiYaz(w, g);
+                return;
+            case 'BARA':
+                if (!this.vardi(b)) return;
+                w.durum = 'HAZIRLIYOR';
+                w.bitis = this.dakika + Math.max(1, 5 - w.stat.yetenek * 0.7);
+                return;
+            case 'HAZIRLIYOR':
+                if (this.dakika < w.bitis) return;
+                if (grupGitti) return this.garsonBosalt(w);
+                w.durum = 'SERVIS';
+                this.git(b, { kat: t.masa.kat, ...t.masa.servisYeri });
+                return;
+            case 'SERVIS':
+                if (grupGitti) return this.garsonBosalt(w);
+                if (!this.vardi(b)) return;
+                g.siparis = null;
+                g.siparisSayisi++;
+                g.sonrakiSiparis = this.dakika + rastgele(25, 50);
+                g.memnuniyet = Math.min(100, g.memnuniyet + 4 + w.stat.yetenek);
+                this.baloncuk(sec(g.uyeler), sec(['Nefis!', 'Teşekkürler!', 'Harika!', 'Tam zamanında!']));
+                w.tamamlanan++;
+                this.kaydet(`${w.ad} → Masa ${t.masa.masaNo} servis tamam`, 'bilgi');
+                this.garsonBosalt(w);
+                return;
+            case 'TEMIZLIGE':
+                if (!this.vardi(b)) return;
+                w.durum = 'TEMIZLIYOR';
+                w.bitis = this.dakika + 2;
+                return;
+            case 'TEMIZLIYOR':
+                if (this.dakika < w.bitis) return;
+                t.masa.kirli = false;
+                this.garsonBosalt(w);
+                return;
+            default:
+        }
+    }
+
+    async siparisiYaz(w, g) {
+        w.mesgul = true;
+        const kalemler = g.siparis.kalemler.map(({ urunId, adet }) => ({ urunId, adet }));
+        try {
+            await this.api(g, () => adina(w.personel.id).gonder(`/oturumlar/${g.oturumId}/siparisler`, { kalemler }));
+            g.siparis.durum = 'ALINDI';
+            w.durum = 'BARA';
+            this.git(w.birey, { kat: g.masa.kat, ...KATLAR[g.masa.kat].bar });
+            this.kaydet(`${w.ad} → Masa ${g.masa.masaNo}: ${g.siparis.kalemler.map((k) => `${k.adet}× ${k.ad}`).join(', ')}`, 'bilgi');
+        } catch (e) {
+            this.baloncuk(g.uyeler[0], 'Tükenmiş mi?!');
+            g.memnuniyet -= 8;
+            g.siparis = null;
+            g.sonrakiSiparis = this.dakika + 10;
+            this.kaydet(`Masa ${g.masa.masaNo} sipariş: ${e.message}`, 'uyari');
+            this.garsonBosalt(w);
+        } finally {
+            w.mesgul = false;
+        }
+    }
+
+    garsonBosalt(w) {
+        if (w.gorev?.grup?.garson === w) w.gorev.grup.garson = null;
+        w.gorev = null;
+        w.durum = 'BOSTA';
+    }
+
+    // ------------------------------------------------------------------ görünüm
+    kaydet(metin, tur = 'bilgi') {
+        this.kayitlar.unshift({ id: ++birimSayac, saat: this.saatMetni(), metin, tur });
+        if (this.kayitlar.length > 80) this.kayitlar.length = 80;
+    }
+
+    saatMetni() {
+        const d = Math.floor(this.dakika % 1440);
+        return `${String(Math.floor(d / 60)).padStart(2, '0')}:${String(d % 60).padStart(2, '0')}`;
+    }
+
+    takvim() {
+        const gun = Math.floor(this.dakika / 1440);
+        return { yil: Math.floor(gun / 360) + 1, ay: Math.floor((gun % 360) / 30) + 1, gun: (gun % 30) + 1, saat: this.saatMetni() };
+    }
+
+    masaDurumu(m) {
+        if (m.kirli && !m.grup) return { metin: 'Temizleniyor', renk: '#8d6e63' };
+        const g = m.grup;
+        if (!g) return { metin: 'Boş', renk: '#4caf6a' };
+        if (g.siparis?.durum === 'ISTENDI') return { metin: 'Hizmet bekliyor', renk: '#d94f3d' };
+        if (g.durum === 'SIRADA') return g.hakVar ? { metin: 'Oyun ayrıldı', renk: '#e07b39' } : { metin: 'Oyun sırasında', renk: '#e3b23c' };
+        if (g.durum === 'MASAYA_GIDIYOR' || g.durum === 'MASA_ACILIYOR') return { metin: 'Oturuyor', renk: '#7e8a97' };
+        if (['HESAP', 'ODUYOR'].includes(g.durum)) return { metin: 'Kalkıyor', renk: '#8d6e63' };
+        return { metin: 'Dolu', renk: '#3d7fd9' };
+    }
+
+    garsonDurumu(w) {
+        const n = w.gorev?.masa?.masaNo;
+        return {
+            BOSTA: 'Boşta', MASAYA: `Masa ${n}'e gidiyor`, SIPARIS_ALIYOR: `Masa ${n} siparişi alıyor`, BARA: `Masa ${n} için bara`,
+            HAZIRLIYOR: `Masa ${n} siparişi hazırlanıyor`, SERVIS: `Masa ${n}'e servis`, TEMIZLIGE: `Masa ${n} temizliğe`, TEMIZLIYOR: `Masa ${n} temizleniyor`,
+        }[w.durum];
+    }
+
+    sahne(kat, seciliMasaId) {
+        const masalar = this.masalar.filter((m) => m.kat === kat).map((m) => ({
+            ...m, durumRenk: this.masaDurumu(m).renk, oyunRenk: m.grup?.oyun?.renk,
+        }));
+        const bireyler = [];
+        for (const g of this.gruplar) {
+            g.uyeler.forEach((b, i) => {
+                if (b.kat !== kat) return;
+                const ikon = i === 0 && g.oyun && g.durum === 'OYNUYOR' ? { renk: g.oyun.renk, harf: g.oyun.ad[0] } : null;
+                bireyler.push({ ...b, ikon });
+            });
+        }
+        for (const w of this.garsonlar) if (w.birey.kat === kat) bireyler.push(w.birey);
+        if (kat === 1 && this.kasiyer) bireyler.push(this.kasiyer);
+        return { kat, masalar, bireyler, seciliMasaId };
+    }
+
+    ozet() {
+        const icerde = this.gruplar.filter((g) => g.durum !== 'CIKIYOR');
+        const katSayilari = { 1: 0, 2: 0, 3: 0 };
+        for (const g of icerde) for (const b of g.uyeler) katSayilari[b.kat]++;
+        return {
+            takvim: this.takvim(), hiz: this.hiz, calisiyor: this.calisiyor, populerlik: Math.round(this.populerlik),
+            ciro: this.ciro, musteri: icerde.reduce((t, g) => t + g.kisi, 0),
+            masaBekleyen: icerde.filter((g) => g.durum === 'MASA_BEKLIYOR').reduce((t, g) => t + g.kisi, 0),
+            katSayilari,
+            garsonlar: this.garsonlar.map((w) => ({
+                id: w.personel.id, ad: w.ad, durum: this.garsonDurumu(w), stat: w.stat, tamamlanan: w.tamamlanan,
+                dbSiparis: this.dbSiparis[w.personel.id] ?? 0, kat: w.birey.kat,
+            })),
+            kayitlar: this.kayitlar.slice(0, 40),
+        };
+    }
+
+    masaBilgisi(masaId) {
+        const m = this.masalar.find((x) => x.masaId === masaId);
+        if (!m) return null;
+        const g = m.grup;
+        return {
+            masaNo: m.masaNo, kat: m.kat, kapasite: m.kapasite, durum: this.masaDurumu(m).metin, oturumId: g?.oturumId || null,
+            kisi: g?.kisi, oyun: g?.oyun?.ad || null, bekledigiOyun: g?.durum === 'SIRADA' ? g.bekledigiOyun?.ad : null,
+            eglence: g ? Math.round(g.memnuniyet) : null, garson: g?.garson?.ad || g?.karsilayan?.ad || null,
+            grupDurumu: g ? DURUM_METNI[g.durum] : null,
+            kalisDk: g?.oturma != null ? Math.floor(this.dakika - g.oturma) : null,
+            bekleyenSiparis: g?.siparis ? g.siparis.kalemler.map((k) => `${k.adet}× ${k.ad}`).join(', ') : null,
+        };
+    }
+}

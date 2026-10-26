@@ -52,6 +52,6 @@ docs/               mimari, API, ER, normalizasyon, performans, yetki, sunum, yo
 ## Dokümanlar
 - [Mimari](docs/ARCHITECTURE.md) · [ER diyagramı](docs/ER.md) · [Normalizasyon](docs/NORMALIZASYON.md)
 - [API](docs/API.md) · [Performans](docs/PERFORMANS.md) · [Yetki ve maskeleme](docs/YETKI.md)
-- [Yol haritası ve puan kriterleri](docs/ROADMAP.md) · [Sunum içeriği](docs/SUNUM.md)
+- [Yol haritası ve puan kriterleri](docs/ROADMAP.md) · [Sunum içeriği](docs/SUNUM.md) · [Simülasyon](docs/SIMULASYON.md)
 
 Teslim: 27 Aralık 2026 23:59; sunumda herkese açık GitHub linki paylaşılır.

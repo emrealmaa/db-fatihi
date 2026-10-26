@@ -290,3 +290,80 @@ fieldset.bilgi-kutu { display: flex; flex-direction: column; gap: .75rem; }
 .giris-kart img { align-self: center; }
 .giris-kart h1 { text-align: center; margin: 0; font-size: 1.8rem; letter-spacing: .02em; }
 .giris-kart > p { text-align: center; margin: -.75rem 0 0; }
+
+/* ------------------------------------------------------------ simülasyon (retro piksel arayüz) */
+.icerik-tam { padding: 0; }
+.sim {
+    --sim-krem: #fff3d6; --sim-krem-2: #f3dfb4; --sim-kahve: #5a3a22; --sim-koyu: #2a1d16;
+    --sim-ahsap: #c98a4b; --sim-ahsap-2: #a8703a; --sim-vurgu: #e07b39; --sim-yesil: #4caf6a;
+    display: flex; flex-direction: column; height: calc(100vh - 56px); min-height: 520px;
+    background: #1d1712; color: var(--sim-koyu);
+    font: bold 13px/1.35 ui-monospace, Consolas, "Courier New", monospace;
+}
+.sim h2 { font-size: .95rem; margin: .25rem 0 .5rem; color: var(--sim-kahve); text-transform: uppercase; letter-spacing: .04em; }
+.sim-hud, .sim-alt { display: flex; align-items: stretch; gap: .5rem; padding: .5rem .75rem; background: #3a2618; flex-wrap: wrap; }
+.sim-hud { border-bottom: 3px solid var(--sim-koyu); }
+.sim-alt { border-top: 3px solid var(--sim-koyu); }
+.sim-kutu {
+    display: flex; flex-direction: column; justify-content: center; padding: .25rem .7rem;
+    background: var(--sim-krem); border: 3px solid var(--sim-kahve); border-radius: 4px;
+    box-shadow: inset 0 -3px 0 var(--sim-krem-2), 0 2px 0 var(--sim-koyu); font-variant-numeric: tabular-nums;
+}
+.sim-etiket { font-size: .68rem; color: #8a6a4a; text-transform: uppercase; letter-spacing: .05em; }
+.sim-saat { font-size: 1.3rem; min-width: 5.5ch; align-items: center; background: #ffe7a8; }
+.sim-pop { flex-direction: row; align-items: center; gap: .5rem; }
+.sim-pop .sim-etiket { writing-mode: initial; }
+.sim-cubuk { width: 90px; height: 10px; background: #d9c39a; border: 2px solid var(--sim-kahve); display: inline-block; vertical-align: middle; }
+.sim-cubuk div { height: 100%; background: linear-gradient(90deg, #e3b23c, var(--sim-vurgu)); }
+.sim-hiz { display: flex; gap: .3rem; margin-left: auto; align-items: center; }
+.sim-dugme {
+    font: inherit; cursor: pointer; padding: .4rem .8rem; color: #fff8e7; text-shadow: 0 1px 0 var(--sim-koyu);
+    background: var(--sim-ahsap); border: 3px solid var(--sim-kahve); border-radius: 4px;
+    box-shadow: inset 0 -3px 0 var(--sim-ahsap-2), 0 2px 0 var(--sim-koyu);
+}
+.sim-dugme:hover { filter: brightness(1.08); }
+.sim-dugme:active { transform: translateY(1px); box-shadow: inset 0 -1px 0 var(--sim-ahsap-2); }
+.sim-dugme.secili { background: var(--sim-yesil); box-shadow: inset 0 -3px 0 #2e7d4f, 0 2px 0 var(--sim-koyu); }
+.sim-dugme small { opacity: .85; font-size: .72rem; margin-left: .3rem; }
+.sim-dugme:focus-visible { outline: 3px solid #ffe27a; outline-offset: 1px; }
+.sim-ara { flex: 1; }
+.sim-orta { flex: 1; display: flex; min-height: 0; }
+.sim-tuval-alani { position: relative; flex: 1; min-width: 0; display: grid; place-items: center; overflow: hidden; }
+.sim-tuval { image-rendering: pixelated; cursor: pointer; display: block; }
+.sim-kat-etiket { position: absolute; left: .75rem; top: .75rem; padding: .3rem .7rem; background: var(--sim-krem); border: 3px solid var(--sim-kahve); border-radius: 4px; }
+.sim-yukleniyor { position: absolute; color: var(--sim-krem); }
+.sim-hata { color: #f08a7e; padding: 2rem; }
+.sim-panel { width: 310px; overflow-y: auto; padding: .75rem; background: var(--sim-krem); border-left: 4px solid var(--sim-kahve); }
+.sim-garsonlar { list-style: none; margin: 0 0 1rem; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+.sim-garsonlar li { padding: .5rem .6rem; background: #fffaf0; border: 2px solid var(--sim-kahve); border-radius: 4px; }
+.sim-garsonlar dl { display: grid; grid-template-columns: auto 1fr; gap: 0 .5rem; margin: .35rem 0; font-size: .78rem; }
+.sim-garsonlar dt { color: #8a6a4a; }
+.sim-garsonlar dd { margin: 0; }
+.sim-gorev { margin-top: .2rem; padding: .15rem .4rem; background: #ffe7a8; border-radius: 3px; font-size: .8rem; }
+.sim-gorev.bos { background: #e5ead8; color: #5b6b4a; }
+.sim-yildiz { color: #e3a21a; letter-spacing: 1px; }
+.sim-yildiz span { color: #d9c39a; }
+.sim-soluk { color: #8a6a4a; font-weight: normal; }
+.sim-uyari { color: #c0392b; }
+.sim-kayitlar { list-style: none; margin: 0; padding: 0; font-size: .76rem; font-weight: normal; display: flex; flex-direction: column; gap: .2rem; }
+.sim-kayitlar li { padding: .15rem .3rem; border-left: 3px solid #b7a07a; background: #fffaf0; }
+.sim-kayitlar li span { color: #8a6a4a; font-weight: bold; }
+.sim-kayit-para { border-left-color: var(--sim-yesil) !important; }
+.sim-kayit-uyari { border-left-color: #c0392b !important; }
+.sim-pencere-arka { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 1rem; background: rgb(20 12 6 / 55%); }
+.sim-pencere { width: min(460px, 100%); max-height: 90vh; overflow: auto; background: var(--sim-krem); border: 4px solid var(--sim-kahve); border-radius: 6px; box-shadow: 0 6px 0 var(--sim-koyu); }
+.sim-pencere header { display: flex; justify-content: space-between; align-items: center; padding: .5rem .75rem; background: var(--sim-ahsap); border-bottom: 3px solid var(--sim-kahve); }
+.sim-pencere header h2 { color: #fff8e7; text-shadow: 0 1px 0 var(--sim-koyu); margin: 0; }
+.sim-pencere header .sim-dugme { padding: .15rem .5rem; }
+.sim-detay { display: grid; grid-template-columns: auto 1fr; gap: .45rem .9rem; margin: 0; padding: .9rem; }
+.sim-detay dt { color: #8a6a4a; }
+.sim-detay dd { margin: 0; }
+.sim-detay small { font-weight: normal; color: #8a6a4a; }
+.sim-rozet { padding: .1rem .45rem; background: #ffe7a8; border: 2px solid var(--sim-kahve); border-radius: 3px; }
+.sim-tablo { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.sim-tablo th, .sim-tablo td { padding: .35rem .6rem; text-align: left; border-bottom: 2px dashed #e2c48f; }
+.sim-tablo th { color: #8a6a4a; }
+@media (max-width: 900px) {
+    .sim-panel { position: absolute; right: 0; top: 0; bottom: 0; z-index: 5; }
+    .sim-orta { position: relative; }
+}
