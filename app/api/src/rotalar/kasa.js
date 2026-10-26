@@ -29,7 +29,7 @@ export function kasaRotalari() {
     });
 
     r.get('/raporlar/ciro', async (req, res) => {
-        res.json(await req.vt((q) => q('SELECT * FROM v_gunluk_ciro ORDER BY gun DESC LIMIT 60')));
+        res.json(await req.vt((q) => q('SELECT gun::text AS gun, hesap_sayisi, nakit, kart, ciro FROM v_gunluk_ciro ORDER BY gun DESC LIMIT 60')));
     });
 
     return r;

@@ -13,7 +13,8 @@ SELECT m.id AS masa_id, m.masa_no, m.kapasite,
        CASE WHEN t.id IS NULL THEN 'BOS' ELSE 'DOLU' END AS durum,
        t.id AS oturum_id, t.kisi_sayisi, t.acilis,
        og.oturum_oyun_id, og.oyun_id, og.ad AS oynanan_oyun, og.baslangic AS oyun_baslangic,
-       b.id AS bekleme_id, b.durum AS bekleme_durumu, b.secim_hakki_zamani
+       b.id AS bekleme_id, b.durum AS bekleme_durumu, b.secim_hakki_zamani,
+       b.secim_hakki_zamani + make_interval(mins => (SELECT secim_suresi_dk FROM ayar)) AS secim_bitis
 FROM masa m
 LEFT JOIN oturum t ON t.masa_id = m.id AND t.kapanis IS NULL
 LEFT JOIN LATERAL (SELECT oo.id AS oturum_oyun_id, o.id AS oyun_id, o.ad, oo.baslangic
