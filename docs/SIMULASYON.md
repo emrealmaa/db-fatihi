@@ -114,10 +114,22 @@ akşam/gece sıcak ışık), tuğla ayaklar ve kornişli alınlık; kapının ü
 ampullü **"KARAVANA · Kutu Oyunu Kafe"** tabelası (akşam/gece ışık saçar). Cephe karo karo parçalanır ki içerideki ve
 dışarıdaki karakterlerle derinlik sıralaması doğru kalsın.
 
+**Blok çevresi yol** (`harita.js: BLOK, yolNoktasi`): kafe ve iki yanındaki binalar bir adada durur; adayı iki şeritli,
+yuvarlak köşeli bir döngü yol çevreler (önde eski cadde, iki yanda yan yollar, arkada arka sokak). Köşelerde çeyrek daire
+yol, adanın yuvarlatılmış kaldırımı, kavisli bordür ve kesik şerit çizgisi; kafe kapısının önünde, iki yan yolda ve arka
+yolda yaya geçitleri; yan ve arka kaldırımlarda lambalar ve çöp kutuları. Bütün blok (yol, karşı kaldırım, karşı dükkânlar)
+tek bir diorama plakası üzerindedir. Arabalar bu döngüde döner: iç şerit ileri, dış şerit ters yönde, her şeritte beşer
+araba; öndeki araca yaklaşan yavaşlar. Gövde, yolun teğetine göre yatay ya da dikey yerleşir. Kafenin arka duvarlarının
+gerisinde kalan bina, araba ve sokak eşyaları duvar katmanından önce çizilir (zemin ve duvar katmanları ayrı önbelleklidir).
+
 **Komşu binalar** (`harita.js: KOMSU_BINALAR`): iki yanda Sahaf Kitabevi ve Simit Fırını, karşı kaldırımda Çiçekçi,
 Kırtasiye, Pizza Dükkânı ve Oyuncakçı. Kameraya göre kafenin arkasında kalan bina çok katlı tam bina olarak çizilir
-(katlara göre pencere sıraları, gece rastgele yanık pencereler ve perdeler, zemin katta ışıklı vitrin, çatıda su deposu ve
-klima); önde kalanlar manzarayı kapatmasın diye çatısız alçak kesit olarak (içi, tezgâhı ve renkli rafları görünür). Her
+(tuğla doku, kat kornişleri, katlara göre pencere sıraları, gece rastgele yanık pencereler ve perdeler, zemin katta ışıklı
+vitrin, ışıklı tabela panosu). Çatılar kapalıdır: Sahaf'ta kat kat daralan **kiremit kırma çatı** (mahya, ışıklı çatı penceresi,
+duman tüten tuğla baca); Fırın'da **korkuluklu düz çatı** (çakıl, ayaklı su deposu, ışıklık, klimalar, havalandırma boruları,
+fırın bacası). Kameranın önünde kalan yan bina manzarayı kapatmasın diye tek katlı, düz çatılı dükkân olarak çizilir;
+karşı kaldırımdaki dükkânlar çatısız alçak kesittir (içi, tezgâhı ve renkli rafları görünür). Dükkân adları gölgeli,
+renkli çerçeveli koyu panolarla yazılır. Her
 dükkânın caddeye bakan tarafında çizgili tente, adı yazan tabela ve akşam/gece kaldırıma düşen vitrin ışığı vardır.
 
 **Sokak mobilyaları:** kuyruk sırasında üç park bankı (dökme demir ayak, ahşap latalar, kolçak), kaldırım kenarında sokak

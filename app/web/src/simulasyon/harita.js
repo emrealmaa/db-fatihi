@@ -32,7 +32,6 @@ export const KAPI_IC = { gx: 2, gy: 15 };
 export const KAPI_ARALIK = { bas: 2, son: 4 };
 export const KALDIRIM_Y = 17;
 export const SOKAK_Y = 18;        // kafenin önündeki yürüme sırası (kaldırımın dış kenarı)
-export const YOL_SERITLERI = [19.25, 20.25];   // arabalar: 0 doğuya, 1 batıya
 export const KARSI_KALDIRIM_Y = 21;
 export const SOKAK_GIRIS = { gx: 19, gy: SOKAK_Y };   // müşteriler sağdan gelir,
 export const SOKAK_CIKIS = { gx: 0, gy: SOKAK_Y };    // soldan gider
@@ -42,11 +41,45 @@ export const DIS_SIRA = Array.from({ length: 15 }, (_, i) => ({ gx: 4 + i, gy: K
 export const BANKLAR = [{ gx: 5, gw: 2 }, { gx: 9, gw: 2 }, { gx: 13, gw: 2 }];
 export const BANK_KAROLARI = new Set(BANKLAR.flatMap((b) => Array.from({ length: b.gw }, (_, i) => b.gx + i)));
 
+// Blok çevresi yol: kafe ve iki yanındaki binalar bir adada; çevresinde iki şeritli, yuvarlak köşeli döngü yol.
+// Köşe merkezleri (BLOK.x0, y0)…(x1, y1); merkezden uzaklık: 1 kaldırım bordürü, 1,5 iç şerit, 2,5 dış şerit, 3 yolun dış kenarı.
+// Ön tarafta bordür y = 19, yol y 19–21, karşı kaldırım y 21–22 (eski düz caddeyle aynı yerde).
+export const BLOK = { x0: -7, y0: 0, x1: 27, y1: 18 };
+export const SERITLER = [{ r: 1.5, yon: 1 }, { r: 2.5, yon: -1 }];   // iç şerit ileri, dış şerit geri yönde
+export const YOL_SINIR = { x0: BLOK.x0 - 3, y0: BLOK.y0 - 3, x1: BLOK.x1 + 3, y1: BLOK.y1 + 3 };
+export function yolUzunlugu(r) {
+    return 2 * (BLOK.x1 - BLOK.x0) + 2 * (BLOK.y1 - BLOK.y0) + 2 * Math.PI * r;
+}
+// Döngü üzerinde s konumundaki nokta ve ileri yön (teğet). Sıra: ön (+x), sağ ön köşe, sağ (−y), sağ arka köşe,
+// arka (−x), sol arka köşe, sol (+y), sol ön köşe.
+export function yolNoktasi(r, s) {
+    const { x0, y0, x1, y1 } = BLOK;
+    const L = yolUzunlugu(r), q = Math.PI * r / 2;
+    s = ((s % L) + L) % L;
+    const parca = [
+        [x1 - x0, (u) => ({ x: x0 + u, y: y1 + r, tx: 1, ty: 0 })],
+        [q, (u) => { const a = Math.PI / 2 - u / r; return { x: x1 + r * Math.cos(a), y: y1 + r * Math.sin(a), tx: Math.sin(a), ty: -Math.cos(a) }; }],
+        [y1 - y0, (u) => ({ x: x1 + r, y: y1 - u, tx: 0, ty: -1 })],
+        [q, (u) => { const a = -u / r; return { x: x1 + r * Math.cos(a), y: y0 + r * Math.sin(a), tx: Math.sin(a), ty: -Math.cos(a) }; }],
+        [x1 - x0, (u) => ({ x: x1 - u, y: y0 - r, tx: -1, ty: 0 })],
+        [q, (u) => { const a = -Math.PI / 2 - u / r; return { x: x0 + r * Math.cos(a), y: y0 + r * Math.sin(a), tx: Math.sin(a), ty: -Math.cos(a) }; }],
+        [y1 - y0, (u) => ({ x: x0 - r, y: y0 + u, tx: 0, ty: 1 })],
+        [q, (u) => { const a = Math.PI - u / r; return { x: x0 + r * Math.cos(a), y: y1 + r * Math.sin(a), tx: Math.sin(a), ty: -Math.cos(a) }; }],
+    ];
+    for (const [uz, f] of parca) { if (s <= uz) return f(s); s -= uz; }
+    return parca[0][1](0);
+}
+// Kameraya göre kafenin arka duvarlarının gerisinde kalan dikdörtgen (oda katmanından önce çizilmeli)
+export function arkadaMi(d, gx, gy, gw, gd) {
+    const r = dikdortgenDondur(d, gx, gy, gw, gd), ic = dikdortgenDondur(d, 0, 0, GENISLIK, IC_DERINLIK);
+    return r.gx + r.gw <= ic.gx + 0.01 || r.gy + r.gd <= ic.gy + 0.01;
+}
+
 // Komşu binalar (yalnızca kat 1, ön cephe görünürken). on: caddeye bakan yüz. Kameraya göre binanın arkasında
 // kalanlar çok katlı tam bina olarak, önde kalanlar (manzarayı kapatmasın diye) çatısız alçak kesit olarak çizilir.
 export const KOMSU_BINALAR = [
-    { ad: 'Sahaf Kitabevi', gx: -7.2, gy: 2, gw: 6.6, gd: 14, h: 150, renk: '#7a4b3a', tente: '#2b6cb0', on: 'G' },
-    { ad: 'Simit Fırını', gx: 20.6, gy: 3, gw: 6.4, gd: 13, h: 118, renk: '#56677a', tente: '#e3b23c', on: 'G' },
+    { ad: 'Sahaf Kitabevi', gx: -7, gy: 0.3, gw: 5.8, gd: 15.7, h: 150, renk: '#7a4b3a', tente: '#2b6cb0', on: 'G', cati: 'kiremit' },
+    { ad: 'Simit Fırını', gx: 21.2, gy: 0.3, gw: 5.8, gd: 15.7, h: 118, renk: '#56677a', tente: '#e3b23c', on: 'G', cati: 'duz', baca: true },
     { ad: 'Çiçekçi', gx: -1.4, gy: 22.5, gw: 5.6, gd: 3.4, h: 120, renk: '#3f6f5a', tente: '#d94f3d', on: 'K' },
     { ad: 'Kırtasiye', gx: 4.8, gy: 22.5, gw: 4.6, gd: 3.4, h: 110, renk: '#8a6a3a', tente: '#3f8f4f', on: 'K' },
     { ad: 'Pizza Dükkânı', gx: 10, gy: 22.5, gw: 5, gd: 3.4, h: 130, renk: '#8b3a2e', tente: '#f4efe6', on: 'K' },
@@ -54,8 +87,7 @@ export const KOMSU_BINALAR = [
 ];
 // Bina, kameraya göre kafenin arka duvarlarının gerisinde mi (tam boy çizilebilir mi)?
 export function binaArkada(d, b) {
-    const r = dikdortgenDondur(d, b.gx, b.gy, b.gw, b.gd), ic = dikdortgenDondur(d, 0, 0, GENISLIK, IC_DERINLIK);
-    return r.gx + r.gw <= ic.gx + 0.01 || r.gy + r.gd <= ic.gy + 0.01;
+    return arkadaMi(d, b.gx, b.gy, b.gw, b.gd);
 }
 
 // Nesne: { tur, gx, gy, gw, gd, h }  (taban karo cinsinden, h piksel yükseklik)
@@ -144,6 +176,14 @@ export const KATLAR = {
             { tur: 'agac', gx: 17.6, gy: 21.2, gw: 0.6, gd: 0.6, h: 10 },
             { tur: 'sokaklambasi', gx: 7.3, gy: 21.3, gw: 0.3, gd: 0.3, h: 52 }, { tur: 'sokaklambasi', gx: 14.3, gy: 21.3, gw: 0.3, gd: 0.3, h: 52 },
             { tur: 'parkbanki', gx: 0.5, gy: 21.45, gw: 2, gd: 0.55, h: 16 }, { tur: 'cop', gx: 9.6, gy: 21.2, gw: 0.36, gd: 0.36, h: 12 },
+            // ön kaldırımın yan binalar önündeki uzantısı ve yan/arka kaldırımlar
+            { tur: 'sokaklambasi', gx: -4.2, gy: 18.75, gw: 0.3, gd: 0.3, h: 52 }, { tur: 'sokaklambasi', gx: 24.2, gy: 18.75, gw: 0.3, gd: 0.3, h: 52 },
+            { tur: 'parkbanki', gx: -6, gy: 17.2, gw: 2, gd: 0.55, h: 16 }, { tur: 'parkbanki', gx: 23.5, gy: 17.2, gw: 2, gd: 0.55, h: 16 },
+            { tur: 'cop', gx: -1.6, gy: 18.6, gw: 0.36, gd: 0.36, h: 12 }, { tur: 'cicek', gx: 21.6, gy: 18.6, gw: 1, gd: 0.36, h: 7 },
+            { tur: 'sokaklambasi', gx: -7.75, gy: 4, gw: 0.3, gd: 0.3, h: 52 }, { tur: 'sokaklambasi', gx: -7.75, gy: 12, gw: 0.3, gd: 0.3, h: 52 },
+            { tur: 'sokaklambasi', gx: 27.45, gy: 4, gw: 0.3, gd: 0.3, h: 52 }, { tur: 'sokaklambasi', gx: 27.45, gy: 12, gw: 0.3, gd: 0.3, h: 52 },
+            { tur: 'cop', gx: -7.7, gy: 8, gw: 0.36, gd: 0.36, h: 12 }, { tur: 'cop', gx: 27.4, gy: 8, gw: 0.36, gd: 0.36, h: 12 },
+            { tur: 'sokaklambasi', gx: 4, gy: -0.75, gw: 0.3, gd: 0.3, h: 52 }, { tur: 'sokaklambasi', gx: 16, gy: -0.75, gw: 0.3, gd: 0.3, h: 52 },
         ],
     },
     2: {

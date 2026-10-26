@@ -25,7 +25,7 @@ export function saatProfili(dakika) {
 
 const SON_CIKIS = 22 * 60 + 15;   // bu saatte hâlâ içeride olan zorla uğurlanır (fiş ~22:15–22:30)
 import {
-    ASANSOR, BANK_KAROLARI, DIS_SIRA, KAPI, KARSI_KALDIRIM_Y, KATLAR, MUTFAK, MUZISYENLER, oturmaYerleri, SAHNE_Z, SOKAK_CIKIS, SOKAK_GIRIS, yolBul, yurunebilir,
+    ASANSOR, BANK_KAROLARI, SERITLER, yolNoktasi, yolUzunlugu, DIS_SIRA, KAPI, KARSI_KALDIRIM_Y, KATLAR, MUTFAK, MUZISYENLER, oturmaYerleri, SAHNE_Z, SOKAK_CIKIS, SOKAK_GIRIS, yolBul, yurunebilir,
 } from './harita.js';
 import { karakterPaleti, OYUN_RENK } from './cizim.js';
 import {
@@ -91,7 +91,7 @@ export class Simulasyon {
         this.asansorKapi = { 1: 0, 2: 0, 3: 0 };   // kapının açık kalacağı zaman (gerçek sn)
         // dış mekân ortamı (simülasyon hızından bağımsız, gerçek zamanla hareket eder)
         this.ortam = { arabalar: [], yayalar: [], kopek: { x: 6, y: KARSI_KALDIRIM_Y + 0.4, yon: 1, hedef: 9, bekle: 0, oturuyor: false, kare: 0 },
-            sonrakiAraba: 0, sonrakiYaya: 0 };
+            sonrakiYaya: 0 };
         this.terkSayisi = 0;
         this.esitlemeSayac = 0;
         this.zamanlayicilar = { masa: 0, oyun: 0, ciro: 0, menu: 0 };
@@ -210,24 +210,36 @@ export class Simulasyon {
         for (const g of this.disKuyruk) for (const b of g.uyeler) {
             if (!b.yol.length && b.hedefSira && BANK_KAROLARI.has(b.hedefSira.gx) && !b.oturuyor) { b.oturuyor = true; b.vx = 0; b.vy = 1; }
         }
-        o.sonrakiAraba -= dt; o.sonrakiYaya -= dt;
-        if (o.sonrakiAraba <= 0) {
-            o.sonrakiAraba = rastgele(1.5, 5);
-            const serit = Math.random() < 0.5 ? 0 : 1;
-            o.arabalar.push({ id: ++birimSayac, serit, x: serit === 0 ? -2 : 24, hiz: rastgele(3.5, 6.5),
-                renk: sec(['#c0392b', '#2b6cb0', '#e3b23c', '#f4efe6', '#2b2b2b', '#3f8f4f', '#7b2d8b']) });
+        o.sonrakiYaya -= dt;
+        // arabalar: bloğun çevresindeki döngü yolda; her şeritte öndeki araca yaklaşan yavaşlar
+        if (!o.arabalar.length) {
+            SERITLER.forEach((sr, serit) => {
+                const L = yolUzunlugu(sr.r), n = 5;
+                for (let i = 0; i < n; i++) o.arabalar.push({ id: ++birimSayac, serit, s: (i + Math.random() * 0.5) * L / n, hiz: rastgele(3.2, 5.5),
+                    renk: sec(['#c0392b', '#2b6cb0', '#e3b23c', '#f4efe6', '#2b2b2b', '#3f8f4f', '#7b2d8b', '#e07b39']) });
+            });
         }
-        for (const a of o.arabalar) a.x += (a.serit === 0 ? 1 : -1) * a.hiz * dt;
-        o.arabalar = o.arabalar.filter((a) => a.x > -3 && a.x < 25);
+        SERITLER.forEach((sr, serit) => {
+            const L = yolUzunlugu(sr.r);
+            const s = o.arabalar.filter((a) => a.serit === serit).sort((a, b) => (a.s - b.s) * sr.yon);
+            s.forEach((a, i) => {
+                const onde = s[(i + 1) % s.length];
+                const ara = ((((onde.s - a.s) * sr.yon) % L) + L) % L;
+                const hiz = s.length > 1 ? Math.min(a.hiz, Math.max(0, (ara - 2.4) * 2)) : a.hiz;
+                a.s += sr.yon * hiz * dt;
+                const p = yolNoktasi(sr.r, a.s);
+                Object.assign(a, { x: p.x, y: p.y, tx: p.tx * sr.yon, ty: p.ty * sr.yon });
+            });
+        });
         if (o.sonrakiYaya <= 0) {
             o.sonrakiYaya = rastgele(2.5, 7);
             const yon = Math.random() < 0.5 ? 1 : -1;
-            const b = yeniBirey('musteri', 1, yon > 0 ? -1 : 21, Math.random() < 0.5 ? 18 : KARSI_KALDIRIM_Y);
+            const b = yeniBirey('musteri', 1, yon > 0 ? -7 : 27, Math.random() < 0.5 ? 18 : KARSI_KALDIRIM_Y);
             Object.assign(b, { vx: yon, vy: 0, yayaYon: yon, yayaHiz: rastgele(0.9, 1.5) });
             o.yayalar.push(b);
         }
         for (const b of o.yayalar) { b.gx += b.yayaYon * b.yayaHiz * dt; b.animT += dt; b.kare = Math.floor(b.animT * 6) % 4; }
-        o.yayalar = o.yayalar.filter((b) => b.gx > -2 && b.gx < 22);
+        o.yayalar = o.yayalar.filter((b) => b.gx > -8 && b.gx < 28);
         // köpek: kaldırımlarda dolaşır, ara sıra oturup koklar
         const k = o.kopek;
         if (k.bekle > 0) { k.bekle -= dt; k.oturuyor = true; return; }
