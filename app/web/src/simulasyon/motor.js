@@ -25,7 +25,7 @@ export function saatProfili(dakika) {
 
 const SON_CIKIS = 22 * 60 + 15;   // bu saatte hâlâ içeride olan zorla uğurlanır (fiş ~22:15–22:30)
 import {
-    ASANSOR, DIS_SIRA, KAPI, KARSI_KALDIRIM_Y, KATLAR, MUTFAK, MUZISYENLER, oturmaYerleri, SAHNE_Z, SOKAK_CIKIS, SOKAK_GIRIS, yolBul, yurunebilir,
+    ASANSOR, BANK_KAROLARI, DIS_SIRA, KAPI, KARSI_KALDIRIM_Y, KATLAR, MUTFAK, MUZISYENLER, oturmaYerleri, SAHNE_Z, SOKAK_CIKIS, SOKAK_GIRIS, yolBul, yurunebilir,
 } from './harita.js';
 import { karakterPaleti, OYUN_RENK } from './cizim.js';
 import {
@@ -206,6 +206,10 @@ export class Simulasyon {
     // ------------------------------------------------------------------ dış mekân ortamı
     ortamAdim(dt) {
         const o = this.ortam;
+        // kaldırım kuyruğunda yerine varan ve bank karosundaki bekleyenler oturur (caddeye bakar)
+        for (const g of this.disKuyruk) for (const b of g.uyeler) {
+            if (!b.yol.length && b.hedefSira && BANK_KAROLARI.has(b.hedefSira.gx) && !b.oturuyor) { b.oturuyor = true; b.vx = 0; b.vy = 1; }
+        }
         o.sonrakiAraba -= dt; o.sonrakiYaya -= dt;
         if (o.sonrakiAraba <= 0) {
             o.sonrakiAraba = rastgele(1.5, 5);

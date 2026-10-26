@@ -38,6 +38,25 @@ export const SOKAK_GIRIS = { gx: 19, gy: SOKAK_Y };   // müşteriler sağdan ge
 export const SOKAK_CIKIS = { gx: 0, gy: SOKAK_Y };    // soldan gider
 // Kaldırımdaki tek sıra kuyruk: kapıya en yakın yer önce
 export const DIS_SIRA = Array.from({ length: 15 }, (_, i) => ({ gx: 4 + i, gy: KALDIRIM_Y }));
+// Kuyruk sırasındaki park bankları: bu karolara düşen bekleyenler oturur
+export const BANKLAR = [{ gx: 5, gw: 2 }, { gx: 9, gw: 2 }, { gx: 13, gw: 2 }];
+export const BANK_KAROLARI = new Set(BANKLAR.flatMap((b) => Array.from({ length: b.gw }, (_, i) => b.gx + i)));
+
+// Komşu binalar (yalnızca kat 1, ön cephe görünürken). on: caddeye bakan yüz. Kameraya göre binanın arkasında
+// kalanlar çok katlı tam bina olarak, önde kalanlar (manzarayı kapatmasın diye) çatısız alçak kesit olarak çizilir.
+export const KOMSU_BINALAR = [
+    { ad: 'Sahaf Kitabevi', gx: -7.2, gy: 2, gw: 6.6, gd: 14, h: 150, renk: '#7a4b3a', tente: '#2b6cb0', on: 'G' },
+    { ad: 'Simit Fırını', gx: 20.6, gy: 3, gw: 6.4, gd: 13, h: 118, renk: '#56677a', tente: '#e3b23c', on: 'G' },
+    { ad: 'Çiçekçi', gx: -1.4, gy: 22.5, gw: 5.6, gd: 3.4, h: 120, renk: '#3f6f5a', tente: '#d94f3d', on: 'K' },
+    { ad: 'Kırtasiye', gx: 4.8, gy: 22.5, gw: 4.6, gd: 3.4, h: 110, renk: '#8a6a3a', tente: '#3f8f4f', on: 'K' },
+    { ad: 'Pizza Dükkânı', gx: 10, gy: 22.5, gw: 5, gd: 3.4, h: 130, renk: '#8b3a2e', tente: '#f4efe6', on: 'K' },
+    { ad: 'Oyuncakçı', gx: 15.6, gy: 22.5, gw: 5.8, gd: 3.4, h: 115, renk: '#4a4f8a', tente: '#e07b39', on: 'K' },
+];
+// Bina, kameraya göre kafenin arka duvarlarının gerisinde mi (tam boy çizilebilir mi)?
+export function binaArkada(d, b) {
+    const r = dikdortgenDondur(d, b.gx, b.gy, b.gw, b.gd), ic = dikdortgenDondur(d, 0, 0, GENISLIK, IC_DERINLIK);
+    return r.gx + r.gw <= ic.gx + 0.01 || r.gy + r.gd <= ic.gy + 0.01;
+}
 
 // Nesne: { tur, gx, gy, gw, gd, h }  (taban karo cinsinden, h piksel yükseklik)
 // Masa yuvası: { gx, gy, gw, gd, sekil } — veritabanındaki o kattaki masalar masa_no sırasıyla yuvalara yerleşir
@@ -109,13 +128,22 @@ export const KATLAR = {
         ],
         // Dış mekân (yalnızca ön cephe kameraya dönükken görünür): cephe şeridindeki süs nesneleri
         dis: [
-            { tur: 'saksi', gx: 5, gy: 16.35, gw: 0.6, gd: 0.5, h: 8 }, { tur: 'bank', gx: 8, gy: 16.35, gw: 2, gd: 0.5, h: 7 },
-            { tur: 'saksi', gx: 12, gy: 16.35, gw: 0.6, gd: 0.5, h: 8 }, { tur: 'menutahta', gx: 4.2, gy: 16.4, gw: 0.5, gd: 0.4, h: 18 },
-            { tur: 'sokaklambasi', gx: 16, gy: 16.45, gw: 0.3, gd: 0.3, h: 52 },
+            // cephe dibi: çiçeklikler ve menü tahtası
+            { tur: 'saksi', gx: 5, gy: 16.35, gw: 0.6, gd: 0.5, h: 8 }, { tur: 'saksi', gx: 9, gy: 16.35, gw: 0.6, gd: 0.5, h: 8 },
+            { tur: 'saksi', gx: 13, gy: 16.35, gw: 0.6, gd: 0.5, h: 8 }, { tur: 'saksi', gx: 17.2, gy: 16.35, gw: 0.6, gd: 0.5, h: 8 },
+            { tur: 'menutahta', gx: 4.3, gy: 16.4, gw: 0.5, gd: 0.4, h: 18 },
+            // kuyruk sırası: park bankları (bekleyenler oturur)
+            ...BANKLAR.map((b) => ({ tur: 'parkbanki', gx: b.gx, gy: 17.2, gw: b.gw, gd: 0.55, h: 16 })),
+            // kaldırım kenarı: sokak lambaları, çöp kutuları, çiçeklikler
+            { tur: 'sokaklambasi', gx: 1.2, gy: 18.75, gw: 0.3, gd: 0.3, h: 52 }, { tur: 'sokaklambasi', gx: 10.6, gy: 18.75, gw: 0.3, gd: 0.3, h: 52 },
+            { tur: 'sokaklambasi', gx: 18.8, gy: 18.75, gw: 0.3, gd: 0.3, h: 52 },
+            { tur: 'cop', gx: 7.8, gy: 18.6, gw: 0.36, gd: 0.36, h: 12 }, { tur: 'cop', gx: 15.8, gy: 18.6, gw: 0.36, gd: 0.36, h: 12 },
+            { tur: 'cicek', gx: 4.2, gy: 18.6, gw: 1, gd: 0.36, h: 7 }, { tur: 'cicek', gx: 12.4, gy: 18.6, gw: 1, gd: 0.36, h: 7 },
             // karşı kaldırım: ağaçlar ve sokak lambaları
             { tur: 'agac', gx: 3.2, gy: 21.2, gw: 0.6, gd: 0.6, h: 10 }, { tur: 'agac', gx: 11.2, gy: 21.2, gw: 0.6, gd: 0.6, h: 10 },
             { tur: 'agac', gx: 17.6, gy: 21.2, gw: 0.6, gd: 0.6, h: 10 },
             { tur: 'sokaklambasi', gx: 7.3, gy: 21.3, gw: 0.3, gd: 0.3, h: 52 }, { tur: 'sokaklambasi', gx: 14.3, gy: 21.3, gw: 0.3, gd: 0.3, h: 52 },
+            { tur: 'parkbanki', gx: 0.5, gy: 21.45, gw: 2, gd: 0.55, h: 16 }, { tur: 'cop', gx: 9.6, gy: 21.2, gw: 0.36, gd: 0.36, h: 12 },
         ],
     },
     2: {

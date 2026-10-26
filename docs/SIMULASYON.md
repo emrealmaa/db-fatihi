@@ -109,9 +109,25 @@ kararıp sayfa kenarlarıyla birleşir. Üst katlarda cadde daha koyu görünür
 | 17–19 | Gün batımı | Mor tonlu cadde, kavşak lambaları yanmaya başlar, pencereler turuncu |
 | 19–22 | Gece | En koyu cadde, kavşak lambaları parlak, kafe camlarından kaldırıma yelpaze gibi süzülen amber ışık huzmeleri |
 
+**Kafenin ön cephesi:** tuğla denizlik duvarı, ahşap kayıtlı büyük cam vitrinler (içerisi camdan görünür; gündüz yansıma,
+akşam/gece sıcak ışık), tuğla ayaklar ve kornişli alınlık; kapının üstünde cam vasistas, çizgili tente ve altın çerçeveli,
+ampullü **"KARAVANA · Kutu Oyunu Kafe"** tabelası (akşam/gece ışık saçar). Cephe karo karo parçalanır ki içerideki ve
+dışarıdaki karakterlerle derinlik sıralaması doğru kalsın.
+
+**Komşu binalar** (`harita.js: KOMSU_BINALAR`): iki yanda Sahaf Kitabevi ve Simit Fırını, karşı kaldırımda Çiçekçi,
+Kırtasiye, Pizza Dükkânı ve Oyuncakçı. Kameraya göre kafenin arkasında kalan bina çok katlı tam bina olarak çizilir
+(katlara göre pencere sıraları, gece rastgele yanık pencereler ve perdeler, zemin katta ışıklı vitrin, çatıda su deposu ve
+klima); önde kalanlar manzarayı kapatmasın diye çatısız alçak kesit olarak (içi, tezgâhı ve renkli rafları görünür). Her
+dükkânın caddeye bakan tarafında çizgili tente, adı yazan tabela ve akşam/gece kaldırıma düşen vitrin ışığı vardır.
+
+**Sokak mobilyaları:** kuyruk sırasında üç park bankı (dökme demir ayak, ahşap latalar, kolçak), kaldırım kenarında sokak
+lambaları, çöp kutuları ve çiçeklikler, cephe dibinde saksılar ve menü tahtası, karşı kaldırımda bank, ağaçlar ve lambalar.
+Kuyrukta bank karosuna denk gelen bekleyenler banka oturup caddeye bakar.
+
 Kafenin önü: cephe şeridi, iki sıra kaldırım (kuyruk sırası + yürüme yolu), iki şeritli yol ve karşı kaldırım (ağaçlar, sokak lambaları).
 `motor.js: ortamAdim` simülasyon hızından bağımsız, gerçek zamanla çalışır:
-- **Arabalar** iki şeritte zıt yönlerde geçer; akşam ve gece **farları yanar**, önlerine ışık konisi düşer, stop lambaları kırmızıdır.
+- **Arabalar** (3D: dört tekerlek, şasi, tampon, camlı kabin, tavan, gölge) iki şeritte zıt yönlerde geçer; akşam ve gece
+  **farları yanar**, önlerine ışık konisi düşer, far ve stop lambaları parlar.
 - **Yayalar** her iki kaldırımda yürüyüp geçer (müşteri değildir, kafeye girmez).
 - **Sevimli bir köpek** kaldırımlarda dolaşır, ara sıra oturup etrafı koklar, kuyruğunu sallar.
 - **Sokak lambaları** 18:00'den sonra yanar ve altlarına ışık havuzu düşer.
