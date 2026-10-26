@@ -14,7 +14,9 @@
     "api": "npm run dev -w app/api",
     "api:lite": "cross-env DB_SURUCU=pglite npm run dev -w app/api",
     "test": "npm run db:test && npm run test -w app/api",
-    "test:lite": "npm run db:test:lite && npm run test:lite -w app/api"
+    "test:lite": "npm run db:test:lite && npm run test:lite -w app/api",
+    "db:performans": "node db/scripts/performans.js",
+    "db:performans:lite": "cross-env DB_SURUCU=pglite node db/scripts/performans.js"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.0",
