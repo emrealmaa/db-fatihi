@@ -4,13 +4,17 @@ Veritabanı dersi dönem projesi. Geliştiriciler: Enes Öztürk, Emre Alma. Tes
 Seçilen yol: **PostgreSQL (RDBMS)**. Puan kriterleri `docs/ROADMAP.md` içinde.
 
 ## Komutlar
-- Başlat: `make up DB=postgres` (port **5433**, 5432 başka konteynerde dolu)
-- Sıfırla (init betiklerini yeniden çalıştırır): `make reset && make up DB=postgres`
-- Shell: `docker compose exec postgres psql -U app karavana`
-- Rol testi: `docker compose exec -e PGPASSWORD=garson_dev_pw postgres psql -U garson_app karavana`
+- Bağımlılıklar: `npm install` (kök dizinde; workspaces: `app/api`, `app/web`)
+- Veritabanını sıfırdan kur: `npm run db:kur` (`.env` içindeki PostgreSQL; yerel kurulum veya Docker)
+- Testler: `npm run db:test` (PostgreSQL) / `npm run db:test:lite` (kurulumsuz PGlite)
+- Docker ile: `make up DB=postgres` (port **5433**); sıfırlama `make reset && make up DB=postgres`
+- Shell: `psql -U postgres karavana` (yerel) veya `docker compose exec postgres psql -U app karavana`
+- Rol testi: `psql -U garson_app karavana` (parola `garson_dev_pw`)
 
 ## Kurallar
-- Şema değişikliği `db/postgres/init/NN_*.sql` dosyalarında yapılır; init yalnızca boş volume'de çalışır.
+- Şema değişikliği `db/postgres/init/NN_*.sql` dosyalarında yapılır, ardından `npm run db:kur` ve testler.
+- Yeni iş kuralına test eklenir (`db/tests/`). Seed (`06_seed.sql`) şu an GEÇİCİ örnek veri; testler seed id'lerine dayanır.
+- Prosedürler işlemi yapan personeli `fn_aktif_personel()` ile okur; çağıran taraf `set_config('app.personel_id', id, true)` yapmalı.
 - Uygulama rolleri tablolara doğrudan erişmez: view okur, `sp_*` prosedürlerini çağırır (bkz. `docs/ARCHITECTURE.md`).
 - Kullanıcı verisi (ad, e-posta, telefon) garson/kasiyer için daima maskeli view'dan okunur.
 - Yeni iş kuralı önce constraint/trigger olarak veritabanında yazılır, uygulama katmanı tekrar etmez.

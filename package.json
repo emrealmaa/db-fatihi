@@ -1,0 +1,18 @@
+{
+  "name": "karavana",
+  "private": true,
+  "description": "Karavana kutu oyunu cafe işletme sistemi",
+  "type": "module",
+  "workspaces": ["app/api", "app/web"],
+  "scripts": {
+    "db:kur": "node db/scripts/kur.js",
+    "db:test": "node --test --test-concurrency=1 \"db/tests/*.test.js\"",
+    "db:test:lite": "cross-env DB_SURUCU=pglite node --test \"db/tests/*.test.js\""
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.3.0",
+    "cross-env": "^7.0.3",
+    "dotenv": "^16.4.5",
+    "pg": "^8.13.0"
+  }
+}

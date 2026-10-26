@@ -2,49 +2,73 @@
 
 ## Genel
 ```
-Ön yüz (henüz seçilmedi) -> API (henüz yok) -> PostgreSQL 15
-                                   garson_app / kasiyer_app / yonetici_app
+Ön yüz (React/Vite) -> API (Node/Express) -> PostgreSQL 15+
+                         giris_app / garson_app / kasiyer_app / yonetici_app
 ```
 İş mantığı veritabanındadır: prosedürler, tetikleyiciler, kısıtlar. API ince kalır.
+Personel uygulamaya kendi kullanıcı adı/parolasıyla girer (`fn_personel_giris`); API o personelin
+rolüne karşılık gelen veritabanı rolüyle bağlanır ve her transaction başında
+`set_config('app.personel_id', ...)` ile işlemi yapan personeli bildirir.
 
-## Tablolar (9)
+## İş modeli (Karavana)
+- Kişi başı sabit **giriş ücreti** (tüm masalarda aynı, `ayar` tablosunda). Masa açılırken oturuma kopyalanır.
+- Hesap = kişi sayısı × giriş ücreti + siparişler − indirim. Oyun ve süre ücreti yoktur.
+- Öğrenci indirimi ileride: `kullanici.ogrenci` ve `oturum.indirim_tutari` alanları hazır.
+- Masa açılırken müşteri telefonla aranır; kayıtlı değilse aynı adımda kaydedilir (`ayar.kayit_zorunlu`).
+- Her masa aynı anda tek oyun oynar. Ödeme nakit veya kart; hesap bölünmez.
+
+## Tablolar (13)
 | Tablo | Amaç |
 |---|---|
-| kullanici | Müşteri (ad, e-posta, telefon) |
+| ayar | Tek satır: giriş ücreti, seçim süresi, kayıt zorunluluğu |
+| kullanici | Müşteri (ad, telefon, isteğe bağlı e-posta, öğrenci mi) |
+| personel | Garson/kasiyer/yönetici; bcrypt parola hash'i |
 | kategori, oyun | Oyun kataloğu; `oyun.toplam_adet` fiziksel kopya sayısı |
-| masa | Kapasite ve kişi başı saatlik ücret |
-| oturum | Masanın açılıp kapanana kadarki hesap birimi |
+| masa | Masa numarası ve kapasite |
+| oturum | Masanın açılıp kapanana kadarki hesap birimi; giriş ücreti, indirim, açan personel |
 | oturum_oyun | Hangi oturum hangi oyunu oynuyor/oynadı |
 | bekleme | Oyun bekleyen masa kuyruğu |
-| urun, siparis | Cafe menüsü ve masa siparişleri (fiyat sipariş anında kopyalanır) |
+| urun_kategori, urun | Menü; stok ve kritik stok seviyesi |
+| siparis | Masa siparişleri (fiyat sipariş anında kopyalanır, siparişi alan personel) |
+| odeme | Kapanan her oturumun tek ödemesi (nakit/kart, tutar, kasiyer) |
 
 Müsait adet saklanmaz, `fn_musait_adet` ile hesaplanır (tutarsızlık riski yok).
 
 ## Seçim hakkı akışı
 1. Masa istediği oyun doluysa `sp_bekleme_ekle` ile kuyruğa girer (`BEKLIYOR`).
-2. Bir masa oyunu iade edince (`sp_oyun_bitir`) veya hesabı kapatınca, `sp_sirayi_ilerlet` sıradaki masaya `SECIM_HAKKI` verir. Aynı anda tek masa hakka sahiptir.
-3. Masa müsait oyunlar arasından `sp_oyun_sec` ile seçer; kayıt `TAMAMLANDI` olur.
-4. `sp_secim_suresi_doldur(dk)` süreyi aşanı `ATLANDI` yapıp sıranın sonuna ekler.
+2. Bir masa oyunu iade edince (`sp_oyun_bitir`), oyun başlatınca veya hesabı kapatınca `sp_sirayi_ilerlet`
+   çalışır: kişi sayısına uygun müsait oyun bulunan **ilk** bekleyen masaya `SECIM_HAKKI` verilir.
+   Aynı anda tek masa hakka sahiptir (kısmi UNIQUE index).
+3. Seçim hakkı başka masadayken hiçbir masa oyun başlatamaz (tetikleyici) — sıra atlanamaz.
+4. Hak sahibi masa `sp_oyun_sec` ile seçer; kayıt `TAMAMLANDI` olur.
+5. `sp_secim_suresi_doldur` (API zamanlayıcısı çağırır) süreyi (`ayar.secim_suresi_dk`, 5 dk) aşanı
+   `ATLANDI` yapıp sıranın sonuna ekler.
 
 ## Kısıtlar
-- PK/FK: tüm tablolar. UNIQUE: e-posta, telefon, masa_no, oyun adı.
-- CHECK: telefon/e-posta formatı, adet>=0, oyuncu aralığı, kapanış>=açılış, stok>=0, bekleme durumu.
-- Kısmi UNIQUE index: masada tek açık oturum, oturumda tek aktif oyun, kuyrukta tek aktif kayıt.
-- Tetikleyici: kişi<=masa kapasitesi; oyun aktif, müsait kopya var ve oyuncu sayısı uygun (satır kilidiyle yarış koşulu önlenir).
+- PK/FK: tüm tablolar. UNIQUE: müşteri e-posta/telefon, personel kullanıcı adı/telefon, masa_no, oyun/ürün/kategori adı, ödeme başına tek oturum.
+- CHECK: telefon/e-posta/kullanıcı adı formatı, personel rolü, ödeme türü, adet/stok/fiyat ≥ 0, oyuncu aralığı, kapanış ≥ açılış, bekleme durumu, ayar tek satır.
+- Kısmi UNIQUE index: masada tek açık oturum, oturumda tek aktif oyun, kuyrukta tek aktif kayıt, tek seçim hakkı.
+- Tetikleyici: kişi ≤ masa kapasitesi; oyun başlarken oturum açık, sıra atlanmıyor, oyun aktif, müsait kopya var ve oyuncu sayısı uygun (satır kilidiyle yarış koşulu önlenir); kapanmış oturuma sipariş eklenemez.
 
 ## Fonksiyonlar, prosedürler, view'lar
-- Fonksiyon: `fn_musait_adet`, `fn_hesap_detay`, `fn_hesap_hesapla` (masa+oyun+sipariş, 15 dk dilimi), `fn_telefon_maskele`, `fn_email_maskele`, `fn_ad_maskele`
-- Prosedür: `sp_oturum_ac`, `sp_bekleme_ekle`, `sp_sirayi_ilerlet`, `sp_oyun_baslat`, `sp_oyun_sec`, `sp_oyun_bitir`, `sp_secim_suresi_doldur`, `sp_siparis_ver`, `sp_oturum_kapat`
-- View: `v_musait_oyunlar`, `v_masa_durumu`, `v_bekleme_sirasi`, `v_musteri_maskeli`, `v_acik_hesaplar`, `v_gunluk_ciro`, `v_oyun_populerlik`
+- Fonksiyon (10): `fn_aktif_personel`, `fn_musait_adet`, `fn_uygun_oyun_var`, `fn_hesap_detay`, `fn_hesap_hesapla`, `fn_musteri_bul`, `fn_personel_giris`, `fn_telefon_maskele`, `fn_email_maskele`, `fn_ad_maskele`
+- Prosedür (15): `sp_musteri_kaydet`, `sp_oturum_ac`, `sp_sirayi_ilerlet`, `sp_bekleme_ekle`, `sp_bekleme_iptal`, `sp_oyun_baslat`, `sp_oyun_sec`, `sp_oyun_bitir`, `sp_secim_suresi_doldur`, `sp_siparis_ver`, `sp_siparis_iptal`, `sp_oturum_kapat`, `sp_personel_ekle`, `sp_personel_parola`, `sp_stok_ekle`
+- View (13): `v_musait_oyunlar`, `v_masa_durumu`, `v_bekleme_sirasi`, `v_musteri_maskeli`, `v_menu`, `v_oturum_siparisleri`, `v_acik_hesaplar`, `v_gunluk_ciro`, `v_oyun_populerlik`, `v_personel_maskeli`, `v_personel_performans`, `v_kritik_stok`, `v_urun_satis`
 
 ## Yetki ve maskeleme
 | Rol | Yapabildiği |
 |---|---|
-| rol_garson | Maskeli view'lar, oturum/oyun/sipariş prosedürleri. Ham `kullanici` tablosu yasak |
-| rol_kasiyer | Garson + açık hesaplar, ciro, `sp_oturum_kapat`, hesap fonksiyonları |
-| rol_yonetici | Tüm tablolar (maskesiz) |
+| rol_giris | Yalnızca `fn_personel_giris` (hiçbir tablo/view okuyamaz) |
+| rol_garson | Maskeli view'lar, menü, müşteri arama/kayıt, oturum/oyun/kuyruk/sipariş prosedürleri. Ham `kullanici`/`personel` yasak |
+| rol_kasiyer | Garson + açık hesaplar, ciro, `sp_oturum_kapat` (ödeme), hesap fonksiyonları |
+| rol_yonetici | Kasiyer + tüm tablolar (maskesiz), raporlar, personel/stok yönetimi |
 
-Login rolleri: `garson_app`, `kasiyer_app`, `yonetici_app`. Prosedürler ve hesap fonksiyonları `SECURITY DEFINER` + sabit `search_path`. Not: PostgreSQL fonksiyon çalıştırma iznini çağıran role göre kontrol eder, bu yüzden view'daki maskeleme fonksiyonları ayrıca garsona açılmıştır.
+Login rolleri: `giris_app`, `garson_app`, `kasiyer_app`, `yonetici_app`. Prosedürler ve hesap fonksiyonları `SECURITY DEFINER` + sabit `search_path`. Not: PostgreSQL fonksiyon çalıştırma iznini çağıran role göre kontrol eder, bu yüzden view'daki maskeleme fonksiyonları ayrıca garsona açılmıştır.
 
 ## Sorgu performansı
-Kısmi indexler: aktif oturum_oyun (müsait adet sayımı), açık oturum, bekleyen kuyruk. Ek: `siparis(oturum_id)`, `oturum(kullanici_id)`. Faz 3'te `EXPLAIN ANALYZE` çıktıları dokümante edilecek.
+Kısmi indexler: aktif oturum_oyun (müsait adet sayımı), açık oturum, bekleyen kuyruk, kapanmış oturum. Ek: `siparis(oturum_id)`, `siparis(personel_id)`, `oturum(kullanici_id)`, `odeme(zaman)`. `EXPLAIN ANALYZE` kanıtları: `docs/PERFORMANS.md`.
+
+## Testler
+`db/tests/*.test.js` (node:test): kısıtlar, kuyruk akışı, hesap/ödeme, rol yetkileri. Her test temiz veritabanıyla başlar.
+- `npm run db:test` — gerçek PostgreSQL (.env)
+- `npm run db:test:lite` — kurulumsuz PGlite
