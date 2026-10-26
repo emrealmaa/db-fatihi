@@ -77,21 +77,30 @@ INSERT INTO oyun (ad, kategori_id, min_oyuncu, max_oyuncu, sure_dk, toplam_adet,
  ('Quacks of Quedlinburg',5,2,4,45,2,2,5),
  ('Dune: Imperium',1,1,4,120,1,4,5);
 
--- Kat 1: giriş & espresso bar (10 masa: bar/mutfak yakını 2'lik, iç kısım 4'lük) · Kat 2: strateji salonu (10 masa) · Kat 3: VIP / FRP (4 büyük masa)
+-- Kat 1: giriş & espresso bar (6 adet 2'lik bar/duvar kenarında, 4 adet 4'lük iç salonda) · Kat 2: strateji salonu (10 masa) · Kat 3: VIP / FRP (4 büyük masa)
 INSERT INTO masa (masa_no, kapasite, kat) VALUES
  (1,4,1),(2,4,1),(3,6,2),(4,6,2),(5,6,3),(6,2,1),(7,2,1),(8,4,2),(9,4,2),(10,8,3),
- (11,2,1),(12,2,1),(13,4,1),(14,4,1),(15,2,1),(16,4,1),
+ (11,2,1),(12,2,1),(13,4,1),(14,4,1),(15,2,1),(16,2,1),
  (17,4,2),(18,6,2),(19,4,2),(20,6,2),(21,4,2),(22,6,2),
  (23,8,3),(24,6,3);
 
 INSERT INTO urun_kategori (ad, sira) VALUES
- ('Sıcak İçecekler',1),('Soğuk İçecekler',2),('Yiyecekler',3),('Tatlılar',4);
+ ('Sıcak İçecekler',2),('Soğuk İçecekler',3),('Ana Yemek & Atıştırmalık',4),('Tatlılar',5),('Kahvaltı',1);
 
+-- İlk 10 ürünün id'si testlerde kullanılır (Su ve Brownie kasıtlı olarak kritik stokta)
 INSERT INTO urun (kategori_id, ad, fiyat, stok, kritik_stok) VALUES
  (1,'Türk Kahvesi',60,100,10),(1,'Filtre Kahve',70,100,10),(1,'Çay',25,200,20),
  (2,'Limonata',80,60,10),(2,'Ayran',35,40,10),(2,'Su',15,4,10),
  (3,'Tost',120,40,5),(3,'Patates Kızartması',110,30,5),
- (4,'Cheesecake',140,20,5),(4,'Brownie',120,3,5);
+ (4,'Cheesecake',140,20,5),(4,'Brownie',120,3,5),
+ -- kahvaltı (sabah saatlerinde öne çıkar)
+ (5,'Serpme Kahvaltı',650,30,5),(5,'Menemen',220,50,8),(5,'Simit',40,80,10),(5,'Kumru',180,40,6),
+ -- ana yemek ve atıştırmalık
+ (3,'Hamburger',340,40,6),(3,'Makarna',280,40,6),(3,'Pizza Dilimi',160,60,8),(3,'Nachos',210,40,6),
+ -- tatlılar
+ (4,'Sufle',190,30,5),(4,'Tiramisu',180,30,5),(4,'Waffle',230,30,5),
+ -- içecekler
+ (1,'Latte',95,100,10),(1,'Sıcak Çikolata',100,80,10),(2,'Ice Latte',105,80,10),(2,'Smoothie',130,50,8);
 
 -- Demo senaryo: masa 1 ve 2 Root'un iki kopyasını oynuyor, masa 3 de Root istiyor -> Root sırasına girer.
 -- Masa 3 açılırken müşteri yeni kaydediliyor (masada hızlı kayıt akışı).

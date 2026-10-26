@@ -40,13 +40,29 @@ const OYUNA_OZEL = [
 export function siparisCumlesi(kalemler) {
     const ilk = kalemler[0];
     const ad = (ilk?.ad || '').toLocaleLowerCase('tr');
+    if (ad.includes('serpme')) return sec(['Serpme kahvaltı söyleyelim!', 'Kahvaltı tabağı gelsin']);
+    if (ad.includes('menemen')) return sec(['Menemen alalım mı?', 'Soğanlı mı soğansız mı?']);
+    if (ad.includes('simit')) return sec(['Simit çayla iyi gider', 'Taze simit var mı?']);
+    if (ad.includes('kumru')) return sec(['Bir kumru söyleyeyim', 'Kumru buranın meşhuru']);
+    if (ad.includes('hamburger')) return sec(['Hamburger açtı beni', 'Bir hamburger alalım']);
+    if (ad.includes('makarna')) return sec(['Makarna söyleyelim', 'Bol peynirli olsun']);
+    if (ad.includes('pizza')) return sec(['Oyun arası pizza!', 'Bir dilim pizza alayım']);
+    if (ad.includes('nachos')) return sec(['Ortaya nachos!', 'Nachos oyunla iyi gider']);
+    if (ad.includes('sufle')) return sec(['Sufle sıcak gelsin', 'Akışkan sufle!']);
+    if (ad.includes('tiramisu')) return sec(['Tiramisu var mı?', 'Kahve + tiramisu']);
+    if (ad.includes('waffle')) return sec(['Waffle paylaşalım', 'Bol meyveli waffle']);
+    if (ad.includes('sıcak çikolata')) return sec(['Sıcak çikolata lütfen', 'Hava soğudu, çikolata!']);
+    if (ad.includes('ice latte')) return sec(['Buzlu latte alayım', 'Bir ice latte!']);
+    if (ad.includes('latte')) return sec(['Latte lütfen', 'Bir latte daha?']);
+    if (ad.includes('smoothie')) return sec(['Meyveli smoothie!', 'Smoothie ferahlatır']);
     if (ad.includes('filtre')) return sec(['Bir filtre kahve daha söylesek mi?', 'Filtre kahve iyi gider']);
     if (ad.includes('türk kahvesi')) return sec(['Zihnim açılsın diye Türk kahvesi alayım', 'Türk kahvesi lazım!']);
     if (ad.includes('çay')) return sec(['Çaylar tazelensin', 'Demli bir çay alalım']);
     const k = ilk?.kategori || '';
     if (/Sıcak/.test(k)) return sec(['Kahve lazım!', 'Sıcak bir şeyler alalım']);
     if (/Soğuk/.test(k)) return sec(['Susadık!', 'Soğuk bir şey iyi gelir']);
-    if (/Yiyecek/.test(k)) return sec(['Acıktık!', 'Masada içecek alanını daraltmayalım', 'Bir tost iyi gider']);
+    if (/Kahvaltı/.test(k)) return sec(['Kahvaltı zamanı!', 'Önce kahvaltı']);
+    if (/Yemek|Atıştırmalık|Yiyecek/.test(k)) return sec(['Acıktık!', 'Masada içecek alanını daraltmayalım', 'Bir tost iyi gider']);
     if (/Tatlı/.test(k)) return sec(['Tatlı zamanı!', 'Bir dilim pasta?']);
     return 'Sipariş verebilir miyiz?';
 }

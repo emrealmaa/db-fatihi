@@ -116,3 +116,11 @@ test('örnek veri: 50 oyun; popüler devler 8 kopya ve en yüksek talepte; zorlu
     await hataBekle(vt.admin('UPDATE oyun SET zorluk = 6 WHERE id = 2'), { kod: CHECK_IHLALI });
     await hataBekle(vt.admin('UPDATE oyun SET talep = 0 WHERE id = 2'), { kod: CHECK_IHLALI });
 });
+
+test('örnek menü: kahvaltı ilk kategori; kahvaltı, ana yemek, tatlı ve içecekler menüde', async () => {
+    const menu = await vt.garson('SELECT ad, kategori FROM v_menu ORDER BY kategori_sira, ad');
+    assert.equal(menu[0].kategori, 'Kahvaltı');
+    const adlar = new Set(menu.map((u) => u.ad));
+    for (const ad of ['Serpme Kahvaltı', 'Menemen', 'Simit', 'Kumru', 'Hamburger', 'Makarna', 'Pizza Dilimi', 'Nachos',
+        'Sufle', 'Tiramisu', 'Waffle', 'Latte', 'Sıcak Çikolata', 'Ice Latte', 'Smoothie']) assert.ok(adlar.has(ad), ad);
+});

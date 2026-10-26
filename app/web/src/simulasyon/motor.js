@@ -652,7 +652,7 @@ export class Simulasyon {
                 g.memnuniyet = Math.min(100, g.memnuniyet + dk * 0.2);
                 this.siparisKontrol(g);
                 if (Math.random() < dk * 0.05) this.izlenecekYon(g);
-                if (Math.random() < dk * 0.02) this.baloncuk(lider, g.kahvalti ? sec(['Kahvaltı harika', 'Bir çay daha?', 'Menemen nefis']) : izleyiciCumlesi());
+                if (Math.random() < dk * 0.02) this.baloncuk(lider, g.kahvalti ? sec(['Kahvaltı harika', 'Bir çay daha?', 'Menemen nefis', 'Simitler taze', 'Serpme kahvaltı efsane']) : izleyiciCumlesi());
                 if (this.dakika >= g.izlemeBitis) this.hesabaGec(g);
                 return;
 
@@ -855,8 +855,11 @@ export class Simulasyon {
         const menu = this.menu.filter((u) => u.stok > 0);
         if (!menu.length) return;
         const yemek = saatProfili(this.dakika).yemek * (g.kahvalti ? 1.5 : 1);
-        const agirlik = (u) => /Sıcak/.test(u.kategori) ? 3 : /Soğuk/.test(u.kategori) ? 2
-            : /Yiyecek/.test(u.kategori) ? (g.masa.kat === 3 ? Math.max(2.5, yemek) : yemek) : 1;
+        // Kahvaltı yalnızca sabah dilimlerinde (13:00'e kadar) istenir, kahvaltıya gelenler için çok ağır basar
+        const sabah = (this.dakika % 1440) < 14 * 60;
+        const agirlik = (u) => /Kahvaltı/.test(u.kategori) ? (sabah ? (g.kahvalti ? 8 : 3) : 0.05)
+            : /Sıcak/.test(u.kategori) ? 3 : /Soğuk/.test(u.kategori) ? 2
+            : /Yemek|Atıştırmalık|Yiyecek/.test(u.kategori) ? (g.masa.kat === 3 ? Math.max(2.5, yemek) : yemek) : 1;
         const kalemler = [];
         // VIP gruplar daha çok ve daha bol sipariş verir
         for (let i = 0; i < Math.ceil(g.kisi / (g.vip ? 1.5 : 2)); i++) {
@@ -974,7 +977,7 @@ export class Simulasyon {
             if (!g.siparis) return;              // bu arada terk ettiyse
             g.siparis.durum = 'ALINDI';
             g.siparis.idler = r.siparisIdleri;
-            const yemek = g.siparis.kalemler.some((k) => /Yiyecek|Tatlı/.test(k.kategori));
+            const yemek = g.siparis.kalemler.some((k) => /Kahvaltı|Yemek|Atıştırmalık|Yiyecek|Tatlı/.test(k.kategori));
             if (yemek && this.sefler.length) {
                 // Yemek mutfağa fiş olarak düşer; garson kat 1'deki servis tezgahının önünde bekler
                 w.fis = { id: ++birimSayac, grup: g, masa: g.masa, durum: 'BEKLIYOR', kalemSayisi: g.siparis.kalemler.length, zaman: this.dakika };
