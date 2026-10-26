@@ -7,9 +7,22 @@ export const GENISLIK = 20;      // x
 export const DERINLIK = 20;      // y (dünya)
 export const IC_DERINLIK = 16;   // iç mekân derinliği
 
-// Merdiven her katta aynı yerde; katlar arası geçiş giriş karosundan yapılır
-export const MERDIVEN = { gx: 17, gy: 2 };
-export const MERDIVEN_GOVDE = { gx: 17, gy: 0, gw: 2, gd: 2 };
+// Asansör her katta aynı yerde (eski merdivenin yeri); katlar arası geçiş kapısının önündeki karodan yapılır
+export const ASANSOR = { gx: 17, gy: 2 };
+export const ASANSOR_GOVDE = { gx: 17, gy: 0, gw: 2, gd: 2 };
+
+// Kat 1 mutfağı: şefler ocak/tezgah başında çalışır, hazır tabağı servis tezgahına koyar,
+// garson tezgahın önündeki alış noktasından alır
+export const MUTFAK = {
+    istasyonlar: [{ gx: 11, gy: 1 }, { gx: 14, gy: 1 }],
+    tezgah: { gx: 12, gy: 1 },
+    alis: { gx: 11, gy: 3 },
+};
+// Kat 3 sahnesi: müzisyenlerin yeri (sahne yüksekliği SAHNE_Z piksel)
+export const SAHNE_Z = 6;
+export const MUZISYENLER = [
+    { rol: 'sarkici', gx: 16, gy: 10 }, { rol: 'gitarist', gx: 17.3, gy: 10.6 }, { rol: 'piyanist', gx: 15.2, gy: 11.2 },
+];
 // Kat 1 girişi: ön cephedeki kapı (x = 2..3). KAPI kaldırımdaki kapı önü, KAPI_IC içerideki ilk karo.
 export const KAPI = { gx: 2, gy: 17 };
 export const KAPI_IC = { gx: 2, gy: 15 };
@@ -36,8 +49,8 @@ const kat1Masalar = [
 
 const kat2Masalar = [
     { gx: 3, gy: 3, gw: 2, gd: 1 }, { gx: 8, gy: 4, gw: 1, gd: 1 }, { gx: 12, gy: 3, gw: 2, gd: 1 },
-    { gx: 4, gy: 8, gw: 1, gd: 1 }, { gx: 8, gy: 8, gw: 2, gd: 1 }, { gx: 13, gy: 7, gw: 1, gd: 1 },
-    { gx: 17, gy: 7, gw: 1, gd: 1 }, { gx: 3, gy: 12, gw: 2, gd: 1 }, { gx: 8, gy: 12, gw: 1, gd: 1 },
+    { gx: 4, gy: 8, gw: 1, gd: 1, tip: 'minder' }, { gx: 8, gy: 8, gw: 2, gd: 1 }, { gx: 13, gy: 7, gw: 1, gd: 1, tip: 'minder' },
+    { gx: 17, gy: 7, gw: 1, gd: 1, tip: 'minder' }, { gx: 3, gy: 12, gw: 2, gd: 1 }, { gx: 8, gy: 12, gw: 1, gd: 1, tip: 'minder' },
     { gx: 13, gy: 12, gw: 2, gd: 1 },
 ];
 
@@ -57,7 +70,12 @@ export const KATLAR = {
             { tur: 'bitki', gx: 19, gy: 15, gw: 1, gd: 1, h: 18 },
             { tur: 'bitki', gx: 1, gy: 15, gw: 1, gd: 1, h: 18 },
             { tur: 'bitki', gx: 19, gy: 8, gw: 1, gd: 1, h: 18 },
-            { tur: 'tabela', gx: 10, gy: 1, gw: 2, gd: 1, h: 30 },
+            { tur: 'tabela', gx: 9, gy: 1, gw: 1, gd: 1, h: 30 },
+            // mutfak: duvar boyunca ekipman, önünde servis tezgahı
+            { tur: 'ocak', gx: 11, gy: 0, gw: 1, gd: 1, h: 22 }, { tur: 'firin', gx: 12, gy: 0, gw: 1, gd: 1, h: 24 },
+            { tur: 'buzdolabi', gx: 13, gy: 0, gw: 1, gd: 1, h: 50 }, { tur: 'evye', gx: 14, gy: 0, gw: 1, gd: 1, h: 22 },
+            { tur: 'hazirlik', gx: 15, gy: 0, gw: 1, gd: 1, h: 22 },
+            { tur: 'servistezgahi', gx: 11, gy: 2, gw: 4, gd: 1, h: 20 },
         ],
         masalar: kat1Masalar,
         bar: { gx: 4, gy: 2 },
@@ -67,10 +85,11 @@ export const KATLAR = {
             { gx: 5, gy: 14 }, { gx: 6, gy: 14 }, { gx: 7, gy: 14 }, { gx: 8, gy: 14 }, { gx: 9, gy: 14 }, { gx: 10, gy: 14 },
             { gx: 5, gy: 13 }, { gx: 6, gy: 13 }, { gx: 7, gy: 13 }, { gx: 8, gy: 13 }, { gx: 9, gy: 13 }, { gx: 10, gy: 13 },
         ],
-        halilar: [{ gx: 5, gy: 13, gw: 6, gd: 3, renk: 'bekleme' }, { gx: 2, gy: 15, gw: 2, gd: 1, renk: 'paspas' }],
+        halilar: [{ gx: 5, gy: 13, gw: 6, gd: 3, renk: 'bekleme' }, { gx: 2, gy: 15, gw: 2, gd: 1, renk: 'paspas' },
+            { gx: 11, gy: 0, gw: 5, gd: 2, renk: 'mutfak' }],
         duvar: [
-            { tur: 'pencere', duvar: 'K', bas: 9, son: 11.5 }, { tur: 'poster', duvar: 'K', bas: 12.3, son: 13.8, oyun: 'catan' },
-            { tur: 'poster', duvar: 'K', bas: 14.4, son: 15.9, oyun: 'tren' },
+            { tur: 'pencere', duvar: 'K', bas: 8.5, son: 10.5 }, { tur: 'fayans', duvar: 'K', bas: 11, son: 16 },
+            { tur: 'poster', duvar: 'B', bas: 11, son: 12.5, oyun: 'catan' }, { tur: 'poster', duvar: 'D', bas: 13, son: 14.5, oyun: 'tren' },
             { tur: 'pencere', duvar: 'B', bas: 2.5, son: 5 }, { tur: 'poster', duvar: 'B', bas: 6, son: 7.5, oyun: 'carcassonne' },
             { tur: 'pano', duvar: 'B', bas: 8.5, son: 10.5 },
             { tur: 'kapi', duvar: 'G', bas: 2, son: 4 }, { tur: 'pencere', duvar: 'G', bas: 6, son: 9 },
@@ -96,10 +115,16 @@ export const KATLAR = {
             { tur: 'lamba', gx: 16, gy: 4, gw: 1, gd: 1, h: 40 },
             { tur: 'lamba', gx: 16, gy: 10, gw: 1, gd: 1, h: 40 },
             { tur: 'bitki', gx: 18, gy: 13, gw: 1, gd: 1, h: 18 },
+            // okuma köşesi
+            { tur: 'okumakoltugu', gx: 18, gy: 11, gw: 1, gd: 1, h: 10 }, { tur: 'kitapyigini', gx: 17, gy: 12, gw: 1, gd: 1, h: 8 },
         ],
         masalar: kat2Masalar,
         bar: { gx: 16, gy: 14 },
-        halilar: [{ gx: 2, gy: 3, gw: 12, gd: 12, renk: 'salon' }],
+        halilar: [{ gx: 2, gy: 3, gw: 12, gd: 12, renk: 'salon' },
+            // minder köşelerinin bohem halıları ve okuma köşesi
+            { gx: 3, gy: 7, gw: 3, gd: 3, renk: 'bohem' }, { gx: 12, gy: 6, gw: 3, gd: 3, renk: 'bohem' },
+            { gx: 16, gy: 6, gw: 3, gd: 3, renk: 'bohem' }, { gx: 7, gy: 11, gw: 3, gd: 3, renk: 'bohem' },
+            { gx: 16, gy: 10, gw: 3, gd: 3, renk: 'bohem' }],
         duvar: [
             // raf üstündeki duvara asılı posterler (ust: rafın üstünde kalacak yükseklik)
             { tur: 'poster', duvar: 'K', bas: 3, son: 4.5, oyun: 'dixit', ust: true },
@@ -123,8 +148,14 @@ export const KATLAR = {
             { tur: 'deri', gx: 19, gy: 10, gw: 1, gd: 3, h: 16 },
             { tur: 'bar', gx: 15, gy: 15, gw: 4, gd: 1, h: 22 },
             { tur: 'lamba', gx: 7, gy: 8, gw: 1, gd: 1, h: 40 },
-            { tur: 'lamba', gx: 14, gy: 8, gw: 1, gd: 1, h: 40 },
             { tur: 'bitki', gx: 1, gy: 15, gw: 1, gd: 1, h: 18 },
+            // canlı müzik sahnesi (sahne üstündeki nesnelerin z'si SAHNE_Z)
+            { tur: 'sahne', gx: 15, gy: 9, gw: 4, gd: 3, h: 6 },
+            { tur: 'piyano', gx: 14.9, gy: 10.1, gw: 0.8, gd: 0.6, h: 16, z: 6, engelsiz: true },
+            { tur: 'mikrofon', gx: 16, gy: 10.55, gw: 0.3, gd: 0.3, h: 22, z: 6, engelsiz: true },
+            { tur: 'amfi', gx: 18.2, gy: 9.2, gw: 0.6, gd: 0.5, h: 14, z: 6, engelsiz: true },
+            // koleksiyonluk vitrinler
+            { tur: 'koleksiyon', gx: 1, gy: 12, gw: 1, gd: 2, h: 40 }, { tur: 'koleksiyon', gx: 7, gy: 15, gw: 3, gd: 1, h: 26 },
         ],
         masalar: [
             { gx: 3, gy: 4, gw: 3, gd: 2, sekil: 'harita' }, { gx: 10, gy: 4, gw: 3, gd: 2, sekil: 'yuvarlak' },
@@ -138,6 +169,8 @@ export const KATLAR = {
             { tur: 'poster', duvar: 'B', bas: 12, son: 14.5, oyun: 'harita' },
             { tur: 'sanc', duvar: 'K', bas: 14, son: 15.2, renk: '#2e6b4a' }, { tur: 'sanc', duvar: 'G', bas: 7, son: 8.2, renk: '#b0302b' },
             { tur: 'pencere', duvar: 'D', bas: 2, son: 4 }, { tur: 'pano', duvar: 'G', bas: 11, son: 13 },
+            { tur: 'tablo', duvar: 'K', bas: 13.2, son: 14.8 }, { tur: 'tablo', duvar: 'B', bas: 5.6, son: 6.9 },
+            { tur: 'tablo', duvar: 'D', bas: 13.5, son: 15 },
         ],
     },
 };
@@ -195,9 +228,9 @@ function engelIzgarasi(kat) {
             if (x >= 0 && y >= 0 && x < GENISLIK && y < DERINLIK) izgara[x][y] = true;
         }
     };
-    for (const o of t.nesneler) kapat(o);
+    for (const o of t.nesneler) if (!o.engelsiz) kapat(o);
     for (const m of t.masalar) kapat(m);
-    kapat(MERDIVEN_GOVDE);
+    kapat(ASANSOR_GOVDE);
     // İç mekân dışı: üst katlarda tamamen kapalı; kat 1'de cephe şeridi yalnızca kapıdan geçilir,
     // kaldırım ve yakın şerit yürünebilir, uzak şerit kapalı
     for (let x = 0; x < GENISLIK; x++) for (let y = IC_DERINLIK; y < DERINLIK; y++) {

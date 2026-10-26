@@ -9,8 +9,9 @@ veriyle dolar. Kurallar (kapasite, oyun sırası, stok, ödeme) veritabanında u
 | Kat | Konsept | Masa | İçerik |
 |---|---|---|---|
 | 1 | Giriş & Espresso Bar | 10 (2, 4 ve 6 kişilik) | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
-| 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Üç duvarı kaplayan kutu oyunu kütüphanesi, oyun barı, loş ışık ve lamba ışık havuzları |
-| 3 | VIP & FRP Özel Bölgesi | 4 büyük (8–12 kişilik) | FRP harita masaları ve örtülü yuvarlak masalar, deri koltuklar, sancaklar, ejderha heykeli, lüks halı, VIP ışığı |
+| 1 | (ek) | – | **Mutfak**: ocak, fırın, buzdolabı, evye, hazırlık tezgahı, ısıtıcı lambalı servis tezgahı; şef ve yardımcı şef |
+| 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Üç duvarı kaplayan kutu oyunu kütüphanesi, 4 **yer minderli alçak sehpa** ve bohem kilimler, okuma köşesi (koltuk + kitap yığını), oyun barı, loş ışık |
+| 3 | VIP & FRP Özel Bölgesi | 4 ferah (6–8 kişilik) | FRP harita masaları ve örtülü masalar, deri koltuklar, **canlı müzik sahnesi** (şarkıcı, gitarist, piyanist), koleksiyon vitrinleri ve tablolar, sancaklar, ejderha heykeli, VIP ışığı |
 
 Kat 1 ve 2 **organik** yerleşimlidir: masalar elle düzensiz konumlara yerleştirildi, her masanın sandalye halkası ile komşusununki
 arasında en az bir karo yürüme boşluğu vardır (yerleşim denetimi betikle doğrulandı). 1x1 masalar 2 veya 4, 2x1 masalar 6 kişiliktir;
@@ -131,9 +132,27 @@ Saç stilleri, gözlük, etek, ten/saç/kıyafet renkleri kimliğe göre sabitti
 kırmızı papyon ve önlükle; servis sırasında elinde içecekli tepsiyle çizilir. Tüm sprite'lar otomatik dış hat alır.
 Zemin ve duvarlar her kat ve açı için bir kez çizilip önbelleğe alınır.
 
-## Merdiven
-Merdivene tıklanınca **Kat değiştir** penceresi açılır (Yukarı çık / Aşağı in, hedef kattaki kişi sayısıyla).
-Kat değişimi kararma + dikey kayma geçişiyle yapılır; alttaki kat düğmeleri de aynı geçişi kullanır.
+## Asansör
+Eski merdivenin yerinde fırçalanmış çelik, geniş bir **asansör** var (kapı, çağırma düğmesi, kat göstergesi "▲▼ n").
+Karakterler katlar arasında asansörle geçer: kapı açılır, biner (görünmez olur), kısa bir yolculuktan sonra hedef katta kapı
+açılıp iner. Asansöre tıklanınca **kat seçim paneli** açılır (bulunulan kat işaretli); kat değişimi kararma + dikey kayma
+geçişiyle yapılır, alttaki kat düğmeleri de aynı geçişi kullanır.
+
+## Mutfak
+Yiyecek veya tatlı içeren sipariş, garson tarafından veritabanına yazıldıktan sonra **mutfağa fiş** olarak düşer
+(yalnız içecekler barda hazırlanmaya devam eder). Şef ve yardımcı şef sıradaki fişi alır, ocak başında pişirir
+(süre kalem sayısına ve hıza bağlı; şef daha hızlı), tabağı servis tezgahına koyar ("Servis!"). Garson kat 1'deki tezgahın
+önünde bekler, tabağı alıp masaya götürür. Ocak pişerken yanar, hazır tabaklar tezgahta görünür. Garson paneli mutfak
+durumunu (şefler, bekleyen fiş, tezgahta hazır tabak) gösterir. Şefler veritabanı personeli değil, simülasyon karakterleridir.
+
+## Yalnız izleyenler
+Tek başına gelenlerin bir kısmı (ve kişi sayısına uygun oyun bulamayanlar) oyun oynamaz: bir masaya oturup bir şeyler içer,
+oyun oynanan en yakın masaya dönüp izler ("İzlemesi bile keyifli", "Bu hamle iyiydi!"), 30–70 dakika sonra kalkar.
+
+## Oyun seçimi
+Veritabanında 50 oyun var (`oyun.talep` 1–10, `oyun.zorluk` 1–5). Gruplar oyunu **talep ağırlıklı** seçer; katın konseptine
+uyan kategoriler (kat 1 kart/aile/parti/geleneksel, kat 2 strateji/kooperatif/soyut, kat 3 parti/kooperatif/strateji/zar)
+iki kat ağırlık alır. Popüler oyunlar 8 kopya olduğundan daha sık masaya gelir; tek kopyalı ağır oyunlar için sıra oluşur.
 
 ## Ekran
 - **Üst panel:** oyun takvimi ve saati (1× hızda 1 sn = 1 oyun dakikası), bugünkü kasa (veritabanı cirosu), açık hesaplar,
@@ -152,7 +171,7 @@ dışarıdan kapatılan hesabın müşterileri kalkar.
 | `simulasyon/harita.js` | Kat yerleşimleri (20×16 karo), masa yuvaları, duvar dekorları, döndürme dönüşümleri, A* yol bulma |
 | `simulasyon/cizim.js` | Piksel-art izometrik çizim: döndürülebilir izdüşüm, önbellekli zemin/duvar, desenli kutular, sprite üretimi ve önbelleği, ışık, seçim (tıklama) — harici görsel yok |
 | `simulasyon/motor.js` | Durum makineleri, sabır zamanlayıcıları, kapı önü kuyruğu, görev kuyruğu, veritabanı eşitlemesi, API çağrıları |
-| `simulasyon/diyalog.js` | Genel, oyuna özel, siparişe özel ve sabırsızlık cümle havuzu |
+| `simulasyon/diyalog.js` | Genel, oyuna özel (Okey, Tavla, Vampir Köylü, Monopoly...), siparişe özel, sabırsızlık, izleyici, şef ve müzik cümleleri |
 | `sayfalar/Simulasyon.jsx` | Kamera (yakınlaştırma, döndürme, kaydırma), kat geçişi, HUD, paneller, merdiven penceresi, masa detayı, oyun kütüphanesi |
 
 ## Sunumda

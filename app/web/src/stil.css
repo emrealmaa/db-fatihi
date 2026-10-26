@@ -429,3 +429,4 @@ fieldset.bilgi-kutu { display: flex; flex-direction: column; gap: .75rem; }
 .fis-barkod { height: 34px; margin: .7rem auto .9rem; width: 70%;
     background: repeating-linear-gradient(90deg, #2a2520 0 2px, transparent 2px 4px, #2a2520 4px 5px, transparent 5px 8px, #2a2520 8px 11px, transparent 11px 12px); }
 .fis-dugme { display: block; width: 100%; }
+.sim-kat-secenek.bulunulan { opacity: .65; cursor: default; background: #efe6d4; }

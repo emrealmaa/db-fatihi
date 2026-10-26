@@ -33,7 +33,7 @@ export default function Simulasyon() {
     const [hata, setHata] = useState(null);
     const [panel, setPanel] = useState('garsonlar');
     const [kutuphane, setKutuphane] = useState(false);
-    const [merdiven, setMerdiven] = useState(false);
+    const [asansor, setAsansor] = useState(false);
     const [kameraDurum, setKameraDurum] = useState({ yakinlik: 1, d: 0 });
 
     gorunum.current.secili = secili;
@@ -61,7 +61,7 @@ export default function Simulasyon() {
         if (yeni === gorunum.current.kat || gorunum.current.gecis) return;
         gorunum.current.gecis = { t: 0, hedef: yeni, yon: yeni > gorunum.current.kat ? 1 : -1, degisti: false };
         setSecili(null);
-        setMerdiven(false);
+        setAsansor(false);
     }, []);
 
     const kameraGuncelle = useCallback((f) => {
@@ -190,7 +190,7 @@ export default function Simulasyon() {
         const { s, ox, oy } = donusum();
         const x = (e.clientX - r.left - ox) / s, y = (e.clientY - r.top - oy) / s;
         const n = nesneBul(motorRef.current.sahne(gorunum.current.kat, null, kamera.current.d), x, y);
-        if (n?.tur === 'merdiven') { setMerdiven(true); setSecili(null); return; }
+        if (n?.tur === 'asansor') { setAsansor(true); setSecili(null); return; }
         setSecili(n?.tur === 'masa' ? n.masa.masaId : null);
     }
 
@@ -217,7 +217,7 @@ export default function Simulasyon() {
                         <button className="sim-dugme" onClick={sifirla} title="Kamerayı sıfırla (0)">Sıfırla</button>
                         <small>{Math.round(kameraDurum.yakinlik * 100)}% · {YON_ADI[kameraDurum.d]}</small>
                     </div>
-                    <div className="sim-ipucu">Sağ tık / Space + sürükle: kaydır · Tekerlek: yakınlaş · Q/E: döndür · Merdivene tıkla: kat değiştir</div>
+                    <div className="sim-ipucu">Sağ tık / Space + sürükle: kaydır · Tekerlek: yakınlaş · Q/E: döndür · Asansöre tıkla: kat değiştir</div>
                     {!ozet && <div className="sim-yukleniyor">Kafe hazırlanıyor…</div>}
                 </div>
                 {panel && ozet && (
@@ -239,7 +239,7 @@ export default function Simulasyon() {
             </nav>
             {secili && motor && <MasaDetay motor={motor} masaId={secili} kapat={() => setSecili(null)} />}
             {kutuphane && motor && <Kutuphane motor={motor} kapat={() => setKutuphane(false)} />}
-            {merdiven && <KatDegistir kat={kat} ozet={ozet} sec={katDegistir} kapat={() => setMerdiven(false)} />}
+            {asansor && <AsansorPaneli kat={kat} ozet={ozet} sec={katDegistir} kapat={() => setAsansor(false)} />}
             {ozet?.gunSonu && <GunSonuFisi fis={ozet.gunSonu} yeniGun={() => { motor.yeniGun(); setOzet(motor.ozet()); }} />}
         </div>
     );
@@ -306,6 +306,17 @@ function GarsonPaneli({ ozet }) {
                     </li>
                 ))}
             </ul>
+            <h2>Mutfak · kat 1</h2>
+            <ul className="sim-garsonlar">
+                {ozet.mutfak.sefler.map((x) => (
+                    <li key={x.ad}>
+                        <div className="satir arasi"><strong>{x.ad}</strong><small>{x.unvan}</small></div>
+                        <div className={`sim-gorev ${x.durum === 'Boşta' ? 'bos' : ''}`}>{x.durum}</div>
+                        <small className="sim-soluk">Bu oturumda {x.hazirlanan} tabak</small>
+                    </li>
+                ))}
+            </ul>
+            <p className="sim-soluk">Bekleyen fiş: {ozet.mutfak.bekleyen} · tezgahta hazır: {ozet.mutfak.hazir}</p>
             <h2>Son olaylar</h2>
             <OlayGunlugu kayitlar={ozet.kayitlar.slice(0, 8)} basliksiz />
         </>
@@ -341,22 +352,20 @@ function SimPencere({ baslik, kapat, children, genis }) {
     );
 }
 
-// Merdiven: kat değiştirme penceresi
-function KatDegistir({ kat, ozet, sec, kapat }) {
-    const secenek = (k, yon) => (
-        <button className="sim-kat-secenek" onClick={() => sec(k)}>
-            <span className="sim-kat-ok">{yon === 'yukari' ? '▲' : '▼'}</span>
-            <span>
-                <strong>{yon === 'yukari' ? 'Yukarı çık' : 'Aşağı in'}: Kat {kat} → Kat {k}</strong>
-                <small>{KATLAR[k].ad} · {ozet?.katSayilari[k] ?? 0} kişi</small>
-            </span>
-        </button>
-    );
+// Asansör: kat seçim paneli (bulunulan kat işaretli)
+function AsansorPaneli({ kat, ozet, sec, kapat }) {
     return (
-        <SimPencere baslik="Merdiven · kat değiştir" kapat={kapat}>
+        <SimPencere baslik="Asansör · kat seçin" kapat={kapat}>
             <div className="sim-kat-secenekler">
-                {kat < 3 && secenek(kat + 1, 'yukari')}
-                {kat > 1 && secenek(kat - 1, 'asagi')}
+                {[3, 2, 1].map((k) => (
+                    <button key={k} className={`sim-kat-secenek ${k === kat ? 'bulunulan' : ''}`} disabled={k === kat} onClick={() => sec(k)}>
+                        <span className="sim-kat-ok">{k === kat ? '●' : k > kat ? '▲' : '▼'}</span>
+                        <span>
+                            <strong>Kat {k}{k === kat ? ' · buradasınız' : ''}</strong>
+                            <small>{KATLAR[k].ad} · {ozet?.katSayilari[k] ?? 0} kişi</small>
+                        </span>
+                    </button>
+                ))}
             </div>
         </SimPencere>
     );

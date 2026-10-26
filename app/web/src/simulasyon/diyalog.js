@@ -21,6 +21,19 @@ const OYUNA_OZEL = [
     [/azul/i, ['Bu karoyu ben alıyorum', 'Taban çizgim doldu!', 'Mavi karolar bitti', 'Duvar tamamlandı']],
     [/splendor/i, ['Bir mücevher daha', 'Soylu ziyaret etti!', 'Yakutları ayırıyorum', 'Kart rezerve ediyorum']],
     [/uno/i, ['UNO!', '+4 çek bakalım', 'Renk değiştiriyorum!', 'Yön değişti']],
+    [/root/i, ['Kediler ormanı tutuyor', 'Kartal Hanedanı ilerliyor', 'İttifak bir ayaklanma başlattı']],
+    [/okey/i, ['Okey bende!', 'Taşları diziyorum', 'Çifte gidiyorum', 'Göstergeyi kim aldı?']],
+    [/tavla/i, ['Dü-şeş!', 'Pul kırdım!', 'Mars oldun!', 'Kapı kapattım']],
+    [/tabu/i, ['Yasaklı kelimeyi söyledin!', 'Süre bitiyor!', 'Pas!']],
+    [/vampir/i, ['Köy uyusun…', 'Vampir sensin!', 'Doktor beni korudu', 'Oylama zamanı']],
+    [/monopoly/i, ['Bu sokak benim!', 'Hapse giriyorsun!', 'Otel dikiyorum', 'Kira öde bakalım']],
+    [/jenga/i, ['Yavaş çek!', 'Kule sallanıyor…', 'Nefesini tut!']],
+    [/exploding/i, ['Patlayan kedi!', 'Defuse kartı bende', 'Sıra sende, dikkat!']],
+    [/rummikub/i, ['Seri tamam!', 'Taşları açıyorum', 'Joker bende']],
+    [/wingspan/i, ['Bir kuş daha oynuyorum', 'Yumurta biriktiriyorum']],
+    [/terraforming/i, ['Okyanus yerleştiriyorum', 'Oksijen arttı!', 'Bir şehir daha']],
+    [/mangala/i, ['Taşlarım hazineye!', 'Tekrar sıra bende']],
+    [/satranç/i, ['Şah!', 'Vezir tehlikede', 'Rok yapıyorum']],
 ];
 
 // Sipariş isterken; kategoriye ve ürüne göre
@@ -54,3 +67,14 @@ export function sabirsizCumle(tur) {
 }
 
 export const TERK_CUMLESI = 'Çok bekledik, gidiyoruz!';
+
+// Tek başına gelip etrafı izleyenler
+export const izleyiciCumlesi = () => sec(['İzlemesi bile keyifli', 'Bu hamle iyiydi!', 'Şu masa çok heyecanlı', 'Kahvem ve zar sesleri…',
+    'Bir dahakine ben de oynarım', 'Kuralları izleyerek öğreniyorum', 'Ne güzel bir kalabalık']);
+
+// Mutfak
+export const sefCumlesi = () => sec(['Tava kızgın!', 'Siparişler geliyor!', 'Tost iki dakikaya hazır', 'Tatlılar fırında', 'Servis tezgahı hazır!']);
+
+// Kat 3 canlı müzik
+export const muzikCumlesi = () => sec(['♪ Sıradaki parça sizin için ♪', '♪ La la la ♪', 'Alkışlar Karavana\'ya!', '♪ Bir akustik daha ♪', 'İyi akşamlar VIP!']);
+export const dinleyiciCumlesi = () => sec(['Müzik harika!', 'Bu şarkıyı sevdim', 'Canlı müzik çok iyi gidiyor', 'Bir alkış!']);
