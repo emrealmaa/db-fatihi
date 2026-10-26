@@ -1,4 +1,4 @@
-# Kutu Oyunu Cafe İşletme Sistemi
+# Karavana – Kutu Oyunu Cafe İşletme Sistemi
 
 Veritabanı dersi dönem projesi (Enes Öztürk, Emre Alma). **Seçilen DB: PostgreSQL.** Diğer motorlar compose'ta profile olarak duruyor ama kullanılmıyor.
 Detaylar: `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `CLAUDE.md`.

@@ -1,4 +1,4 @@
--- Kutu Oyunu Cafe İşletme Sistemi - şema
+-- Karavana kutu oyunu cafe - şema
 -- Çalıştırma sırası: 01 şema, 02 fonksiyonlar, 03 view, 04 prosedürler, 05 güvenlik, 06 seed
 
 -- ---------------------------------------------------------------- kullanici

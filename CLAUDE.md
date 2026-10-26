@@ -1,4 +1,4 @@
-# Kutu Oyunu Cafe İşletme Sistemi
+# Karavana – Kutu Oyunu Cafe İşletme Sistemi
 
 Veritabanı dersi dönem projesi. Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59.
 Seçilen yol: **PostgreSQL (RDBMS)**. Puan kriterleri `docs/ROADMAP.md` içinde.
@@ -6,8 +6,8 @@ Seçilen yol: **PostgreSQL (RDBMS)**. Puan kriterleri `docs/ROADMAP.md` içinde.
 ## Komutlar
 - Başlat: `make up DB=postgres` (port **5433**, 5432 başka konteynerde dolu)
 - Sıfırla (init betiklerini yeniden çalıştırır): `make reset && make up DB=postgres`
-- Shell: `docker compose exec postgres psql -U app projectdb`
-- Rol testi: `docker compose exec -e PGPASSWORD=garson_dev_pw postgres psql -U garson_app projectdb`
+- Shell: `docker compose exec postgres psql -U app karavana`
+- Rol testi: `docker compose exec -e PGPASSWORD=garson_dev_pw postgres psql -U garson_app karavana`
 
 ## Kurallar
 - Şema değişikliği `db/postgres/init/NN_*.sql` dosyalarında yapılır; init yalnızca boş volume'de çalışır.
