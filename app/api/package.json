@@ -1,1 +1,17 @@
-{"name":"@karavana/api","private":true,"type":"module","version":"0.0.0"}
+{
+  "name": "@karavana/api",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "dependencies": {
+    "express": "^5.3.0",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "description": "Karavana API (Express + PostgreSQL)",
+  "scripts": {
+    "dev": "node --watch src/sunucu.js",
+    "start": "node src/sunucu.js",
+    "test": "node --test \"test/*.test.js\"",
+    "test:lite": "cross-env DB_SURUCU=pglite node --test \"test/*.test.js\""
+  }
+}

@@ -3,11 +3,18 @@
   "private": true,
   "description": "Karavana kutu oyunu cafe işletme sistemi",
   "type": "module",
-  "workspaces": ["app/api", "app/web"],
+  "workspaces": [
+    "app/api",
+    "app/web"
+  ],
   "scripts": {
     "db:kur": "node db/scripts/kur.js",
     "db:test": "node --test --test-concurrency=1 \"db/tests/*.test.js\"",
-    "db:test:lite": "cross-env DB_SURUCU=pglite node --test \"db/tests/*.test.js\""
+    "db:test:lite": "cross-env DB_SURUCU=pglite node --test \"db/tests/*.test.js\"",
+    "api": "npm run dev -w app/api",
+    "api:lite": "cross-env DB_SURUCU=pglite npm run dev -w app/api",
+    "test": "npm run db:test && npm run test -w app/api",
+    "test:lite": "npm run db:test:lite && npm run test:lite -w app/api"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.3.0",

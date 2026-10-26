@@ -19,6 +19,9 @@ const ROL_PAROLALARI = {
 };
 export const ROLLER = Object.keys(ROL_PAROLALARI);
 
+// bigint (20) ve numeric (1700) JSON'a sayı olarak gitsin (tutarlar 2 ondalıklı, id'ler 2^53'ün altında)
+const SAYI_TIPLERI = { 20: Number, 1700: parseFloat };
+
 export function ayarlar(env = process.env) {
     return {
         surucu: env.DB_SURUCU || 'pg',
@@ -65,6 +68,7 @@ async function pgKur(a, { log = () => {} } = {}) {
 
 async function pgBaglan(a) {
     const { default: pg } = await import('pg');
+    for (const [oid, f] of Object.entries(SAYI_TIPLERI)) pg.types.setTypeParser(Number(oid), f);
     const havuzlar = {};
     const havuz = (rol) => {
         if (!havuzlar[rol]) {
@@ -111,7 +115,8 @@ async function pgliteAc(a, { kur = false, log = () => {} } = {}) {
     if (kur && a.pgliteDizini && !yeni) {
         fs.rmSync(a.pgliteDizini, { recursive: true, force: true });
     }
-    const db = await PGlite.create({ dataDir: a.pgliteDizini || undefined, extensions: { pgcrypto } });
+    const db = await PGlite.create({ dataDir: a.pgliteDizini || undefined, extensions: { pgcrypto },
+        parsers: Object.fromEntries(Object.entries(SAYI_TIPLERI).map(([oid, f]) => [oid, (v) => f(v)])) });
     if (kur || yeni) {
         for (const f of initDosyalari()) {
             log(`  ${f.ad}`);
