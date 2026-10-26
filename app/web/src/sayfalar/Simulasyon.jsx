@@ -47,13 +47,14 @@ export default function Simulasyon() {
         // Katın görünür kısmı (iç mekân; kat 1'de görünüyorsa dış mekân da) ekrana sığdırılır
         const g0 = gorunurAlan(gorunum.current.kat, k.d);
         const aw = g0.x1 - g0.x0, ah = g0.y1 - g0.y0;
-        const s = Math.min(w / aw, h / ah) * k.yakinlik;
+        const g = gorunum.current.gecis;
+        const tg = g ? Math.min(1, g.t / GECIS_SN) : 0;
+        // kat geçişi: kamera hafifçe geri çekilir (asansör kuyusunda yükselme/inme hissi)
+        const s = Math.min(w / aw, h / ah) * k.yakinlik * (1 - 0.14 * Math.sin(Math.PI * tg));
         const ox = (w - aw * s) / 2 - g0.x0 * s + k.panX;
         let oy = (h - ah * s) / 2 - g0.y0 * s + k.panY;
-        const g = gorunum.current.gecis;
-        if (g) {                                       // kat geçişi: dikey kayma
-            const t = Math.min(1, g.t / GECIS_SN);
-            oy += (t < 0.5 ? -t * 2 : (1 - t) * 2) * 40 * g.yon;
+        if (g) {                                       // kat geçişi: eski kat yukarı/aşağı kayar, yenisi karşı yönden gelir
+            oy += (tg < 0.5 ? tg * 2 : -(1 - tg) * 2) * 160 * g.yon;
         }
         return { s, ox, oy, w, h };
     }, []);
@@ -123,12 +124,22 @@ export default function Simulasyon() {
                 c.imageSmoothingEnabled = false;
                 // tuvalin dışı arka planın kenar rengiyle doldurulur (vinyet bu renge karardığı için dikiş görünmez)
                 c.fillStyle = ARKA_RENK[sahne.evre || 'gun']; c.fillRect(0, 0, w, h);
+                if (sahne.kat > 1) { c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(0, 0, w, h); }
+                if (KATLAR[sahne.kat].isik) { c.fillStyle = `rgba(12,6,24,${KATLAR[sahne.kat].isik})`; c.fillRect(0, 0, w, h); }
                 c.drawImage(ara, ox, oy, DOGAL_G * s, DOGAL_Y * s);
                 ustKatmanCiz(c, s, (p) => ({ x: ox + p.x * s, y: oy + p.y * s }), sahne);
                 if (g.gecis) {                         // kat geçişi: kararma
                     const t = Math.min(1, g.gecis.t / GECIS_SN);
                     c.fillStyle = `rgba(20,12,6,${Math.sin(Math.PI * t) * 0.9})`;
                     c.fillRect(0, 0, w, h);
+                    // asansör kuyusu: katlar arasındaki döşeme kirişleri hareket yönünün tersine akar
+                    const a = Math.sin(Math.PI * t);
+                    for (let i = 0; i < 4; i++) {
+                        const yy = ((i / 4 + t * 2 * g.gecis.yon) % 1 + 1) % 1 * h;
+                        c.fillStyle = `rgba(70,52,40,${0.85 * a})`; c.fillRect(0, yy, w, 22);
+                        c.fillStyle = `rgba(140,110,80,${0.6 * a})`; c.fillRect(0, yy, w, 2);
+                        c.fillStyle = `rgba(0,0,0,${0.5 * a})`; c.fillRect(0, yy + 22, w, 6);
+                    }
                 }
             }
             ozetZamani -= dt;

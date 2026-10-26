@@ -11,7 +11,7 @@ veriyle dolar. Kurallar (kapasite, oyun sırası, stok, ödeme) veritabanında u
 | 1 | Giriş & Espresso Bar | 10: bar önü ve duvar kenarlarında 6 × 2 kişilik, iç salonda 4 × 4 kişilik; mutfağın önü boş | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
 | 1 | (ek) | – | **Mutfak**: ocak, fırın, buzdolabı, evye, hazırlık tezgahı, ısıtıcı lambalı servis tezgahı; şef ve yardımcı şef |
 | 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Kuzey duvarında tek, şık kitaplık; batı duvarında neon halı üstünde 4 **retro atari kabini** (yanıp sönen ekran), doğu duvarında 2 **tilt (pinball)** makinesi, yeni oyunlar standı, okuma köşesi, oyun barı, loş ışık |
-| 3 | VIP & FRP Özel Bölgesi | 4 ferah (6–8 kişilik) | Batı duvarının ortasında, salona bakan **yarım daire VIP sahnesi** (masalar etrafında yay çizer): şarkıcı, gitarist, piyanist, amfiler ve renkli spot ışıkları; boyalı nadir FRP figür kaideleri (ejderha, şövalye, büyücü), koleksiyon vitrinleri, tablolar; FRP harita masaları, deri koltuklar, VIP ışığı |
+| 3 | VIP & FRP Özel Bölgesi | 4 ferah (6–8 kişilik) | Batı duvarından ayrık, zeminden **iki kademeyle yükselen yarım daire VIP sahnesi** (arkasında kırmızı kadife perdeli kulis, kenarında yanıp sönen ışıklar, önünde loş pembe ışık havuzu; masalar etrafında yay çizer): şarkıcı, gitarist, piyanist, amfiler ve renkli spot ışıkları; boyalı nadir FRP figür kaideleri (ejderha, şövalye, büyücü), koleksiyon vitrinleri, tablolar; FRP harita masaları, deri koltuklar, VIP ışığı |
 
 Kat 1 ve 2 **organik** yerleşimlidir: masalar elle düzensiz konumlara yerleştirildi, her masanın sandalye halkası ile komşusununki
 arasında en az bir karo yürüme boşluğu vardır (yerleşim denetimi betikle doğrulandı). 1x1 masalar 2 veya 4, 2x1 masalar 6 kişiliktir;
@@ -99,13 +99,15 @@ görünür (cephe kesit olarak alçak çizilir ki içerisi görünsün). Müşte
 3. Kuyruk da doluysa "Çok kalabalık…" deyip gider.
 
 ### Canlı cadde ve gün evreleri
-Düz renkli arka plan yoktur: sahnenin arkasında saate göre değişen **gökyüzü ve şehir silueti** çizilir (ekranın kenarlarına kadar uzar).
+Düz renkli arka plan ve şehir silüeti yoktur: kafe, binanın izometrik ızgarasıyla hizalı **karanlık bir cadde haritasının** (kaldırım
+blokları, şerit çizgili caddeler, kavşaklarda yanan sokak lambaları) ortasında bir diorama gibi durur; harita kenarlara doğru
+kararıp sayfa kenarlarıyla birleşir. Üst katlarda cadde daha koyu görünür (aşağıda kalır).
 
 | Oyun saati | Evre | Görünüm |
 |---|---|---|
-| 10–17 | Gündüz | Mavi gökyüzü, açık pencereler, ağaçlar yeşil |
-| 17–19 | Gün batımı | Mor-turuncu gökyüzü, batan güneş, binalarda ilk ışıklar, pencereler turuncu |
-| 19–22 | Gece | Yıldızlar ve hilal, ışıklı gökdelen pencereleri, kafe camlarından kaldırıma süzülen sıcak ışık |
+| 10–17 | Gündüz | Daha açık (arduvaz) cadde, açık mavi pencereler, ağaçlar yeşil |
+| 17–19 | Gün batımı | Mor tonlu cadde, kavşak lambaları yanmaya başlar, pencereler turuncu |
+| 19–22 | Gece | En koyu cadde, kavşak lambaları parlak, kafe camlarından kaldırıma yelpaze gibi süzülen amber ışık huzmeleri |
 
 Kafenin önü: cephe şeridi, iki sıra kaldırım (kuyruk sırası + yürüme yolu), iki şeritli yol ve karşı kaldırım (ağaçlar, sokak lambaları).
 `motor.js: ortamAdim` simülasyon hızından bağımsız, gerçek zamanla çalışır:
@@ -120,6 +122,21 @@ Kafenin önü: cephe şeridi, iki sıra kaldırım (kuyruk sırası + yürüme y
 takası, Carcassonne'da meeple, Ticket to Ride rotaları, Codenames ipuçları, Pandemic salgını, Uno...), **siparişe göre**
 cümleler ("Bir filtre kahve daha söylesek mi?", "Zihnim açılsın diye Türk kahvesi alayım", "Masada içecek alanını
 daraltmayalım"), servis sonrası teşekkürler ve bekleme türüne göre sabırsızlık cümleleri.
+
+## 3D hacim ve derinlik
+- **Oda kutusu:** her kat, altında katmanlı kesiti görünen kalın bir **zemin plakası** üzerinde durur; arka duvarlar kalın
+  kutulardır (üst kesit ve açık uçlarda duvar kesiti görünür), iç köşede ve süpürgelik hizasında ortam gölgesi vardır.
+- **Zemin dokuları:** kat 1 açık, kat 2 koyu **ahşap parke** (karo başına üç tahta, şaşırtmalı ek yerleri, parlama çizgileri);
+  kat 3 **derin mor desenli halı** (baklava motifleri, altın noktalar, çift bordür).
+- **Gölgeler:** masa, sandalye, bar, mutfak ekipmanı, atari ve pinball, kitaplık, asansör ve sahnenin altında iki katmanlı
+  yumuşak zemin gölgesi.
+- **Hacimli mobilya:** masalarda kalın ayaklar, etek tahtası ve kalın tabla; sandalyelerde dört ayak, ince oturak ve iki
+  dikmeli, latalı sırtlık (arası boş); barda pirinç ayak barı ve süpürgelik.
+- **Kat 2:** kaideli, girintili kitaplık (dikmeler, raf tahtaları); atari kabinlerinde ekrandan öne **çıkıntı yapan kontrol
+  paneli** (joystick, düğmeler), ekran ve başlık ışıması ile zeminde renkli yansıma; pinball arka kutusu ışıması.
+- **Asansör:** çelik dikmeler arasında cam paneller; camdan ışıklı kabin, halatlar ve yansımalar görünür, kabin hafifçe hareket
+  eder. **Kat geçişinde** kamera geri çekilir, eski kat kayarak çıkar, yenisi karşı yönden gelir ve kuyudaki döşeme kirişleri
+  hareket yönünün tersine akar.
 
 ## Mobilya ve atmosfer
 - **Masalar:** dört ayak + köşeleri yumuşatılmış ahşap tabla (damarlı) + oyun matı: kat 1 krem örtü, kat 2 yeşil keçe,

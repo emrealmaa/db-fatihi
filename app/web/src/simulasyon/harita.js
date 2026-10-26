@@ -20,10 +20,11 @@ export const MUTFAK = {
 };
 // Kat 3 sahnesi: müzisyenlerin yeri (sahne yüksekliği SAHNE_Z piksel)
 export const SAHNE_Z = 8;
-// Yarım daire sahne: düz kenarı batı duvarına yaslı, merkez (cx, cy), yarıçap r
-export const SAHNE = { cx: 0.6, cy: 8, r: 3.2 };
+// Yarım daire sahne: batı duvarından ayrık, zeminden iki kademeyle yükselen platform. Merkez (cx, cy), üst kademe
+// yarıçapı r, alt basamak halkası r + basamak. Arkası (duvar ile düz kenar arası) kulis, kadife perdeyle kapalı.
+export const SAHNE = { cx: 2, cy: 8, r: 3.2, basamak: 0.45 };
 export const MUZISYENLER = [
-    { rol: 'sarkici', gx: 2.4, gy: 7.5 }, { rol: 'gitarist', gx: 1.6, gy: 5.8 }, { rol: 'piyanist', gx: 2.0, gy: 9.2 },
+    { rol: 'sarkici', gx: 3.8, gy: 7.5 }, { rol: 'gitarist', gx: 3.0, gy: 5.8 }, { rol: 'piyanist', gx: 3.4, gy: 9.2 },
 ];
 // Kat 1 girişi: ön cephedeki kapı (x = 2..3). KAPI kaldırımdaki kapı önü, KAPI_IC içerideki ilk karo.
 export const KAPI = { gx: 2, gy: 17 };
@@ -168,13 +169,13 @@ export const KATLAR = {
             { tur: 'lamba', gx: 7, gy: 8, gw: 1, gd: 1, h: 40 },
             { tur: 'bitki', gx: 1, gy: 15, gw: 1, gd: 1, h: 18 },
             // yarım daire VIP sahnesi (batı duvarı ortası, salona bakar); sahne üstü nesnelerin z'si SAHNE_Z
-            { tur: 'yarimsahne', gx: 0.6, gy: 4.8, gw: 3.2, gd: 6.4, h: 8 },
-            { tur: 'piyano', gx: 0.8, gy: 8.8, gw: 0.9, gd: 0.8, h: 16, z: 8, engelsiz: true },
-            { tur: 'mikrofon', gx: 2.9, gy: 7.55, gw: 0.3, gd: 0.3, h: 22, z: 8, engelsiz: true },
-            { tur: 'amfi', gx: 0.8, gy: 5.3, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
-            { tur: 'amfi', gx: 0.8, gy: 10.1, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
-            { tur: 'spot', gx: 2.2, gy: 5.4, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#ff5ea8' },
-            { tur: 'spot', gx: 2.2, gy: 10.4, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#5ec8ff' },
+            { tur: 'yarimsahne', gx: 2, gy: 4.35, gw: 3.65, gd: 7.3, h: 8 },
+            { tur: 'piyano', gx: 2.2, gy: 8.8, gw: 0.9, gd: 0.8, h: 16, z: 8, engelsiz: true },
+            { tur: 'mikrofon', gx: 4.3, gy: 7.55, gw: 0.3, gd: 0.3, h: 22, z: 8, engelsiz: true },
+            { tur: 'amfi', gx: 2.1, gy: 5.3, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
+            { tur: 'amfi', gx: 2.1, gy: 10.1, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
+            { tur: 'spot', gx: 3.6, gy: 5.4, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#ff5ea8' },
+            { tur: 'spot', gx: 3.6, gy: 10.4, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#5ec8ff' },
             // hobi ve koleksiyon: vitrinler ve boyalı FRP figür kaideleri
             { tur: 'koleksiyon', gx: 1, gy: 12, gw: 1, gd: 2, h: 40 }, { tur: 'koleksiyon', gx: 7, gy: 15, gw: 3, gd: 1, h: 26 },
             { tur: 'figurstandi', gx: 13.5, gy: 1.5, gw: 0.8, gd: 0.8, h: 14, figur: 'ejderha' },
@@ -194,7 +195,8 @@ export const KATLAR = {
             { tur: 'poster', duvar: 'B', bas: 12, son: 14.5, oyun: 'harita' },
             { tur: 'sanc', duvar: 'K', bas: 14, son: 15.2, renk: '#2e6b4a' }, { tur: 'sanc', duvar: 'G', bas: 7, son: 8.2, renk: '#b0302b' },
             { tur: 'pencere', duvar: 'D', bas: 2, son: 4 }, { tur: 'pano', duvar: 'G', bas: 11, son: 13 },
-            { tur: 'tablo', duvar: 'K', bas: 13.2, son: 14.8 }, { tur: 'tablo', duvar: 'B', bas: 5.6, son: 6.9 },
+            { tur: 'tablo', duvar: 'K', bas: 13.2, son: 14.8 },
+            { tur: 'perde', duvar: 'B', bas: 4.2, son: 11.8 },                       // sahnenin arkasında kadife perde
             { tur: 'tablo', duvar: 'D', bas: 13.5, son: 15 },
         ],
     },
@@ -258,7 +260,9 @@ function engelIzgarasi(kat) {
         if (o.engelsiz) continue;
         if (o.tur === 'yarimsahne') {
             for (let x = 0; x < GENISLIK; x++) for (let y = 0; y < IC_DERINLIK; y++) {
-                if ((x + 0.5 - SAHNE.cx) ** 2 + (y + 0.5 - SAHNE.cy) ** 2 <= SAHNE.r ** 2) izgara[x][y] = true;
+                const R = SAHNE.r + SAHNE.basamak;
+                // platform + arkasındaki kulis (duvar ile düz kenar arası)
+                if ((x + 0.5 - SAHNE.cx) ** 2 + (y + 0.5 - SAHNE.cy) ** 2 <= R ** 2 || (x < SAHNE.cx && Math.abs(y + 0.5 - SAHNE.cy) <= R)) izgara[x][y] = true;
             }
         } else kapat(o);
     }
