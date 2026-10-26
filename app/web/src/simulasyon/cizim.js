@@ -411,7 +411,7 @@ function masaCiz(c, P, d, m, kat, secili) {
     const ahsap = kat === 3 ? '#6b3f22' : kat === 2 ? '#7a5533' : '#c29061';
     const tahta = renkler(ahsap, (cc, x, yy, h, sol, sutun) => { if (sutun % 9 === 4) { cc.fillStyle = 'rgba(0,0,0,.12)'; cc.fillRect(x, yy, 1, h); } });
     const AYAK = 12, KALINLIK = 4, UST = AYAK + KALINLIK;
-    const p = 0.08, k = 0.16;                            // kenar payı, köşe yumuşatma
+    const p = 0.03, k = 0.15;                            // kenar payı, köşe yumuşatma
     for (const [ax, ay] of [[0.18, 0.18], [y.gw - 0.3, 0.18], [0.18, y.gd - 0.3], [y.gw - 0.3, y.gd - 0.3]]) {
         kutu(c, P, d, y.gx + ax, y.gy + ay, 0.12, 0.12, AYAK, renkler(ton(ahsap, 0.7)));
     }
@@ -420,7 +420,7 @@ function masaCiz(c, P, d, m, kat, secili) {
     kutu(c, P, d, y.gx + p, y.gy + p + k, y.gw - 2 * p, y.gd - 2 * (p + k), KALINLIK, tahta, AYAK);
     kutu(c, P, d, y.gx + p + k, y.gy + p, y.gw - 2 * (p + k), y.gd - 2 * p, KALINLIK, tahta, AYAK);
     // mat
-    const mat = { gx: y.gx + 0.26, gy: y.gy + 0.26, gw: y.gw - 0.52, gd: y.gd - 0.52 };
+    const mat = { gx: y.gx + 0.18, gy: y.gy + 0.18, gw: y.gw - 0.36, gd: y.gd - 0.36 };
     if (y.sekil === 'harita') {
         const n = 3;
         for (let i = 0; i < y.gw * n; i++) for (let j = 0; j < y.gd * n; j++) {
@@ -435,15 +435,70 @@ function masaCiz(c, P, d, m, kat, secili) {
     }
     if (secili) kutu(c, P, d, y.gx + p, y.gy + p, y.gw - 2 * p, y.gd - 2 * p, 0, { ust: 'rgba(255,226,122,.45)' }, UST + 1);
     const orta = P.W(y.gx + y.gw / 2, y.gy + y.gd / 2);
-    if (m.oyunRenk) {
-        kutu(c, P, d, y.gx + y.gw / 2 - 0.22, y.gy + y.gd / 2 - 0.18, 0.44, 0.36, 3, renkler(m.oyunRenk), UST);
-        c.fillStyle = '#f4efe6';
-        for (let i = 0; i < 3; i++) c.fillRect(orta.x - 8 + i * 7, orta.y - UST - 6 + (i % 2) * 2, 2, 3);   // piyonlar
-        c.fillStyle = '#d94f3d'; c.fillRect(orta.x + 9, orta.y - UST - 3, 2, 2);                          // zar
-    }
+    if (m.oyunAd) masaOyunu(c, P, d, mat, UST, m.oyunAd, m.oyunRenk);
     if (m.kirli) {
         c.fillStyle = '#e9ecef'; c.fillRect(orta.x - 6, orta.y - UST - 4, 4, 3); c.fillRect(orta.x + 3, orta.y - UST - 3, 3, 3);
         c.fillStyle = '#8d6e63'; c.fillRect(orta.x - 5, orta.y - UST - 4, 2, 1);
+    }
+}
+
+// Masanın üstündeki oyun: oyuna özel minyatürler. Konumlar mat içinde oransal (u, v ∈ 0..1) verilir,
+// böylece masa boyutu ve kamera açısı değişse de doğru yerde kalır.
+function masaOyunu(c, P, d, mat, z, ad, renk) {
+    const K = (u, v, w, h, yuk, r, ek = 0) => kutu(c, P, d, mat.gx + u * mat.gw, mat.gy + v * mat.gd, w * mat.gw, h * mat.gd, yuk, typeof r === 'string' ? renkler(r) : r, z + ek);
+    const N = (u, v) => P.W(mat.gx + u * mat.gw, mat.gy + v * mat.gd);
+    const piyon = (u, v, r) => { const q = N(u, v); c.fillStyle = r; c.fillRect(q.x - 1, q.y - z - 5, 3, 4); c.fillRect(q.x, q.y - z - 7, 1, 2); };
+    const zar = (u, v) => K(u, v, 0.1, 0.1, 2, '#f4efe6');
+    const a = ad.toLocaleLowerCase('tr');
+    if (/catan/.test(a)) {
+        // altıgen arazi karoları + ahşap yollar + yerleşimler
+        const arazi = ['#e3b23c', '#4caf6a', '#c0703a', '#9aa3ad', '#7cb342', '#d9c39a', '#3f8f4f'];
+        [[0.42, 0.4], [0.24, 0.3], [0.6, 0.3], [0.24, 0.55], [0.6, 0.55], [0.42, 0.65], [0.42, 0.15]].forEach(([u, v], i) => K(u - 0.1, v - 0.1, 0.2, 0.2, 1, arazi[i]));
+        K(0.33, 0.48, 0.18, 0.04, 1, '#8b5a2b', 1); K(0.52, 0.27, 0.04, 0.16, 1, '#8b5a2b', 1);
+        K(0.3, 0.42, 0.06, 0.06, 3, '#d94f3d', 1); K(0.58, 0.44, 0.06, 0.06, 3, '#3d7fd9', 1);
+    } else if (/carcassonne/.test(a)) {
+        [[0.2, 0.25], [0.42, 0.25], [0.42, 0.47], [0.64, 0.47], [0.2, 0.47]].forEach(([u, v]) => {
+            K(u, v, 0.2, 0.2, 1, '#5fa35a'); K(u + 0.08, v, 0.04, 0.2, 0, { ust: '#c9a46b' }, 1);
+        });
+        K(0.44, 0.27, 0.16, 0.1, 3, '#9aa3ad', 1);                 // kale
+        piyon(0.3, 0.35, '#d94f3d'); piyon(0.55, 0.57, '#3d7fd9'); piyon(0.75, 0.55, '#e3b23c');
+    } else if (/ticket|tren/.test(a)) {
+        K(0.1, 0.12, 0.8, 0.6, 0, { ust: '#e9dcb8' });
+        K(0.15, 0.3, 0.6, 0.03, 0, { ust: '#d94f3d' }, 1); K(0.3, 0.15, 0.03, 0.5, 0, { ust: '#3d7fd9' }, 1);
+        K(0.5, 0.45, 0.35, 0.03, 0, { ust: '#4caf6a' }, 1);
+        K(0.7, 0.78, 0.16, 0.12, 3, '#f4efe6'); K(0.72, 0.8, 0.12, 0.08, 1, '#e3b23c', 3);   // kart destesi
+    } else if (/codenames/.test(a)) {
+        for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) {
+            const r = (i * 3 + j * 7) % 9 === 0 ? '#d94f3d' : (i * 5 + j) % 7 === 0 ? '#3d7fd9' : '#efe3c8';
+            K(0.12 + i * 0.16, 0.15 + j * 0.18, 0.13, 0.14, 1, r);
+        }
+    } else if (/dixit/.test(a)) {
+        ['#9b59b6', '#e07b39', '#2bb0a8', '#f06292', '#e3b23c'].forEach((r, i) => K(0.18 + i * 0.13, 0.3 + (i % 2) * 0.06, 0.12, 0.2, 1, r, i * 0.3));
+        piyon(0.5, 0.75, '#ffffff'); piyon(0.65, 0.72, '#7cb342');
+    } else if (/uno/.test(a)) {
+        K(0.2, 0.35, 0.18, 0.26, 4, '#1c1c1c'); K(0.22, 0.37, 0.14, 0.22, 0, { ust: '#d94f3d' }, 4);   // çekme destesi
+        ['#d94f3d', '#e3b23c', '#4caf6a', '#3d7fd9'].forEach((r, i) => K(0.48 + i * 0.03, 0.33 + i * 0.03, 0.18, 0.26, 1, r, i * 0.5));
+    } else if (/pandemic/.test(a)) {
+        K(0.1, 0.12, 0.8, 0.6, 0, { ust: '#1f3f66' });
+        [[0.25, 0.3], [0.5, 0.25], [0.65, 0.5], [0.35, 0.55]].forEach(([u, v]) => K(u, v, 0.06, 0.06, 2, '#d94f3d', 0));
+        piyon(0.45, 0.42, '#f4efe6'); piyon(0.6, 0.35, '#7cb342');
+    } else if (/azul/.test(a)) {
+        [[0.2, 0.2], [0.5, 0.15], [0.75, 0.3], [0.3, 0.55], [0.65, 0.6]].forEach(([u, v], i) => {
+            K(u - 0.08, v - 0.08, 0.16, 0.16, 1, '#f4efe6');
+            K(u - 0.04, v - 0.04, 0.05, 0.05, 1, ['#3d7fd9', '#e3b23c', '#d94f3d', '#1c1c1c', '#2bb0a8'][i], 1);
+        });
+    } else if (/splendor/.test(a)) {
+        ['#d94f3d', '#3d7fd9', '#4caf6a', '#f4efe6', '#1c1c1c', '#e3b23c'].forEach((r, i) => K(0.15 + i * 0.12, 0.2, 0.09, 0.09, 2 + (i % 3) * 2, r));
+        for (let i = 0; i < 4; i++) K(0.15 + i * 0.18, 0.5, 0.14, 0.2, 1, ['#c9a46b', '#8bb5c9', '#b5c98b', '#c98bb5'][i]);
+    } else if (/7 wonders/.test(a)) {
+        [[0.12, 0.15], [0.5, 0.15], [0.3, 0.55]].forEach(([u, v], i) => K(u, v, 0.34, 0.16, 1, ['#c9a46b', '#9aa3ad', '#b5523b'][i]));
+        K(0.72, 0.6, 0.14, 0.2, 4, '#5c6bc0');
+    } else {
+        // genel: oyun tahtası + zar kulesi + zarlar
+        K(0.15, 0.15, 0.55, 0.5, 1, renk || '#c9a46b');
+        K(0.75, 0.2, 0.14, 0.14, 12, '#3b2a1e');
+        zar(0.74, 0.62); zar(0.6, 0.72);
+        piyon(0.3, 0.35, '#d94f3d'); piyon(0.5, 0.45, '#3d7fd9');
     }
 }
 
@@ -454,7 +509,7 @@ function sandalyeOgeleri(c, P, d, s, masa, kat) {
     const yatay = Math.abs(dx) >= Math.abs(dy);
     const vip = kat === 3;
     const ana = vip ? '#5a2e1c' : kat === 2 ? '#4a2e1a' : '#7a4b2a';
-    const pay = vip ? 0.16 : 0.24, gen = 1 - 2 * pay;
+    const pay = vip ? 0.12 : 0.18, gen = 1 - 2 * pay;
     const OTURAK = vip ? 9 : 8;
     let sirt;
     if (yatay) sirt = { gx: s.gx + (dx > 0 ? 1 - pay - 0.12 : pay), gy: s.gy + pay, gw: 0.12, gd: gen };
@@ -524,10 +579,14 @@ function posterPikseli(oyun, i, r, n, boy) {
 }
 
 // ------------------------------------------------------------------ karakterler
-const SPRITE_G = 24, SPRITE_Y = 36, SX = 4, SY = 3;    // sprite tuvali ve çizim başlangıcı
+// Sprite tasarımı 16x30 ızgarada yapılır, ÖLÇEK ile büyütülerek üretilir (dış hat üretimden sonra
+// eklendiği için 1 piksel ve keskin kalır)
+const OLCEK = 1.25;
+const SPRITE_G = 32, SPRITE_Y = 46, SX = 6, SY = 4;    // sprite tuvali ve çizim başlangıcı
+const sk = (v) => Math.round(v * OLCEK);
 const spriteOnbellek = new Map();
 
-export function karakterPaleti(tohum, tur = 'musteri') {
+export function karakterPaleti(tohum, tur = 'musteri', ogrenci = false) {
     const r = (n) => Math.abs(Math.sin(tohum * 9301 + n * 49297)) % 1;
     const sec = (dizi, n) => dizi[Math.floor(r(n) * dizi.length)];
     const sac = sec(['#2b1d14', '#5a3a22', '#8c5a2b', '#d9b26b', '#1c1c1c', '#a33b20', '#6b4a8a', '#c9c2b8'], 1);
@@ -541,7 +600,8 @@ export function karakterPaleti(tohum, tur = 'musteri') {
     };
     if (tur === 'garson') Object.assign(p, { gomlek: '#f4efe6', gomlekG: '#d9d2c5', gomlekA: '#ffffff', pantolon: '#1f1f1f', pantolonG: '#141414', etek: false });
     if (tur === 'kasiyer') Object.assign(p, { gomlek: '#e9d3a6', gomlekG: '#cdb586', gomlekA: '#f7e6c2', etek: false });
-    p.anahtar = `${tohum}-${tur}`;
+    p.ogrenci = ogrenci && tur === 'musteri';
+    p.anahtar = `${tohum}-${tur}-${p.ogrenci ? 1 : 0}`;
     return p;
 }
 
@@ -550,7 +610,10 @@ function spriteUret(p, { poz, arka, kare, tepsi, elKalkik }) {
     const t = document.createElement('canvas');
     t.width = SPRITE_G; t.height = SPRITE_Y;
     const c = t.getContext('2d');
-    const r = (x, y, w, h, renk) => { c.fillStyle = renk; c.fillRect(SX + x, SY + y, w, h); };
+    const r = (x, y, w, h, renk) => {
+        c.fillStyle = renk;
+        c.fillRect(SX + sk(x), SY + sk(y), sk(x + w) - sk(x), sk(y + h) - sk(y));
+    };
     const adim = poz === 'yuruyor' ? kare % 4 : 0;
     const kol = adim === 1 ? -1 : adim === 3 ? 1 : 0;
 
@@ -621,6 +684,10 @@ function spriteUret(p, { poz, arka, kare, tepsi, elKalkik }) {
         }
     }
     if (p.tur === 'kasiyer') { r(3, 0, 10, 2, '#7a4b2a'); if (!arka) r(2, 2, 12, 1, '#5f3a20'); }
+    if (p.ogrenci) {                                                   // öğrenci: mezuniyet kepi ve püskül
+        r(2, -1, 12, 1, '#1c1c1c'); r(5, -2, 6, 1, '#2b2b2b'); r(6, 0, 4, 1, '#1c1c1c');
+        r(arka ? 3 : 12, 0, 1, 4, '#e3b23c');
+    }
 
     // dış hat: saydam olup opak komşusu olan pikseller koyu renk
     const veri = c.getImageData(0, 0, SPRITE_G, SPRITE_Y);
@@ -655,10 +722,10 @@ function karakterCiz(c, P, d, b) {
     const yon = ekranYonu(d, b.vx, b.vy) || { arka: false, ayna: false };
     const poz = b.oturuyor ? 'oturuyor' : b.hareketli ? 'yuruyor' : 'ayakta';
     c.fillStyle = 'rgba(0,0,0,.28)';
-    c.fillRect(p.x - 6, p.y - 1, 12, 2); c.fillRect(p.x - 4, p.y - 2, 8, 4);
+    c.fillRect(p.x - 8, p.y - 1, 16, 2); c.fillRect(p.x - 5, p.y - 2, 10, 4);
     const s = sprite(b.palet, { poz, arka: yon.arka, kare: b.kare, tepsi: b.tepsi, elKalkik: b.elKalkik });
     // oturan karakter sandalyenin oturma yüksekliğine çıkar
-    const x = Math.round(p.x) - SX - 8, y = Math.round(p.y) - SY - 29 - (b.oturuyor ? 6 : 0);
+    const x = Math.round(p.x) - SX - sk(8), y = Math.round(p.y) - SY - sk(29) - (b.oturuyor ? sk(6) : 0);
     if (yon.ayna) {
         c.save(); c.translate(Math.round(p.x) * 2, 0); c.scale(-1, 1);
         c.drawImage(s, x, y); c.restore();
@@ -769,7 +836,7 @@ export function ustKatmanCiz(c, olcek, donus, sahne) {
     for (const b of sahne.bireyler) {
         if (b.gy >= IC_DERINLIK - 0.5 && !dis) continue;
         const p = donus(P.W(b.gx + 0.5, b.gy + 0.5));
-        const ust = p.y - (b.oturuyor ? 33 : 37) * olcek;
+        const ust = p.y - (b.oturuyor ? 40 : 45) * olcek;
         let ikonUst = ust;
         if (b.ruh) {
             // sabır göstergesi: ikon, sabırsızlıkta öfke barı, çok sinirlide kırmızı ünlem

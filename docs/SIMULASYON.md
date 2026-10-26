@@ -8,9 +8,14 @@ veriyle dolar. Kurallar (kapasite, oyun sırası, stok, ödeme) veritabanında u
 ## Katlar
 | Kat | Konsept | Masa | İçerik |
 |---|---|---|---|
-| 1 | Giriş & Espresso Bar | 10 (2–4 kişilik) | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
+| 1 | Giriş & Espresso Bar | 10 (2, 4 ve 6 kişilik) | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
 | 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Üç duvarı kaplayan kutu oyunu kütüphanesi, oyun barı, loş ışık ve lamba ışık havuzları |
 | 3 | VIP & FRP Özel Bölgesi | 4 büyük (8–12 kişilik) | FRP harita masaları ve örtülü yuvarlak masalar, deri koltuklar, sancaklar, ejderha heykeli, lüks halı, VIP ışığı |
+
+Kat 1 ve 2 **organik** yerleşimlidir: masalar elle düzensiz konumlara yerleştirildi, her masanın sandalye halkası ile komşusununki
+arasında en az bir karo yürüme boşluğu vardır (yerleşim denetimi betikle doğrulandı). 1x1 masalar 2 veya 4, 2x1 masalar 6 kişiliktir;
+veritabanındaki masalar kapasitelerine uyan en küçük yuvaya yerleşir. Masalar, sandalyeler ve karakterler (%25 büyütülmüş sprite) daha
+büyük çizilir.
 
 VIP (kat 3) grupları daha uzun oynar (×1.4), daha sık ve bol sipariş verir (en fazla 6 sipariş, kalem başına 1–3 adet)
 ve ikinci/üçüncü oyuna kalma olasılıkları daha yüksektir.
@@ -31,6 +36,24 @@ GELIYOR ─► MASAYA_GIDIYOR ─► MASA_ACILIYOR ─► OYUN_SECIYOR ─┬─
 - **Sipariş:** oynarken baloncukla sipariş ister ("Kahve lazım!"); boştaki garson gelip alır (`POST siparisler`, o garson adına),
   bara gidip hazırlar, masaya getirir. Stok yetmezse veritabanı reddeder ve grup "Tükenmiş mi?!" der.
 - **Ödeme:** oyun bitince grup kasaya yürür, kasiyer adına `POST /oturumlar/:id/kapat` (nakit/kart). Masa kirli kalır; garson temizler.
+
+## Çalışma saatleri ve gün sonu
+- Kafe her gün **10:00**'da açılır (açılışta yönetici adına **sabah tedariki**: stoğu azalan ürünler `sp_stok_ekle` ile tamamlanır).
+- **22:00**'da kapanış süreci başlar: yeni müşteri alınmaz, kaldırımda ve bekleme alanında bekleyenler "Kapanıyormuş, yarın geliriz"
+  deyip döner, masadakilerin oyunu birkaç dakikada biter, yeni sipariş ve ikinci oyun olmaz, hesaplar kapanır.
+  22:15'te hâlâ içeride olan uğurlanır; HUD'da durum rozeti: **Açık · 10–22 / Kapanıyor / Kapalı**.
+- Son müşteri çıkınca (≈22:15–22:40) **gün sonu fişi** yazar kasadan çıkar gibi yukarıdan süzülür (satır satır açılan, alt kenarı
+  yırtık, barkodlu fiş). Tutarlar veritabanından: `GET /raporlar/donem?bas=<günün başı>` → `fn_donem_ozeti`:
+  normal ve öğrenci giriş geliri, yiyecek-içecek, ek indirim, toplam ciro (nakit/kart), kapanan hesap. Müşteri akışı simülasyonun
+  gün sayaçlarından: gelen kişi/grup, masaya oturan, sıkılıp terk eden (grup/kişi), kuyruk dolu diye giden, kapanışta dönen, garson
+  başına servis sayısı. **Kapat · Yeni güne başla** ertesi günü 10:00'dan başlatır.
+- HUD kasası da aynı kaynaktan (simülasyon gününün dönem özeti) gelir; terk sayacı günlüktür. 10× hızda bir gün ≈ 72 saniye.
+
+## Öğrenci tarifesi
+Grupların yaklaşık üçte biri öğrenci grubudur (üyelerin çoğu öğrenci), diğerlerinde ara sıra bir öğrenci bulunur. Masa açılırken
+öğrenci sayısı veritabanına yazılır (`sp_oturum_ac(..., p_ogrenci)`); öğrenciler giriş ücretinin **yarısını** öder
+(`ayar.ogrenci_indirim_orani`, Yönetim > Ayarlar'dan değiştirilebilir). Öğrenciler başlarında **mezuniyet kepiyle** çizilir;
+masa kartında ve fişte "🎓 öğrenci" satırı görünür.
 
 ## Sabır ve öfke
 Her grubun 0–100 arası **sabrı** vardır. Bekleme türüne göre dakikada azalır, oynarken toparlanır, servis gelince +15 artar:
@@ -68,7 +91,11 @@ daraltmayalım"), servis sonrası teşekkürler ve bekleme türüne göre sabır
 
 ## Mobilya ve atmosfer
 - **Masalar:** dört ayak + köşeleri yumuşatılmış ahşap tabla (damarlı) + oyun matı: kat 1 krem örtü, kat 2 yeşil keçe,
-  kat 3 kırmızı örtü veya FRP harita masası. Oynanan oyunun kutusu, piyonlar ve zar masada görünür.
+  kat 3 kırmızı örtü veya FRP harita masası.
+- **Masadaki oyun:** oynanan oyuna özel minyatürler — Catan altıgen karolar, ahşap yollar ve yerleşimler; Carcassonne karoları,
+  kale ve meeple'lar; Ticket to Ride haritası, tren hatları ve kart destesi; Codenames kart ızgarası; Dixit resim kartları ve
+  tavşan piyon; Uno desteleri; Pandemic salgın haritası ve küpler; Azul fabrika diskleri; Splendor mücevher fişleri; 7 Wonders
+  harika tahtaları; diğer oyunlarda tahta, zar kulesi ve zarlar.
 - **Sandalyeler:** oturak + masaya ters yönde sırtlık; VIP'de kollu deri koltuk. Sırtlık kameraya dönükse oturanın
   önünde çizilir (ayrı derinlik öğesi).
 - **Bar:** fincan ısıtıcılı espresso makinesi (grup başlığı, portafiltre, buhar çubuğu, damlama tepsisi, buhar), arkada şişe ve
@@ -77,7 +104,8 @@ daraltmayalım"), servis sonrası teşekkürler ve bekleme türüne göre sabır
   Pandemic (salgın haritası) ve FRP haritaları; kat 2'de kütüphane raflarının üstünde.
 
 ## Garsonlar
-Garsonlar veritabanındaki **aktif GARSON** personeldir. Hız, sipariş alma hızı ve servis yeteneği personel kimliğinden türetilir
+Garsonlar veritabanındaki **aktif GARSON** personeldir (örnek veride 6 garson). Katlara eşit dağıtılır — 6 garsonla **her katta 2** —
+ve her garson yalnızca kendi katının sipariş/temizlik işlerine bakar (bir katın hiç garsonu yoksa diğerleri yardım eder). Hız, sipariş alma hızı ve servis yeteneği personel kimliğinden türetilir
 (her açılışta aynı). Görev sırası: kendi katındaki en eski istek önce. Yan panel her garsonun anlık görevini, bu oturumdaki servis
 sayısını ve veritabanındaki toplam sipariş sayısını (`v_personel_performans`) gösterir. Yönetici, `X-Personel` başlığıyla
 garson adına işlem yaptığı için siparişler gerçekten o garsona yazılır.

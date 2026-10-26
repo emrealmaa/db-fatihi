@@ -394,3 +394,38 @@ fieldset.bilgi-kutu { display: flex; flex-direction: column; gap: .75rem; }
 .sim-kat-ok { font-size: 1.4rem; color: var(--sim-vurgu); }
 .sim-kutu-uyari { background: #ffe1d6; }
 .sim-cubuk-sabir div { background: #4caf6a; }
+
+/* ------------------------------------------------------------ çalışma durumu ve gün sonu fişi */
+.sim-saat { flex-direction: row; gap: .5rem; }
+.sim-durum { font-size: .66rem; padding: .1rem .35rem; border-radius: 3px; border: 2px solid var(--sim-kahve); white-space: nowrap; }
+.sim-durum-acik { background: #d9f0dd; color: #2e6b45; }
+.sim-durum-kapaniyor { background: #ffe1c2; color: #a0521c; }
+.sim-durum-kapali { background: #e7d9d4; color: #6b4a3a; }
+.sim-ogrenci { margin-left: .5rem; padding: .05rem .4rem; background: #dfe9f7; border: 2px solid #3d5f8f; border-radius: 3px; font-size: .75rem; color: #2a4a75; }
+.fis-arka { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; padding-top: 4vh;
+    background: rgb(20 12 6 / 62%); overflow-y: auto; animation: fisArka .4s ease-out; }
+@keyframes fisArka { from { background: rgb(20 12 6 / 0%); } }
+.fis-yazici { width: min(380px, 92vw); height: 18px; background: #2a1d16; border-radius: 6px 6px 2px 2px; box-shadow: 0 3px 0 #120c08; position: relative; z-index: 2; }
+.fis {
+    width: min(340px, 86vw); margin-top: -4px; padding: 1.1rem 1.1rem 1.4rem; color: #2a2520;
+    background: #fffdf6; font: 13px/1.45 ui-monospace, Consolas, "Courier New", monospace;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+    /* yırtık alt kenar */
+    -webkit-mask: linear-gradient(#000 0 0) top/100% calc(100% - 10px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/16px 10px repeat-x;
+            mask: linear-gradient(#000 0 0) top/100% calc(100% - 10px) no-repeat, conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom/16px 10px repeat-x;
+    transform-origin: top; animation: fisBas 1.6s steps(28) both;
+}
+/* yazar kasadan satır satır çıkış */
+@keyframes fisBas { from { clip-path: inset(0 0 100% 0); transform: translateY(-30px); } to { clip-path: inset(0 0 0 0); transform: translateY(0); } }
+@media (prefers-reduced-motion: reduce) { .fis, .fis-arka { animation: none; } }
+.fis-baslik { text-align: center; }
+.fis-logo { font-size: 1.5rem; font-weight: 800; letter-spacing: .25em; }
+.fis-kucuk { font-size: .78rem; color: #6e6458; }
+.fis-orta { text-align: center; margin: .3rem 0; }
+.fis-cizgi { border-top: 2px dashed #b9ad98; margin: .6rem 0; }
+.fis-satir { display: flex; justify-content: space-between; gap: .75rem; }
+.fis-satir span:last-child { white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fis-satir.vurgu { font-weight: 800; font-size: 1.05rem; }
+.fis-barkod { height: 34px; margin: .7rem auto .9rem; width: 70%;
+    background: repeating-linear-gradient(90deg, #2a2520 0 2px, transparent 2px 4px, #2a2520 4px 5px, transparent 5px 8px, #2a2520 8px 11px, transparent 11px 12px); }
+.fis-dugme { display: block; width: 100%; }

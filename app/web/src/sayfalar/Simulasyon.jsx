@@ -13,7 +13,7 @@ import {
 } from '../simulasyon/cizim.js';
 import { KATLAR } from '../simulasyon/harita.js';
 
-const HIZLAR = [1, 2, 4];
+const HIZLAR = [1, 2, 4, 10];
 const YAKINLIK = { min: 0.6, max: 5 };
 const GECIS_SN = 0.5;
 const YON_ADI = ['Kuzey-batı', 'Kuzey-doğu', 'Güney-doğu', 'Güney-batı'];
@@ -240,6 +240,7 @@ export default function Simulasyon() {
             {secili && motor && <MasaDetay motor={motor} masaId={secili} kapat={() => setSecili(null)} />}
             {kutuphane && motor && <Kutuphane motor={motor} kapat={() => setKutuphane(false)} />}
             {merdiven && <KatDegistir kat={kat} ozet={ozet} sec={katDegistir} kapat={() => setMerdiven(false)} />}
+            {ozet?.gunSonu && <GunSonuFisi fis={ozet.gunSonu} yeniGun={() => { motor.yeniGun(); setOzet(motor.ozet()); }} />}
         </div>
     );
 }
@@ -250,7 +251,12 @@ function Hud({ ozet, duraklat, hizAyarla }) {
     return (
         <header className="sim-hud">
             <div className="sim-kutu"><span className="sim-etiket">Takvim</span>{t.yil}. Yıl {t.ay}. Ay {t.gun}. Gün</div>
-            <div className="sim-kutu sim-saat">{t.saat}</div>
+            <div className="sim-kutu sim-saat">
+                {t.saat}
+                <span className={`sim-durum sim-durum-${ozet.calismaDurumu.toLowerCase()}`}>
+                    {{ ACIK: 'Açık · 10–22', KAPANIYOR: 'Kapanıyor', KAPALI: 'Kapalı' }[ozet.calismaDurumu]}
+                </span>
+            </div>
             <div className="sim-kutu"><span className="sim-etiket">Kasa (bugün)</span>{tl(ozet.ciro.bugun)}</div>
             <div className="sim-kutu"><span className="sim-etiket">Açık hesap</span>{tl(ozet.ciro.acik)}</div>
             <div className="sim-kutu">
@@ -258,7 +264,7 @@ function Hud({ ozet, duraklat, hizAyarla }) {
                 {ozet.masaBekleyen > 0 && <small className="sim-uyari"> ({ozet.masaBekleyen} kişi masa bekliyor)</small>}
             </div>
             <div className={`sim-kutu ${ozet.disarida ? 'sim-kutu-uyari' : ''}`}><span className="sim-etiket">Dışarıda sırada</span>{ozet.disarida} kişi</div>
-            <div className={`sim-kutu ${ozet.terkSayisi ? 'sim-kutu-uyari' : ''}`}><span className="sim-etiket">Terk eden grup</span>{ozet.terkSayisi}</div>
+            <div className={`sim-kutu ${ozet.terkSayisi ? 'sim-kutu-uyari' : ''}`}><span className="sim-etiket">Terk eden (bugün)</span>{ozet.terkSayisi}</div>
             <div className="sim-kutu sim-pop">
                 <span className="sim-etiket">Popülerlik</span>
                 <div className="sim-cubuk"><div style={{ width: `${ozet.populerlik}%` }} /></div>
@@ -414,16 +420,67 @@ function MasaDetay({ motor, masaId, kapat }) {
                 </div>
             </div>
             <dl className="sim-detay">
-                <dt>Kişi</dt><dd>{b.kisi ? `${b.kisi} / ${b.kapasite}` : `${b.kapasite} kişilik`}</dd>
+                <dt>Kişi</dt><dd>{b.kisi ? `${b.kisi} / ${b.kapasite}` : `${b.kapasite} kişilik`}
+                    {b.ogrenci > 0 && <span className="sim-ogrenci">🎓 {b.ogrenci} öğrenci · giriş yarı fiyat</span>}</dd>
                 <dt>Siparişler</dt><dd>{toplu.length ? toplu.map(([u, a]) => `${a}× ${u}`).join(', ') : '–'}
                     {b.bekleyenSiparis && <div className="sim-uyari">Bekleyen istek: {b.bekleyenSiparis}</div>}</dd>
                 <dt>Garson</dt><dd>{b.garson || '–'}</dd>
                 <dt>Son servis</dt><dd>{b.sonServis ? `${b.sonServis.saat} · ${b.sonServis.garson}` : '–'}</dd>
                 <dt>Kalış süresi</dt><dd>{b.kalisDk != null ? `${b.kalisDk} dk` : '–'}</dd>
                 <dt>Biriken hesap</dt><dd><strong>{db.hesap ? tl(db.hesap.toplam) : '–'}</strong>
-                    {db.hesap && <small> (giriş {tl(db.hesap.giris_toplam)} + sipariş {tl(db.hesap.siparis_toplam)})</small>}</dd>
+                    {db.hesap && <small> (giriş {tl(db.hesap.giris_toplam)} + sipariş {tl(db.hesap.siparis_toplam)}
+                        {db.hesap.ogrenci_indirimi > 0 && <> − öğrenci {tl(db.hesap.ogrenci_indirimi)}</>})</small>}</dd>
             </dl>
         </SimPencere>
+    );
+}
+
+// Gün sonu fişi: yazar kasadan çıkıyormuş gibi yukarıdan süzülür. Tutarlar veritabanından (fn_donem_ozeti),
+// müşteri akışı (gelen, terk eden, kapanışta dönen) simülasyonun gün sayaçlarından gelir.
+function GunSonuFisi({ fis, yeniGun }) {
+    const o = fis.db || {};
+    const g = fis.gun;
+    const satir = (sol, sag, vurgu) => (
+        <div className={`fis-satir ${vurgu ? 'vurgu' : ''}`}><span>{sol}</span><span>{sag}</span></div>
+    );
+    const toplamServis = fis.garsonlar.reduce((t, w) => t + w.servis, 0);
+    return (
+        <div className="fis-arka" role="dialog" aria-modal="true" aria-label="Gün sonu fişi">
+            <div className="fis-yazici" aria-hidden="true" />
+            <article className="fis">
+                <header className="fis-baslik">
+                    <div className="fis-logo">KARAVANA</div>
+                    <div>Kutu Oyunu Cafe</div>
+                    <div className="fis-kucuk">GÜN SONU RAPORU</div>
+                    <div className="fis-kucuk">{fis.takvim.yil}. Yıl {fis.takvim.ay}. Ay {fis.takvim.gun}. Gün · {fis.tarih}</div>
+                    <div className="fis-kucuk">Açılış 10:00 · Kapanış {fis.kapanisSaati}</div>
+                </header>
+                <div className="fis-cizgi" />
+                {satir(`Giriş · normal (${(o.kisi ?? 0) - (o.ogrenci ?? 0)} kişi)`, tl(o.normal_giris ?? 0))}
+                {satir(`Giriş · öğrenci 🎓 ${o.ogrenci ?? 0} kişi`, tl(o.ogrenci_giris ?? 0))}
+                {satir('Yiyecek & içecek', tl(o.siparis ?? 0))}
+                {o.diger_indirim > 0 && satir('Ek indirim', `−${tl(o.diger_indirim)}`)}
+                <div className="fis-cizgi" />
+                {satir('TOPLAM CİRO', tl(o.ciro ?? 0), true)}
+                {satir('  Nakit', tl(o.nakit ?? 0))}
+                {satir('  Kart', tl(o.kart ?? 0))}
+                {satir('Kapanan hesap', `${o.hesap_sayisi ?? 0} masa`)}
+                <div className="fis-cizgi" />
+                {satir('Gelen müşteri', `${g.gelenKisi} kişi · ${g.gelenGrup} grup`)}
+                {satir('Masaya oturan', `${o.kisi ?? 0} kişi`)}
+                {satir('Sıkılıp terk eden 😡', `${g.terkGrup} grup · ${g.terkKisi} kişi`)}
+                {g.yerBulamayan > 0 && satir('Kuyruk dolu diye giden', `${g.yerBulamayan} kişi`)}
+                {g.kapanistaDonen > 0 && satir('Kapanışta geri dönen', `${g.kapanistaDonen} kişi`)}
+                <div className="fis-cizgi" />
+                <div className="fis-kucuk fis-orta">GARSON SERVİSLERİ · toplam {toplamServis}</div>
+                {fis.garsonlar.map((w) => satir(`${w.ad} (kat ${w.kat})`, `${w.servis} servis`))}
+                <div className="fis-cizgi" />
+                {!fis.db && <div className="fis-kucuk fis-orta">Tutarlar alınamadı (bağlantı)</div>}
+                <div className="fis-orta">Teşekkürler, yarın görüşmek üzere!</div>
+                <div className="fis-barkod" aria-hidden="true" />
+                <button className="sim-dugme fis-dugme" onClick={yeniGun} autoFocus>Kapat · Yeni güne başla (10:00)</button>
+            </article>
+        </div>
     );
 }
 

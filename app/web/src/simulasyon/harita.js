@@ -24,13 +24,22 @@ export const DIS_SIRA = Array.from({ length: 15 }, (_, i) => ({ gx: 4 + i, gy: K
 // Nesne: { tur, gx, gy, gw, gd, h }  (taban karo cinsinden, h piksel yükseklik)
 // Masa yuvası: { gx, gy, gw, gd, sekil } — veritabanındaki o kattaki masalar masa_no sırasıyla yuvalara yerleşir
 // Duvar dekoru: { tur, duvar: 'K'|'B'|'G'|'D', bas, son } — duvar boyunca karo aralığı
-const kat1Masalar = [];
-for (const gy of [4, 7]) for (const gx of [5, 8, 11, 14]) kat1Masalar.push({ gx, gy, gw: 1, gd: 1 });
-kat1Masalar.push({ gx: 11, gy: 10, gw: 1, gd: 1 }, { gx: 14, gy: 10, gw: 1, gd: 1 });
+// Organik yerleşim: masalar elle, düzensiz konumlara yerleştirildi; her masanın sandalye halkası ile
+// komşusununki arasında en az bir karo yürüme boşluğu var. 1x1 masa 2 veya 4 kişilik, 2x1 masa 6 kişiliktir;
+// veritabanındaki masalar kapasitelerine uyan yuvaya yerleşir (motor.js).
+const kat1Masalar = [
+    { gx: 4, gy: 4, gw: 1, gd: 1 }, { gx: 8, gy: 3, gw: 2, gd: 1 }, { gx: 13, gy: 4, gw: 1, gd: 1 },
+    { gx: 17, gy: 5, gw: 1, gd: 1 }, { gx: 2, gy: 9, gw: 1, gd: 1 }, { gx: 6, gy: 9, gw: 2, gd: 1 },
+    { gx: 11, gy: 8, gw: 1, gd: 1 }, { gx: 16, gy: 9, gw: 1, gd: 1 }, { gx: 13, gy: 13, gw: 1, gd: 1 },
+    { gx: 17, gy: 13, gw: 1, gd: 1 },
+];
 
-const kat2Masalar = [];
-for (const gx of [3, 7]) for (const gy of [4, 7, 10, 13]) kat2Masalar.push({ gx, gy, gw: 2, gd: 1 });
-kat2Masalar.push({ gx: 11, gy: 4, gw: 2, gd: 1 }, { gx: 11, gy: 7, gw: 2, gd: 1 });
+const kat2Masalar = [
+    { gx: 3, gy: 3, gw: 2, gd: 1 }, { gx: 8, gy: 4, gw: 1, gd: 1 }, { gx: 12, gy: 3, gw: 2, gd: 1 },
+    { gx: 4, gy: 8, gw: 1, gd: 1 }, { gx: 8, gy: 8, gw: 2, gd: 1 }, { gx: 13, gy: 7, gw: 1, gd: 1 },
+    { gx: 17, gy: 7, gw: 1, gd: 1 }, { gx: 3, gy: 12, gw: 2, gd: 1 }, { gx: 8, gy: 12, gw: 1, gd: 1 },
+    { gx: 13, gy: 12, gw: 2, gd: 1 },
+];
 
 export const KATLAR = {
     1: {
@@ -43,8 +52,8 @@ export const KATLAR = {
             { tur: 'pasta', gx: 7, gy: 1, gw: 1, gd: 1, h: 22 },
             { tur: 'espresso', gx: 2, gy: 1, gw: 1, gd: 1, h: 22 },
             { tur: 'vitrin', gx: 5, gy: 1, gw: 2, gd: 1, h: 22 },
-            { tur: 'kasa', gx: 2, gy: 10, gw: 1, gd: 2, h: 20 },
-            { tur: 'koltuk', gx: 5, gy: 15, gw: 4, gd: 1, h: 10 },
+            { tur: 'kasa', gx: 1, gy: 12, gw: 1, gd: 2, h: 20 },
+            { tur: 'koltuk', gx: 6, gy: 15, gw: 4, gd: 1, h: 10 },
             { tur: 'bitki', gx: 19, gy: 15, gw: 1, gd: 1, h: 18 },
             { tur: 'bitki', gx: 1, gy: 15, gw: 1, gd: 1, h: 18 },
             { tur: 'bitki', gx: 19, gy: 8, gw: 1, gd: 1, h: 18 },
@@ -52,13 +61,13 @@ export const KATLAR = {
         ],
         masalar: kat1Masalar,
         bar: { gx: 4, gy: 2 },
-        kasa: { gx: 3, gy: 11 },
-        kasiyer: { gx: 1, gy: 10 },
+        kasa: { gx: 2, gy: 12 },
+        kasiyer: { gx: 0, gy: 12 },
         bekleme: [
-            { gx: 4, gy: 14 }, { gx: 5, gy: 14 }, { gx: 6, gy: 14 }, { gx: 7, gy: 14 }, { gx: 8, gy: 14 }, { gx: 9, gy: 14 },
-            { gx: 4, gy: 13 }, { gx: 5, gy: 13 }, { gx: 6, gy: 13 }, { gx: 7, gy: 13 }, { gx: 8, gy: 13 }, { gx: 9, gy: 13 },
+            { gx: 5, gy: 14 }, { gx: 6, gy: 14 }, { gx: 7, gy: 14 }, { gx: 8, gy: 14 }, { gx: 9, gy: 14 }, { gx: 10, gy: 14 },
+            { gx: 5, gy: 13 }, { gx: 6, gy: 13 }, { gx: 7, gy: 13 }, { gx: 8, gy: 13 }, { gx: 9, gy: 13 }, { gx: 10, gy: 13 },
         ],
-        halilar: [{ gx: 4, gy: 13, gw: 6, gd: 3, renk: 'bekleme' }, { gx: 2, gy: 15, gw: 2, gd: 1, renk: 'paspas' }],
+        halilar: [{ gx: 5, gy: 13, gw: 6, gd: 3, renk: 'bekleme' }, { gx: 2, gy: 15, gw: 2, gd: 1, renk: 'paspas' }],
         duvar: [
             { tur: 'pencere', duvar: 'K', bas: 9, son: 11.5 }, { tur: 'poster', duvar: 'K', bas: 12.3, son: 13.8, oyun: 'catan' },
             { tur: 'poster', duvar: 'K', bas: 14.4, son: 15.9, oyun: 'tren' },
