@@ -20,8 +20,10 @@ export const MUTFAK = {
 };
 // Kat 3 sahnesi: müzisyenlerin yeri (sahne yüksekliği SAHNE_Z piksel)
 export const SAHNE_Z = 8;
+// Yarım daire sahne: düz kenarı batı duvarına yaslı, merkez (cx, cy), yarıçap r
+export const SAHNE = { cx: 0.6, cy: 8, r: 3.2 };
 export const MUZISYENLER = [
-    { rol: 'sarkici', gx: 4.4, gy: 7 }, { rol: 'gitarist', gx: 3.4, gy: 5.2 }, { rol: 'piyanist', gx: 2.6, gy: 9.1 },
+    { rol: 'sarkici', gx: 2.4, gy: 7.5 }, { rol: 'gitarist', gx: 1.6, gy: 5.8 }, { rol: 'piyanist', gx: 2.0, gy: 9.2 },
 ];
 // Kat 1 girişi: ön cephedeki kapı (x = 2..3). KAPI kaldırımdaki kapı önü, KAPI_IC içerideki ilk karo.
 export const KAPI = { gx: 2, gy: 17 };
@@ -41,12 +43,18 @@ export const DIS_SIRA = Array.from({ length: 15 }, (_, i) => ({ gx: 4 + i, gy: K
 // komşusununki arasında en az bir karo yürüme boşluğu var. 1x1 masa 2 veya 4 kişilik, 2x1 masa 6 kişiliktir.
 // tercih: yuvanın tasarlandığı kapasite. Kat 1'de bar ve mutfağa yakın sıradaki masalar hızlı sirkülasyon için
 // 2 kişilik, iç kısımdakiler uzun oyun ve yemek için 4 kişilik; veritabanındaki masalar önce tercihi uyan yuvaya yerleşir.
+// Kat 1: mutfağın önü (x 10–16, y 3–6) şeflerin ve servisin alanı olarak tamamen boş.
+// Barın önünde ve duvar kenarlarında 6 adet 2 kişilik, iç salonda 4 adet 4 kişilik masa.
 const kat1Masalar = [
-    { gx: 4, gy: 4, gw: 1, gd: 1, tercih: 2 }, { gx: 8, gy: 3, gw: 1, gd: 1, tercih: 2 }, { gx: 13, gy: 4, gw: 1, gd: 1, tercih: 2 },
-    { gx: 17, gy: 5, gw: 1, gd: 1, tercih: 2 }, { gx: 11, gy: 8, gw: 1, gd: 1, tercih: 2 },
-    { gx: 2, gy: 9, gw: 1, gd: 1, tercih: 4 }, { gx: 6, gy: 9, gw: 1, gd: 1, tercih: 4 }, { gx: 16, gy: 9, gw: 1, gd: 1, tercih: 4 },
-    { gx: 13, gy: 13, gw: 1, gd: 1, tercih: 4 }, { gx: 17, gy: 13, gw: 1, gd: 1, tercih: 4 },
+    // 2 kişilik: bar önü (2), batı duvarı (1), doğu duvarı (3)
+    { gx: 2, gy: 4, gw: 1, gd: 1, tercih: 2 }, { gx: 6, gy: 4, gw: 1, gd: 1, tercih: 2 },
+    { gx: 1, gy: 8, gw: 1, gd: 1, tercih: 2 },
+    { gx: 18, gy: 5, gw: 1, gd: 1, tercih: 2 }, { gx: 18, gy: 9, gw: 1, gd: 1, tercih: 2 }, { gx: 18, gy: 13, gw: 1, gd: 1, tercih: 2 },
+    // 4 kişilik: iç salon
+    { gx: 6, gy: 9, gw: 1, gd: 1, tercih: 4 }, { gx: 10, gy: 9, gw: 1, gd: 1, tercih: 4 },
+    { gx: 14, gy: 8, gw: 1, gd: 1, tercih: 4 }, { gx: 14, gy: 12, gw: 1, gd: 1, tercih: 4 },
 ];
+export const MUTFAK_ONU = { gx: 10, gy: 3, gw: 7, gd: 4 };
 
 const kat2Masalar = [
     { gx: 3, gy: 3, gw: 2, gd: 1 }, { gx: 8, gy: 4, gw: 1, gd: 1 }, { gx: 12, gy: 3, gw: 2, gd: 1 },
@@ -70,7 +78,6 @@ export const KATLAR = {
             { tur: 'koltuk', gx: 6, gy: 15, gw: 4, gd: 1, h: 10 },
             { tur: 'bitki', gx: 19, gy: 15, gw: 1, gd: 1, h: 18 },
             { tur: 'bitki', gx: 1, gy: 15, gw: 1, gd: 1, h: 18 },
-            { tur: 'bitki', gx: 19, gy: 8, gw: 1, gd: 1, h: 18 },
             { tur: 'tabela', gx: 9, gy: 1, gw: 1, gd: 1, h: 30 },
             // mutfak: duvar boyunca ekipman, önünde servis tezgahı
             { tur: 'ocak', gx: 11, gy: 0, gw: 1, gd: 1, h: 22 }, { tur: 'firin', gx: 12, gy: 0, gw: 1, gd: 1, h: 24 },
@@ -151,30 +158,30 @@ export const KATLAR = {
             { tur: 'heykel', gx: 1, gy: 1, gw: 1, gd: 1, h: 40 },
             { tur: 'sandik', gx: 19, gy: 7, gw: 1, gd: 2, h: 16 },
             { tur: 'deri', gx: 8, gy: 0, gw: 5, gd: 1, h: 16 },
-            { tur: 'deri', gx: 19, gy: 10, gw: 1, gd: 3, h: 16 },
             { tur: 'bar', gx: 15, gy: 15, gw: 4, gd: 1, h: 22 },
             { tur: 'lamba', gx: 7, gy: 8, gw: 1, gd: 1, h: 40 },
             { tur: 'bitki', gx: 1, gy: 15, gw: 1, gd: 1, h: 18 },
-            // büyük VIP sahnesi: batı duvarında, salona (doğuya) bakar; sahne üstü nesnelerin z'si SAHNE_Z
-            { tur: 'sahne', gx: 1, gy: 4, gw: 5, gd: 7, h: 8 },
-            { tur: 'piyano', gx: 1.3, gy: 8.4, gw: 1, gd: 0.8, h: 16, z: 8, engelsiz: true },
-            { tur: 'mikrofon', gx: 4.9, gy: 7.1, gw: 0.3, gd: 0.3, h: 22, z: 8, engelsiz: true },
-            { tur: 'amfi', gx: 1.2, gy: 4.3, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
-            { tur: 'amfi', gx: 1.2, gy: 10.1, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
-            { tur: 'spot', gx: 5.6, gy: 4.2, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#ff5ea8' },
-            { tur: 'spot', gx: 5.6, gy: 10.6, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#5ec8ff' },
+            // yarım daire VIP sahnesi (batı duvarı ortası, salona bakar); sahne üstü nesnelerin z'si SAHNE_Z
+            { tur: 'yarimsahne', gx: 0.6, gy: 4.8, gw: 3.2, gd: 6.4, h: 8 },
+            { tur: 'piyano', gx: 0.8, gy: 8.8, gw: 0.9, gd: 0.8, h: 16, z: 8, engelsiz: true },
+            { tur: 'mikrofon', gx: 2.9, gy: 7.55, gw: 0.3, gd: 0.3, h: 22, z: 8, engelsiz: true },
+            { tur: 'amfi', gx: 0.8, gy: 5.3, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
+            { tur: 'amfi', gx: 0.8, gy: 10.1, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
+            { tur: 'spot', gx: 2.2, gy: 5.4, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#ff5ea8' },
+            { tur: 'spot', gx: 2.2, gy: 10.4, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#5ec8ff' },
             // hobi ve koleksiyon: vitrinler ve boyalı FRP figür kaideleri
             { tur: 'koleksiyon', gx: 1, gy: 12, gw: 1, gd: 2, h: 40 }, { tur: 'koleksiyon', gx: 7, gy: 15, gw: 3, gd: 1, h: 26 },
-            { tur: 'figurstandi', gx: 6.5, gy: 1.5, gw: 0.8, gd: 0.8, h: 14, figur: 'ejderha' },
+            { tur: 'figurstandi', gx: 13.5, gy: 1.5, gw: 0.8, gd: 0.8, h: 14, figur: 'ejderha' },
             { tur: 'figurstandi', gx: 13, gy: 14, gw: 0.8, gd: 0.8, h: 14, figur: 'sovalye' },
             { tur: 'figurstandi', gx: 3, gy: 13.6, gw: 0.8, gd: 0.8, h: 14, figur: 'buyucu' },
         ],
+        // masalar sahnenin etrafında yay çizer: kuzey, doğu (karşı), güney ve arka sıra
         masalar: [
-            { gx: 9, gy: 3, gw: 3, gd: 2, sekil: 'harita' }, { gx: 15, gy: 4, gw: 3, gd: 2, sekil: 'yuvarlak' },
-            { gx: 9, gy: 10, gw: 3, gd: 2, sekil: 'yuvarlak' }, { gx: 15, gy: 10, gw: 3, gd: 2, sekil: 'harita' },
+            { gx: 7, gy: 2, gw: 3, gd: 2, sekil: 'harita' }, { gx: 10, gy: 7, gw: 3, gd: 2, sekil: 'yuvarlak' },
+            { gx: 7, gy: 12, gw: 3, gd: 2, sekil: 'yuvarlak' }, { gx: 16, gy: 10, gw: 3, gd: 2, sekil: 'harita' },
         ],
         bar: { gx: 16, gy: 14 },
-        halilar: [{ gx: 7, gy: 2, gw: 12, gd: 12, renk: 'vip' }],
+        halilar: [{ gx: 5, gy: 1, gw: 14, gd: 14, renk: 'vip' }],
         duvar: [
             { tur: 'sanc', duvar: 'B', bas: 3, son: 4.2, renk: '#b0302b' }, { tur: 'sanc', duvar: 'K', bas: 4, son: 5.2, renk: '#e3b23c' },
             { tur: 'poster', duvar: 'K', bas: 9, son: 11.5, oyun: 'harita', ust: true },
@@ -241,7 +248,14 @@ function engelIzgarasi(kat) {
             if (x >= 0 && y >= 0 && x < GENISLIK && y < DERINLIK) izgara[x][y] = true;
         }
     };
-    for (const o of t.nesneler) if (!o.engelsiz) kapat(o);
+    for (const o of t.nesneler) {
+        if (o.engelsiz) continue;
+        if (o.tur === 'yarimsahne') {
+            for (let x = 0; x < GENISLIK; x++) for (let y = 0; y < IC_DERINLIK; y++) {
+                if ((x + 0.5 - SAHNE.cx) ** 2 + (y + 0.5 - SAHNE.cy) ** 2 <= SAHNE.r ** 2) izgara[x][y] = true;
+            }
+        } else kapat(o);
+    }
     for (const m of t.masalar) kapat(m);
     kapat(ASANSOR_GOVDE);
     // İç mekân dışı: üst katlarda tamamen kapalı; kat 1'de cephe şeridi yalnızca kapıdan geçilir,

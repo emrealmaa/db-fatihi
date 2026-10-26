@@ -4,7 +4,7 @@
 // koordinatlarla yeniden hesaplanır. Tüm şekiller fillRect ile satır/sütun çizildiğinden kenarlar keskin kalır.
 import {
     arkaDuvarlar, DERINLIK, dikdortgenDondur, disGorunur, dondur, duvarNoktasi, GENISLIK, IC_DERINLIK,
-    ASANSOR_GOVDE, KALDIRIM_Y, KAPI_ARALIK, KATLAR, boyut,
+    ASANSOR_GOVDE, KALDIRIM_Y, KAPI_ARALIK, KATLAR, SAHNE, boyut,
 } from './harita.js';
 
 const KX = 24, KY = 12;                  // yarım karo genişliği / yüksekliği
@@ -416,6 +416,26 @@ function nesneCiz(c, P, d, o, sahne = {}) {
             break;
         }
         // -------------------------------------------------------- kat 3 sahne, müzik, koleksiyon
+        case 'yarimsahne': {
+            // ince şeritlerden oluşan yarım daire; şeritler kameraya göre arkadan öne çizilir
+            const { cx, cy, r } = SAHNE;
+            const ad = 0.16;
+            const seritler = [];
+            for (let dx = 0; dx < r; dx += ad) {
+                const yari = Math.sqrt(Math.max(0, r * r - (dx + ad / 2) ** 2));
+                const q = dondur(d, cx + dx + ad / 2, cy);
+                seritler.push({ dx, yari, k: q.x + q.y });
+            }
+            seritler.sort((a, b) => a.k - b.k);
+            const isik = (cc, x, y, hh, sol, st) => {
+                if (st % 6 === 0) { cc.fillStyle = (Math.floor(performance.now() / 400) + st / 6) % 2 < 1 ? '#ffd166' : '#ff8a3d'; cc.fillRect(x, y + 2, 1, 2); }
+            };
+            for (const sr of seritler) {
+                K(cx + sr.dx, cy - sr.yari, ad, sr.yari * 2, o.h, renkler('#3b2418', isik));
+                if (sr.yari > 0.25) K(cx + sr.dx, cy - sr.yari + 0.12, ad, sr.yari * 2 - 0.24, 0, { ust: (Math.floor((sr.dx + 0.2) / 0.8) % 2) ? '#5a3424' : '#4e2d1f' }, o.h);
+            }
+            break;
+        }
         case 'sahne':
             K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#3b2418', (cc, x, y, h, sol, st) => {
                 if (st % 8 === 0) { cc.fillStyle = (Math.floor(performance.now() / 400) + st / 8) % 2 < 1 ? '#ffd166' : '#ff8a3d'; cc.fillRect(x, y + 2, 1, 2); }

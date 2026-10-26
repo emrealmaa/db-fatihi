@@ -8,10 +8,10 @@ veriyle dolar. Kurallar (kapasite, oyun sırası, stok, ödeme) veritabanında u
 ## Katlar
 | Kat | Konsept | Masa | İçerik |
 |---|---|---|---|
-| 1 | Giriş & Espresso Bar | 10 (bar/mutfak yakını 2'lik, iç kısım 4'lük) | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
+| 1 | Giriş & Espresso Bar | 10: bar önü ve duvar kenarlarında 6 × 2 kişilik, iç salonda 4 × 4 kişilik; mutfağın önü boş | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
 | 1 | (ek) | – | **Mutfak**: ocak, fırın, buzdolabı, evye, hazırlık tezgahı, ısıtıcı lambalı servis tezgahı; şef ve yardımcı şef |
 | 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Kuzey duvarında tek, şık kitaplık; batı duvarında neon halı üstünde 4 **retro atari kabini** (yanıp sönen ekran), doğu duvarında 2 **tilt (pinball)** makinesi, yeni oyunlar standı, okuma köşesi, oyun barı, loş ışık |
-| 3 | VIP & FRP Özel Bölgesi | 4 ferah (6–8 kişilik) | Batı duvarında (eski yerinin karşısı) **büyük VIP sahnesi**: şarkıcı, gitarist, piyanist, amfiler ve renkli spot ışıkları; boyalı nadir FRP figür kaideleri (ejderha, şövalye, büyücü), koleksiyon vitrinleri, tablolar; FRP harita masaları, deri koltuklar, VIP ışığı |
+| 3 | VIP & FRP Özel Bölgesi | 4 ferah (6–8 kişilik) | Batı duvarının ortasında, salona bakan **yarım daire VIP sahnesi** (masalar etrafında yay çizer): şarkıcı, gitarist, piyanist, amfiler ve renkli spot ışıkları; boyalı nadir FRP figür kaideleri (ejderha, şövalye, büyücü), koleksiyon vitrinleri, tablolar; FRP harita masaları, deri koltuklar, VIP ışığı |
 
 Kat 1 ve 2 **organik** yerleşimlidir: masalar elle düzensiz konumlara yerleştirildi, her masanın sandalye halkası ile komşusununki
 arasında en az bir karo yürüme boşluğu vardır (yerleşim denetimi betikle doğrulandı). 1x1 masalar 2 veya 4, 2x1 masalar 6 kişiliktir;
