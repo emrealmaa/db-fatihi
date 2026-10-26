@@ -185,10 +185,12 @@ export class Simulasyon {
         g.masa = m; m.grup = g; m.kirli = false;
         g.oturumId = s.oturum_id;
         g.oturma = this.dakika;
+        g.vip = m.kat === 3;
         g.karsilayan = this.garsonlar.length ? sec(this.garsonlar) : null;
         g.uyeler.forEach((b, i) => {
             const y = m.yerler[i] || m.yerler[0];
-            Object.assign(b, { kat: m.kat, gx: y.gx, gy: y.gy, oturuyor: true, yol: [] });
+            Object.assign(b, { kat: m.kat, gx: y.gx, gy: y.gy, yol: [] });
+            this.otur(b, m);
         });
         if (s.oturum_oyun_id) {
             g.durum = 'OYNUYOR'; g.oturumOyunId = s.oturum_oyun_id;
@@ -224,6 +226,7 @@ export class Simulasyon {
         const h = b.yol[0];
         if (h.katDegis) { b.kat = h.katDegis; b.yol.shift(); return; }
         const dx = h.gx - b.gx, dy = h.gy - b.gy, d = Math.hypot(dx, dy);
+        if (d > 0.01) { b.vx = dx; b.vy = dy; }
         const adim = b.hiz * dtSn * this.hiz;
         if (d <= adim) { b.gx = h.gx; b.gy = h.gy; b.yol.shift(); }
         else { b.gx += (dx / d) * adim; b.gy += (dy / d) * adim; }
@@ -232,6 +235,13 @@ export class Simulasyon {
     }
 
     vardi = (b) => b.yol.length === 0;
+
+    // Oturan bireyi masanın ortasına döndür
+    otur(b, m) {
+        b.oturuyor = true;
+        b.vx = m.yuva.gx + m.yuva.gw / 2 - 0.5 - b.gx;
+        b.vy = m.yuva.gy + m.yuva.gd / 2 - 0.5 - b.gy;
+    }
     hepsiVardi = (g) => g.uyeler.every(this.vardi);
 
     baloncuk(b, metin, sure = 3.5) {
@@ -259,11 +269,11 @@ export class Simulasyon {
 
     gelisPlanla() {
         const p = Math.max(this.populerlik, 10);
-        this.sonrakiGelis = this.dakika + rastgele(3, 8) * (80 / (p + 20));
+        this.sonrakiGelis = this.dakika + rastgele(2, 5) * (80 / (p + 20));
         // Bekleme alanı doluyken kapıda yığılma olmasın
         const bekleyen = this.gruplar.filter((g) => g.durum === 'MASA_BEKLIYOR').reduce((t, g) => t + g.kisi, 0);
         if (this.gruplar.length >= this.masalar.length + 3 || bekleyen >= 8) return;
-        const kisi = agirlikliSec([1, 2, 3, 4, 5, 6, 8, 10], (k) => ({ 1: 1, 2: 5, 3: 4, 4: 5, 5: 2, 6: 2, 8: 0.7, 10: 0.3 }[k]));
+        const kisi = agirlikliSec([1, 2, 3, 4, 5, 6, 8, 10, 12], (k) => ({ 1: 1, 2: 5, 3: 4, 4: 5, 5: 2, 6: 2, 8: 0.8, 10: 0.5, 12: 0.3 }[k]));
         const g = this.grupOlustur(kisi, 1, KAPI);
         this.gruplar.push(g);
         g.uyeler.forEach((b, i) => { b.gx = KAPI.gx; b.gy = KAPI.gy + (i % 2) * 0.3; b.yol = [{ gx: 1, gy: KAPI.gy }]; });
@@ -393,7 +403,8 @@ export class Simulasyon {
             const r = await this.api(g, () => this.garsonApi(g).gonder(`/masalar/${m.masaId}/ac`, { kisiSayisi: g.kisi, musteri: g.musteri }));
             g.oturumId = r.oturumId;
             g.oturma = this.dakika;
-            g.uyeler.forEach((b) => { b.oturuyor = true; });
+            g.vip = m.kat === 3;
+            g.uyeler.forEach((b) => this.otur(b, m));
             g.durum = 'OYUN_SECIYOR';
             g.sonrakiSiparis = this.dakika + rastgele(2, 6);
             this.kaydet(`Masa ${m.masaNo} açıldı: ${g.kisi} kişi${g.karsilayan ? ` · karşılayan ${g.karsilayan.ad}` : ''}`, 'bilgi');
@@ -432,7 +443,7 @@ export class Simulasyon {
             g.oyun = this.oyunBilgisi(o.oyun_id, o.ad);
             g.durum = 'OYNUYOR';
             g.oyunSayisi++;
-            g.oyunBitis = this.dakika + o.sure_dk * rastgele(0.6, 1.0);
+            g.oyunBitis = this.dakika + o.sure_dk * rastgele(0.6, 1.0) * (g.vip ? 1.4 : 1);
             this.baloncuk(g.uyeler[0], `${o.ad}!`);
             this.kaydet(`Masa ${g.masa.masaNo}: ${o.ad} başladı`, 'bilgi');
         } catch (e) {
@@ -462,7 +473,7 @@ export class Simulasyon {
             g.oturumOyunId = r.oturumOyunId;
             g.oyun = g.bekledigiOyun;
             g.durum = 'OYNUYOR'; g.oyunSayisi++; g.beklemeId = null;
-            g.oyunBitis = this.dakika + g.oyun.sure * rastgele(0.6, 1.0);
+            g.oyunBitis = this.dakika + g.oyun.sure * rastgele(0.6, 1.0) * (g.vip ? 1.4 : 1);
             g.memnuniyet = Math.min(100, g.memnuniyet + 8);
             this.baloncuk(g.uyeler[0], 'Sıra bizde!');
             this.kaydet(`Masa ${g.masa.masaNo}: sırası geldi, ${g.oyun.ad} aldı`, 'bilgi');
@@ -481,7 +492,7 @@ export class Simulasyon {
         g.oturumOyunId = null;
         const ad = g.oyun?.ad;
         g.oyun = null;
-        if (ad && g.oyunSayisi < 2 && Math.random() < 0.35) {
+        if (ad && g.oyunSayisi < (g.vip ? 3 : 2) && Math.random() < (g.vip ? 0.6 : 0.35)) {
             g.durum = 'OYUN_SECIYOR';
             this.baloncuk(g.uyeler[0], 'Bir oyun daha!');
             return;
@@ -534,16 +545,17 @@ export class Simulasyon {
 
     // ------------------------------------------------------------------ siparişler
     siparisKontrol(g) {
-        if (!g.oturumId || g.siparis || g.siparisSayisi >= 3 || this.dakika < g.sonrakiSiparis) return;
+        if (!g.oturumId || g.siparis || g.siparisSayisi >= (g.vip ? 6 : 3) || this.dakika < g.sonrakiSiparis) return;
         const menu = this.menu.filter((u) => u.stok > 0);
         if (!menu.length) return;
         const agirlik = (u) => /Sıcak/.test(u.kategori) ? 3 : /Soğuk/.test(u.kategori) ? 2
             : /Yiyecek/.test(u.kategori) ? (g.masa.kat === 3 ? 2.5 : 1.5) : 1;
         const kalemler = [];
-        for (let i = 0; i < Math.ceil(g.kisi / 2); i++) {
+        // VIP gruplar daha çok ve daha bol sipariş verir
+        for (let i = 0; i < Math.ceil(g.kisi / (g.vip ? 1.5 : 2)); i++) {
             const u = agirlikliSec(menu, agirlik);
             const var_ = kalemler.find((k) => k.urunId === u.urun_id);
-            if (var_) var_.adet++; else kalemler.push({ urunId: u.urun_id, adet: tamRastgele(1, 2), ad: u.ad, kategori: u.kategori });
+            if (var_) var_.adet++; else kalemler.push({ urunId: u.urun_id, adet: tamRastgele(1, g.vip ? 3 : 2), ad: u.ad, kategori: u.kategori });
         }
         g.siparis = { kalemler, durum: 'ISTENDI', zaman: this.dakika };
         const k = kalemler[0].kategori;
@@ -604,8 +616,9 @@ export class Simulasyon {
                 if (!this.vardi(b)) return;
                 g.siparis = null;
                 g.siparisSayisi++;
-                g.sonrakiSiparis = this.dakika + rastgele(25, 50);
+                g.sonrakiSiparis = this.dakika + (g.vip ? rastgele(15, 30) : rastgele(25, 50));
                 g.memnuniyet = Math.min(100, g.memnuniyet + 4 + w.stat.yetenek);
+                g.sonServis = { saat: this.saatMetni(), garson: w.ad };
                 this.baloncuk(sec(g.uyeler), sec(['Nefis!', 'Teşekkürler!', 'Harika!', 'Tam zamanında!']));
                 w.tamamlanan++;
                 this.kaydet(`${w.ad} → Masa ${t.masa.masaNo} servis tamam`, 'bilgi');
@@ -687,7 +700,7 @@ export class Simulasyon {
         }[w.durum];
     }
 
-    sahne(kat, seciliMasaId) {
+    sahne(kat, seciliMasaId, d = 0) {
         const masalar = this.masalar.filter((m) => m.kat === kat).map((m) => ({
             ...m, durumRenk: this.masaDurumu(m).renk, oyunRenk: m.grup?.oyun?.renk,
         }));
@@ -696,12 +709,15 @@ export class Simulasyon {
             g.uyeler.forEach((b, i) => {
                 if (b.kat !== kat) return;
                 const ikon = i === 0 && g.oyun && g.durum === 'OYNUYOR' ? { renk: g.oyun.renk, harf: g.oyun.ad[0] } : null;
-                bireyler.push({ ...b, ikon });
+                const elKalkik = i === 0 && g.siparis?.durum === 'ISTENDI' && b.oturuyor;
+                bireyler.push({ ...b, ikon, elKalkik, hareketli: b.yol.length > 0 });
             });
         }
-        for (const w of this.garsonlar) if (w.birey.kat === kat) bireyler.push(w.birey);
-        if (kat === 1 && this.kasiyer) bireyler.push(this.kasiyer);
-        return { kat, masalar, bireyler, seciliMasaId };
+        for (const w of this.garsonlar) {
+            if (w.birey.kat === kat) bireyler.push({ ...w.birey, hareketli: w.birey.yol.length > 0, tepsi: w.durum === 'SERVIS' });
+        }
+        if (kat === 1 && this.kasiyer) bireyler.push({ ...this.kasiyer, vx: 1, vy: 0.2 });
+        return { kat, d, masalar, bireyler, seciliMasaId };
     }
 
     ozet() {
@@ -727,7 +743,8 @@ export class Simulasyon {
         const g = m.grup;
         return {
             masaNo: m.masaNo, kat: m.kat, kapasite: m.kapasite, durum: this.masaDurumu(m).metin, oturumId: g?.oturumId || null,
-            kisi: g?.kisi, oyun: g?.oyun?.ad || null, bekledigiOyun: g?.durum === 'SIRADA' ? g.bekledigiOyun?.ad : null,
+            kisi: g?.kisi, oyun: g?.oyun?.ad || null, oyunId: g?.oyun?.id ?? null, vip: m.kat === 3,
+            sonServis: g?.sonServis || null, bekledigiOyun: g?.durum === 'SIRADA' ? g.bekledigiOyun?.ad : null,
             eglence: g ? Math.round(g.memnuniyet) : null, garson: g?.garson?.ad || g?.karsilayan?.ad || null,
             grupDurumu: g ? DURUM_METNI[g.durum] : null,
             kalisDk: g?.oturma != null ? Math.floor(this.dakika - g.oturma) : null,

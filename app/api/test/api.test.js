@@ -63,7 +63,8 @@ test('garson kasa ve yönetim uçlarına erişemez (403)', async () => {
 
 test('masalar ve oyunlar listelenir, sayılar JSON sayısıdır', async () => {
     const { govde: masalar } = await istek('GET', '/masalar', null, 'garson');
-    assert.equal(masalar.length, 10);
+    assert.equal(masalar.length, 24);
+    assert.deepEqual([1, 2, 3].map((k) => masalar.filter((m) => m.kat === k).length), [10, 10, 4]);
     assert.deepEqual([...new Set(masalar.map((m) => m.kat))].sort(), [1, 2, 3]);
     assert.equal(typeof masalar[0].oturum_id, 'number');
     const { govde: oyunlar } = await istek('GET', '/oyunlar', null, 'garson');

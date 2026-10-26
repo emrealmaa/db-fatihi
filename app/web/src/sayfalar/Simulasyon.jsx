@@ -1,31 +1,87 @@
 // Karavana simülasyonu: 3 katlı izometrik piksel-art kafe. Müşteriler ve garsonlar motor.js'teki
 // durum makineleriyle hareket eder; her işlem gerçek API/veritabanı üzerinden yapılır.
-import { useEffect, useMemo, useRef, useState } from 'react';
+//
+// Kamera: sahne ara tuvale (DOGAL_G x DOGAL_Y) çizilir, ekrana aktarılırken
+//   ekran = ofset + doğal * (sigdirma * yakinlik)
+// dönüşümü uygulanır. Döndürme (d: 0..3) çizim aşamasında dünya koordinatlarında yapılır.
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { al } from '../api.js';
 import { tl } from '../bicim.js';
 import { Simulasyon as Motor } from '../simulasyon/motor.js';
-import { DOGAL_G, DOGAL_Y, masaBul, pikselBaglami, sahneCiz, ustKatmanCiz } from '../simulasyon/cizim.js';
+import { DOGAL_G, DOGAL_Y, kapakCiz, nesneBul, pikselBaglami, sahneCiz, ustKatmanCiz } from '../simulasyon/cizim.js';
 import { KATLAR } from '../simulasyon/harita.js';
 
 const HIZLAR = [1, 2, 4];
+const YAKINLIK = { min: 0.6, max: 5 };
+const GECIS_SN = 0.5;
+const YON_ADI = ['Kuzey-batı', 'Kuzey-doğu', 'Güney-doğu', 'Güney-batı'];
 
 export default function Simulasyon() {
     const motorRef = useRef(null);
     const tuvalRef = useRef(null);
     const alanRef = useRef(null);
-    const katRef = useRef(1);
-    const seciliRef = useRef(null);
-    const olcekRef = useRef(2);
+    // Kamera ve görünüm durumu döngü içinde okunduğu için ref'te; React durumu yalnızca arayüz için
+    const kamera = useRef({ yakinlik: 1, panX: 0, panY: 0, d: 0 });
+    const gorunum = useRef({ kat: 1, secili: null, gecis: null });
+    const surukle = useRef(null);
+    const bosluk = useRef(false);
     const [kat, setKat] = useState(1);
     const [secili, setSecili] = useState(null);
     const [ozet, setOzet] = useState(null);
     const [hata, setHata] = useState(null);
     const [panel, setPanel] = useState('garsonlar');
     const [kutuphane, setKutuphane] = useState(false);
-    const [olcek, setOlcek] = useState(2);
+    const [merdiven, setMerdiven] = useState(false);
+    const [kameraDurum, setKameraDurum] = useState({ yakinlik: 1, d: 0 });
 
-    katRef.current = kat;
-    seciliRef.current = secili;
+    gorunum.current.secili = secili;
+
+    // Ekran dönüşümü (doğal → ekran CSS pikseli)
+    const donusum = useCallback(() => {
+        const alan = alanRef.current;
+        const k = kamera.current;
+        const w = alan?.clientWidth || 800, h = alan?.clientHeight || 500;
+        const sigdir = Math.min(w / DOGAL_G, h / DOGAL_Y);
+        const s = sigdir * k.yakinlik;
+        const ox = (w - DOGAL_G * s) / 2 + k.panX;
+        let oy = (h - DOGAL_Y * s) / 2 + k.panY;
+        const g = gorunum.current.gecis;
+        if (g) {                                       // kat geçişi: dikey kayma
+            const t = Math.min(1, g.t / GECIS_SN);
+            oy += (t < 0.5 ? -t * 2 : (1 - t) * 2) * 40 * g.yon;
+        }
+        return { s, ox, oy, w, h };
+    }, []);
+
+    const katDegistir = useCallback((yeni) => {
+        if (yeni === gorunum.current.kat || gorunum.current.gecis) return;
+        gorunum.current.gecis = { t: 0, hedef: yeni, yon: yeni > gorunum.current.kat ? 1 : -1, degisti: false };
+        setSecili(null);
+        setMerdiven(false);
+    }, []);
+
+    const kameraGuncelle = useCallback((f) => {
+        f(kamera.current);
+        const k = kamera.current;
+        k.yakinlik = Math.max(YAKINLIK.min, Math.min(YAKINLIK.max, k.yakinlik));
+        setKameraDurum({ yakinlik: k.yakinlik, d: k.d });
+    }, []);
+
+    // Yakınlaştırma: ekrandaki (mx, my) noktası sabit kalacak şekilde
+    const yakinlastir = useCallback((oran, mx, my) => {
+        const once = donusum();
+        const x = mx ?? once.w / 2, y = my ?? once.h / 2;
+        const nx = (x - once.ox) / once.s, ny = (y - once.oy) / once.s;
+        kameraGuncelle((k) => { k.yakinlik *= oran; });
+        const sonra = donusum();
+        kamera.current.panX += x - (sonra.ox + nx * sonra.s);
+        kamera.current.panY += y - (sonra.oy + ny * sonra.s);
+    }, [donusum, kameraGuncelle]);
+
+    const dondur = useCallback((adim) => {
+        kameraGuncelle((k) => { k.d = (k.d + adim + 4) % 4; k.panX = 0; k.panY = 0; });
+    }, [kameraGuncelle]);
+    const sifirla = useCallback(() => kameraGuncelle((k) => Object.assign(k, { yakinlik: 1, panX: 0, panY: 0, d: 0 })), [kameraGuncelle]);
 
     // Motor ve çizim döngüsü
     useEffect(() => {
@@ -33,24 +89,42 @@ export default function Simulasyon() {
         motorRef.current = motor;
         motor.baslat().catch((e) => setHata(e.message));
 
-        const dogal = document.createElement('canvas');
-        dogal.width = DOGAL_G; dogal.height = DOGAL_Y;
-        const dc = pikselBaglami(dogal);
+        const ara = document.createElement('canvas');
+        ara.width = DOGAL_G; ara.height = DOGAL_Y;
+        const ac = pikselBaglami(ara);
 
         let son = performance.now(), ozetZamani = 0, kare;
         const dongu = (simdi) => {
-            const dt = (simdi - son) / 1000;
+            const dt = Math.min(0.25, (simdi - son) / 1000);
             son = simdi;
             motor.tick(dt);
+            const g = gorunum.current;
+            if (g.gecis) {
+                g.gecis.t += dt;
+                if (!g.gecis.degisti && g.gecis.t >= GECIS_SN / 2) { g.kat = g.gecis.hedef; g.gecis.degisti = true; setKat(g.kat); }
+                if (g.gecis.t >= GECIS_SN) g.gecis = null;
+            }
             const tuval = tuvalRef.current;
             if (tuval && motor.hazir) {
-                const sahne = motor.sahne(katRef.current, seciliRef.current);
-                sahneCiz(dc, sahne);
+                const dpr = window.devicePixelRatio || 1;
+                const { s, ox, oy, w, h } = donusum();
+                if (tuval.width !== Math.round(w * dpr) || tuval.height !== Math.round(h * dpr)) {
+                    tuval.width = Math.round(w * dpr); tuval.height = Math.round(h * dpr);
+                }
+                const sahne = motor.sahne(g.kat, g.secili, kamera.current.d);
+                sahneCiz(ac, sahne);
                 const c = tuval.getContext('2d');
+                c.setTransform(dpr, 0, 0, dpr, 0, 0);
                 c.imageSmoothingEnabled = false;
-                c.clearRect(0, 0, tuval.width, tuval.height);
-                c.drawImage(dogal, 0, 0, tuval.width, tuval.height);
-                ustKatmanCiz(c, olcekRef.current, sahne);
+                c.fillStyle = '#1d1712';
+                c.fillRect(0, 0, w, h);
+                c.drawImage(ara, ox, oy, DOGAL_G * s, DOGAL_Y * s);
+                ustKatmanCiz(c, s, (p) => ({ x: ox + p.x * s, y: oy + p.y * s }), sahne);
+                if (g.gecis) {                         // kat geçişi: kararma
+                    const t = Math.min(1, g.gecis.t / GECIS_SN);
+                    c.fillStyle = `rgba(20,12,6,${Math.sin(Math.PI * t) * 0.9})`;
+                    c.fillRect(0, 0, w, h);
+                }
             }
             ozetZamani -= dt;
             if (ozetZamani <= 0 && motor.hazir) { ozetZamani = 0.25; setOzet(motor.ozet()); }
@@ -58,26 +132,62 @@ export default function Simulasyon() {
         };
         kare = requestAnimationFrame(dongu);
         return () => cancelAnimationFrame(kare);
-    }, []);
+    }, [donusum]);
 
-    // Tuval ölçeği: alana sığan en büyük (0.25 adımlı) büyütme
+    // Klavye: Q/E döndür, +/- yakınlaş, Space basılıyken sürükle, 0 sıfırla
     useEffect(() => {
-        const alan = alanRef.current;
-        if (!alan) return undefined;
-        const gozlem = new ResizeObserver(() => {
-            const o = Math.max(1, Math.floor(Math.min(alan.clientWidth / DOGAL_G, alan.clientHeight / DOGAL_Y) * 4) / 4);
-            olcekRef.current = o;
-            setOlcek(o);
-        });
-        gozlem.observe(alan);
-        return () => gozlem.disconnect();
-    }, []);
+        const yazimda = (e) => ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName);
+        const bas = (e) => {
+            if (yazimda(e)) return;
+            if (e.key === 'q' || e.key === 'Q') dondur(-1);
+            else if (e.key === 'e' || e.key === 'E') dondur(1);
+            else if (e.key === '+' || e.key === '=') yakinlastir(1.2);
+            else if (e.key === '-') yakinlastir(1 / 1.2);
+            else if (e.key === '0') sifirla();
+            else if (e.code === 'Space') { bosluk.current = true; e.preventDefault(); }
+        };
+        const birak = (e) => { if (e.code === 'Space') bosluk.current = false; };
+        window.addEventListener('keydown', bas);
+        window.addEventListener('keyup', birak);
+        return () => { window.removeEventListener('keydown', bas); window.removeEventListener('keyup', birak); };
+    }, [dondur, yakinlastir, sifirla]);
+
+    // Tekerlek (pasif olmayan dinleyici: sayfa kaymasın)
+    useEffect(() => {
+        const t = tuvalRef.current;
+        if (!t) return undefined;
+        const tekerlek = (e) => {
+            e.preventDefault();
+            const r = t.getBoundingClientRect();
+            yakinlastir(e.deltaY < 0 ? 1.15 : 1 / 1.15, e.clientX - r.left, e.clientY - r.top);
+        };
+        t.addEventListener('wheel', tekerlek, { passive: false });
+        return () => t.removeEventListener('wheel', tekerlek);
+    }, [yakinlastir]);
+
+    function fareBas(e) {
+        if (e.button === 2 || e.button === 1 || (e.button === 0 && bosluk.current)) {
+            e.preventDefault();
+            surukle.current = { x: e.clientX, y: e.clientY, panX: kamera.current.panX, panY: kamera.current.panY };
+            e.currentTarget.setPointerCapture?.(e.pointerId);
+        }
+    }
+    function fareOynat(e) {
+        const s = surukle.current;
+        if (!s) return;
+        kamera.current.panX = s.panX + e.clientX - s.x;
+        kamera.current.panY = s.panY + e.clientY - s.y;
+    }
+    function fareBirak() { surukle.current = null; }
 
     function tikla(e) {
+        if (bosluk.current || !motorRef.current?.hazir) return;
         const r = e.currentTarget.getBoundingClientRect();
-        const x = (e.clientX - r.left) / olcek, y = (e.clientY - r.top) / olcek;
-        const m = masaBul(motorRef.current.sahne(kat).masalar, x, y);
-        setSecili(m ? m.masaId : null);
+        const { s, ox, oy } = donusum();
+        const x = (e.clientX - r.left - ox) / s, y = (e.clientY - r.top - oy) / s;
+        const n = nesneBul(motorRef.current.sahne(gorunum.current.kat, null, kamera.current.d), x, y);
+        if (n?.tur === 'merdiven') { setMerdiven(true); setSecili(null); return; }
+        setSecili(n?.tur === 'masa' ? n.masa.masaId : null);
     }
 
     const motor = motorRef.current;
@@ -91,9 +201,19 @@ export default function Simulasyon() {
             <Hud ozet={ozet} duraklat={duraklat} hizAyarla={hizAyarla} />
             <div className="sim-orta">
                 <div className="sim-tuval-alani" ref={alanRef}>
-                    <canvas ref={tuvalRef} width={Math.round(DOGAL_G * olcek)} height={Math.round(DOGAL_Y * olcek)}
-                            onClick={tikla} className="sim-tuval" aria-label={`Kat ${kat} görünümü`} />
+                    <canvas ref={tuvalRef} className="sim-tuval" aria-label={`Kat ${kat} görünümü`}
+                            onClick={tikla} onPointerDown={fareBas} onPointerMove={fareOynat} onPointerUp={fareBirak}
+                            onPointerCancel={fareBirak} onContextMenu={(e) => e.preventDefault()} />
                     <div className="sim-kat-etiket">Kat {kat} · {KATLAR[kat].ad}</div>
+                    <div className="sim-kamera" role="group" aria-label="Kamera">
+                        <button className="sim-dugme" onClick={() => yakinlastir(1.25)} title="Yakınlaş (+ / tekerlek)" aria-label="Yakınlaş">+</button>
+                        <button className="sim-dugme" onClick={() => yakinlastir(1 / 1.25)} title="Uzaklaş (- / tekerlek)" aria-label="Uzaklaş">−</button>
+                        <button className="sim-dugme" onClick={() => dondur(-1)} title="Sola döndür (Q)" aria-label="Sola döndür">⟲</button>
+                        <button className="sim-dugme" onClick={() => dondur(1)} title="Sağa döndür (E)" aria-label="Sağa döndür">⟳</button>
+                        <button className="sim-dugme" onClick={sifirla} title="Kamerayı sıfırla (0)">Sıfırla</button>
+                        <small>{Math.round(kameraDurum.yakinlik * 100)}% · {YON_ADI[kameraDurum.d]}</small>
+                    </div>
+                    <div className="sim-ipucu">Sağ tık / Space + sürükle: kaydır · Tekerlek: yakınlaş · Q/E: döndür · Merdivene tıkla: kat değiştir</div>
                     {!ozet && <div className="sim-yukleniyor">Kafe hazırlanıyor…</div>}
                 </div>
                 {panel && ozet && (
@@ -104,7 +224,7 @@ export default function Simulasyon() {
             </div>
             <nav className="sim-alt">
                 {[1, 2, 3].map((k) => (
-                    <button key={k} className={`sim-dugme ${kat === k ? 'secili' : ''}`} onClick={() => { setKat(k); setSecili(null); }}>
+                    <button key={k} className={`sim-dugme ${kat === k ? 'secili' : ''}`} onClick={() => katDegistir(k)}>
                         Kat {k} <small>{ozet?.katSayilari[k] ?? 0} kişi</small>
                     </button>
                 ))}
@@ -115,6 +235,7 @@ export default function Simulasyon() {
             </nav>
             {secili && motor && <MasaDetay motor={motor} masaId={secili} kapat={() => setSecili(null)} />}
             {kutuphane && motor && <Kutuphane motor={motor} kapat={() => setKutuphane(false)} />}
+            {merdiven && <KatDegistir kat={kat} ozet={ozet} sec={katDegistir} kapat={() => setMerdiven(false)} />}
         </div>
     );
 }
@@ -150,7 +271,8 @@ function Hud({ ozet, duraklat, hizAyarla }) {
 }
 
 function Yildiz({ n }) {
-    return <span className="sim-yildiz" aria-label={`${n} / 5`}>{'★'.repeat(n)}<span>{'★'.repeat(5 - n)}</span></span>;
+    const k = Math.max(0, Math.min(5, n));
+    return <span className="sim-yildiz" aria-label={`${k} / 5`}>{'★'.repeat(k)}<span>{'★'.repeat(5 - k)}</span></span>;
 }
 
 function GarsonPaneli({ ozet }) {
@@ -191,7 +313,7 @@ function OlayGunlugu({ kayitlar, basliksiz }) {
     );
 }
 
-function SimPencere({ baslik, kapat, children }) {
+function SimPencere({ baslik, kapat, children, genis }) {
     useEffect(() => {
         const esc = (e) => e.key === 'Escape' && kapat();
         document.addEventListener('keydown', esc);
@@ -199,12 +321,39 @@ function SimPencere({ baslik, kapat, children }) {
     }, [kapat]);
     return (
         <div className="sim-pencere-arka" onMouseDown={(e) => e.target === e.currentTarget && kapat()}>
-            <section className="sim-pencere" role="dialog" aria-modal="true" aria-label={baslik}>
+            <section className={`sim-pencere ${genis ? 'genis' : ''}`} role="dialog" aria-modal="true" aria-label={baslik}>
                 <header><h2>{baslik}</h2><button className="sim-dugme" onClick={kapat} aria-label="Kapat">✕</button></header>
                 {children}
             </section>
         </div>
     );
+}
+
+// Merdiven: kat değiştirme penceresi
+function KatDegistir({ kat, ozet, sec, kapat }) {
+    const secenek = (k, yon) => (
+        <button className="sim-kat-secenek" onClick={() => sec(k)}>
+            <span className="sim-kat-ok">{yon === 'yukari' ? '▲' : '▼'}</span>
+            <span>
+                <strong>{yon === 'yukari' ? 'Yukarı çık' : 'Aşağı in'}: Kat {kat} → Kat {k}</strong>
+                <small>{KATLAR[k].ad} · {ozet?.katSayilari[k] ?? 0} kişi</small>
+            </span>
+        </button>
+    );
+    return (
+        <SimPencere baslik="Merdiven · kat değiştir" kapat={kapat}>
+            <div className="sim-kat-secenekler">
+                {kat < 3 && secenek(kat + 1, 'yukari')}
+                {kat > 1 && secenek(kat - 1, 'asagi')}
+            </div>
+        </SimPencere>
+    );
+}
+
+function Kapak({ ad, no }) {
+    const ref = useRef(null);
+    useEffect(() => { if (ref.current) kapakCiz(ref.current, ad, no); }, [ad, no]);
+    return <canvas ref={ref} width={120} height={88} className="sim-kapak" aria-label={`${ad} kapağı`} />;
 }
 
 // Masa detayı: simülasyon durumu + veritabanından siparişler ve anlık hesap
@@ -235,20 +384,29 @@ function MasaDetay({ motor, masaId, kapat }) {
     }, [db.siparisler]);
 
     if (!b) return null;
+    const oyunAdi = b.oyun || b.bekledigiOyun;
     return (
-        <SimPencere baslik={`Masa ${b.masaNo} · Kat ${b.kat}`} kapat={kapat}>
+        <SimPencere baslik={`Masa ${b.masaNo} · Kat ${b.kat}${b.vip ? ' · VIP' : ''}`} kapat={kapat} genis>
+            <div className="sim-detay-ust">
+                {oyunAdi ? <Kapak ad={oyunAdi} no={b.oyunId ?? oyunAdi.length} /> : <div className="sim-kapak bos">Oyun yok</div>}
+                <div>
+                    <div className="sim-detay-oyun">{b.oyun || (b.bekledigiOyun ? `${b.bekledigiOyun} (sırada)` : 'Oyun oynanmıyor')}</div>
+                    <span className="sim-rozet">{b.durum}</span>{b.grupDurumu && <small className="sim-soluk"> {b.grupDurumu}</small>}
+                    <div className="sim-eglence">
+                        <span className="sim-etiket">Eğlence</span>
+                        {b.eglence != null ? <><div className="sim-cubuk"><div style={{ width: `${b.eglence}%` }} /></div> {b.eglence}</> : '–'}
+                    </div>
+                </div>
+            </div>
             <dl className="sim-detay">
-                <dt>Durum</dt><dd><span className="sim-rozet">{b.durum}</span>{b.grupDurumu && <small> {b.grupDurumu}</small>}</dd>
                 <dt>Kişi</dt><dd>{b.kisi ? `${b.kisi} / ${b.kapasite}` : `${b.kapasite} kişilik`}</dd>
-                <dt>Oynanan oyun</dt><dd>{b.oyun || (b.bekledigiOyun ? `${b.bekledigiOyun} (sırada)` : '–')}</dd>
-                <dt>Eğlence</dt><dd>{b.eglence != null
-                    ? <><div className="sim-cubuk"><div style={{ width: `${b.eglence}%` }} /></div> {b.eglence}</> : '–'}</dd>
-                <dt>Aktif siparişler</dt><dd>{toplu.length ? toplu.map(([u, a]) => `${a}× ${u}`).join(', ') : '–'}
+                <dt>Siparişler</dt><dd>{toplu.length ? toplu.map(([u, a]) => `${a}× ${u}`).join(', ') : '–'}
                     {b.bekleyenSiparis && <div className="sim-uyari">Bekleyen istek: {b.bekleyenSiparis}</div>}</dd>
+                <dt>Garson</dt><dd>{b.garson || '–'}</dd>
+                <dt>Son servis</dt><dd>{b.sonServis ? `${b.sonServis.saat} · ${b.sonServis.garson}` : '–'}</dd>
                 <dt>Kalış süresi</dt><dd>{b.kalisDk != null ? `${b.kalisDk} dk` : '–'}</dd>
                 <dt>Biriken hesap</dt><dd><strong>{db.hesap ? tl(db.hesap.toplam) : '–'}</strong>
                     {db.hesap && <small> (giriş {tl(db.hesap.giris_toplam)} + sipariş {tl(db.hesap.siparis_toplam)})</small>}</dd>
-                <dt>Atanan garson</dt><dd>{b.garson || '–'}</dd>
             </dl>
         </SimPencere>
     );
@@ -262,7 +420,7 @@ function Kutuphane({ motor, kapat }) {
     }, []);
     const oyunlar = [...motor.oyunlar].sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
     return (
-        <SimPencere baslik="Oyun kütüphanesi" kapat={kapat}>
+        <SimPencere baslik="Oyun kütüphanesi" kapat={kapat} genis>
             <table className="sim-tablo">
                 <thead><tr><th>Oyun</th><th>Kategori</th><th>Kişi</th><th>Rafta</th><th>Sırada</th></tr></thead>
                 <tbody>

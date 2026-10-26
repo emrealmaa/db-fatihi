@@ -6,11 +6,14 @@ canlandırır. Müşteri grupları ve garsonlar kendi kendine hareket eder; **he
 veriyle dolar. Kurallar (kapasite, oyun sırası, stok, ödeme) veritabanında uygulanır; motor yalnızca sonuca göre davranır.
 
 ## Katlar
-| Kat | Konsept | İçerik |
-|---|---|---|
-| 1 | Giriş & Espresso Bar | Kapı, kasa ve kasiyer, espresso barı, küçük masalar, masa bekleyenler için bekleme alanı (koltuk) |
-| 2 | Strateji Salonu | Raf dolusu kutu oyunu, geniş masalar, oyun barı, loş atmosfer |
-| 3 | VIP & FRP | Büyük yuvarlak masalar, ejderha heykeli, sancaklar, VIP bar |
+| Kat | Konsept | Masa | İçerik |
+|---|---|---|---|
+| 1 | Giriş & Espresso Bar | 10 (2–4 kişilik) | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
+| 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Üç duvarı kaplayan kutu oyunu kütüphanesi, oyun barı, loş ışık ve lamba ışık havuzları |
+| 3 | VIP & FRP Özel Bölgesi | 4 büyük (8–12 kişilik) | FRP harita masaları ve örtülü yuvarlak masalar, deri koltuklar, sancaklar, ejderha heykeli, lüks halı, VIP ışığı |
+
+VIP (kat 3) grupları daha uzun oynar (×1.4), daha sık ve bol sipariş verir (en fazla 6 sipariş, kalem başına 1–3 adet)
+ve ikinci/üçüncü oyuna kalma olasılıkları daha yüksektir.
 
 Masalar `masa.kat` sütununa göre yerleşir (her katta `masa_no` sırasıyla yuvalara). Yerleşim `app/web/src/simulasyon/harita.js` içinde.
 
@@ -35,12 +38,38 @@ Garsonlar veritabanındaki **aktif GARSON** personeldir. Hız, sipariş alma hı
 sayısını ve veritabanındaki toplam sipariş sayısını (`v_personel_performans`) gösterir. Yönetici, `X-Personel` başlığıyla
 garson adına işlem yaptığı için siparişler gerçekten o garsona yazılır.
 
+## Kamera
+| Eylem | Fare / dokunma | Klavye / düğme |
+|---|---|---|
+| Yakınlaş / uzaklaş (imleç etrafında) | Tekerlek | `+` / `-`, ekrandaki **+ / −** |
+| 90° döndür | – | `Q` / `E`, **⟲ / ⟳** |
+| Kaydır | Sağ veya orta tuşla sürükle, `Space` + sol tuşla sürükle | – |
+| Sıfırla | – | `0`, **Sıfırla** |
+
+Sahne ara bir tuvale çizilir; kamera bu tuvali ekrana aktarırken `ekran = ofset + doğal × (sığdırma × yakınlık)`
+dönüşümünü uygular (tıklama bunun tersiyle doğal koordinata çevrilir). **Döndürme dünya koordinatlarında** yapılır
+(`harita.js: dondur`): oda 90° döner, kameraya göre arkada kalan iki duvar ve onların dekorları çizilir (kesit görünüm),
+her nesnenin ve karakterin derinliği döndürülmüş koordinatların toplamıyla (rx + ry) yeniden sıralanır. Karakterlerin
+yüzü de hareket yönünün ekrandaki karşılığına göre seçilir (ön/arka + ayna).
+
+## Karakterler
+16×30 piksellik sprite'lar kodla çizilir ve her poz/kare bir kez üretilip önbelleğe alınır: ön ve arka görünüm,
+aynalama ile dört yön, 4 kare yürüme, oturma (uyluklar öne, bacaklar sarkık), sipariş verirken el kaldırma.
+Saç stilleri, gözlük, etek, ten/saç/kıyafet renkleri kimliğe göre sabittir. Garsonlar beyaz gömlek, siyah yelek,
+kırmızı papyon ve önlükle; servis sırasında elinde içecekli tepsiyle çizilir. Tüm sprite'lar otomatik dış hat alır.
+Zemin ve duvarlar her kat ve açı için bir kez çizilip önbelleğe alınır.
+
+## Merdiven
+Merdivene tıklanınca **Kat değiştir** penceresi açılır (Yukarı çık / Aşağı in, hedef kattaki kişi sayısıyla).
+Kat değişimi kararma + dikey kayma geçişiyle yapılır; alttaki kat düğmeleri de aynı geçişi kullanır.
+
 ## Ekran
 - **Üst panel:** oyun takvimi ve saati (1× hızda 1 sn = 1 oyun dakikası), bugünkü kasa (veritabanı cirosu), açık hesaplar,
   içerideki müşteri ve masa bekleyen sayısı, popülerlik, hız (duraklat / 1× / 2× / 4×).
 - **Alt panel:** Kat 1 / 2 / 3 geçişi (kattaki kişi sayısıyla), Garsonlar, Olay günlüğü, Oyun kütüphanesi.
-- **Masaya tıklama:** durum (Boş / Dolu / Hizmet bekliyor / Oyun sırasında / Temizleniyor), oynanan oyun ve eğlence skoru,
-  aktif siparişler (veritabanından), kalış süresi, biriken hesap (`fn_hesap_detay`), atanan garson.
+- **Masaya tıklama:** oyunun adı ve kapak resmi (oyun adından üretilir), durum (Boş / Dolu / Hizmet bekliyor /
+  Oyun sırasında / Temizleniyor), eğlence skoru, siparişler (veritabanından) ve bekleyen istek, sorumlu garson ve son servis
+  zamanı, kalış süresi (oyun saati), biriken hesap (`fn_hesap_detay`: giriş + sipariş).
 
 Personelin normal arayüzden yaptığı işlemler de simülasyona yansır: arayüzden açılan masa simülasyon tarafından devralınır,
 dışarıdan kapatılan hesabın müşterileri kalkar.
@@ -48,10 +77,10 @@ dışarıdan kapatılan hesabın müşterileri kalkar.
 ## Kod
 | Dosya | Görev |
 |---|---|
-| `simulasyon/harita.js` | Kat yerleşimleri, masa yuvaları, oturma yerleri, A* yol bulma |
-| `simulasyon/cizim.js` | Piksel-art izometrik çizim (karolar, kutular, karakter sprite'ları, baloncuklar) — harici görsel yok |
+| `simulasyon/harita.js` | Kat yerleşimleri (20×16 karo), masa yuvaları, duvar dekorları, döndürme dönüşümleri, A* yol bulma |
+| `simulasyon/cizim.js` | Piksel-art izometrik çizim: döndürülebilir izdüşüm, önbellekli zemin/duvar, desenli kutular, sprite üretimi ve önbelleği, ışık, seçim (tıklama) — harici görsel yok |
 | `simulasyon/motor.js` | Durum makineleri, görev kuyruğu, veritabanı eşitlemesi, API çağrıları |
-| `sayfalar/Simulasyon.jsx` | HUD, kat/panel düğmeleri, masa detayı, oyun kütüphanesi |
+| `sayfalar/Simulasyon.jsx` | Kamera (yakınlaştırma, döndürme, kaydırma), kat geçişi, HUD, paneller, merdiven penceresi, masa detayı, oyun kütüphanesi |
 
 ## Sunumda
 Temiz veriyle başlatın (`npm run db:kur`), Simülasyon'u 2× hızda birkaç dakika çalıştırın, ardından Raporlar → personel
