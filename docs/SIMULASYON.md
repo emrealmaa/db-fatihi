@@ -111,7 +111,7 @@ Kafenin önü: cephe şeridi, iki sıra kaldırım (kuyruk sırası + yürüme y
 `motor.js: ortamAdim` simülasyon hızından bağımsız, gerçek zamanla çalışır:
 - **Arabalar** iki şeritte zıt yönlerde geçer; akşam ve gece **farları yanar**, önlerine ışık konisi düşer, stop lambaları kırmızıdır.
 - **Yayalar** her iki kaldırımda yürüyüp geçer (müşteri değildir, kafeye girmez).
-- **Sevimli bir köpek** kaldırımlarda dolaşır, ara sıra oturup koklanır, kuyruğunu sallar.
+- **Sevimli bir köpek** kaldırımlarda dolaşır, ara sıra oturup etrafı koklar, kuyruğunu sallar.
 - **Sokak lambaları** 18:00'den sonra yanar ve altlarına ışık havuzu düşer.
 
 ## Diyaloglar
