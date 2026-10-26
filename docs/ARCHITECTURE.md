@@ -13,7 +13,7 @@ rolüne karşılık gelen veritabanı rolüyle bağlanır ve her transaction ba�
 ## İş modeli (Karavana)
 - Kişi başı sabit **giriş ücreti** (tüm masalarda aynı, `ayar` tablosunda). Masa açılırken oturuma kopyalanır.
 - Hesap = kişi sayısı × giriş ücreti + siparişler − indirim. Oyun ve süre ücreti yoktur.
-- Öğrenci indirimi ileride: `kullanici.ogrenci` ve `oturum.indirim_tutari` alanları hazır.
+- Öğrenci indirimi: öğrenci başına giriş ücretinin `ayar.ogrenci_indirim_orani` kadarı (varsayılan %50). Oran ve öğrenci sayısı açılışta oturuma yazılır (`oturum.ogrenci_sayisi`, `ogrenci_orani`); `fn_hesap_detay` ayrı kalem olarak gösterir.
 - Masa açılırken müşteri telefonla aranır; kayıtlı değilse aynı adımda kaydedilir (`ayar.kayit_zorunlu`).
 - Her masa aynı anda tek oyun oynar. Ödeme nakit veya kart; hesap bölünmez.
 
@@ -52,7 +52,7 @@ Müsait adet saklanmaz, `fn_musait_adet` ile hesaplanır (tutarsızlık riski yo
 - Tetikleyici: kişi ≤ masa kapasitesi; oyun başlarken oturum açık, oyun aktif, müsait kopya var, kopya sıradaki masaya ayrılmamış ve oyuncu sayısı uygun (satır kilidiyle yarış koşulu önlenir); kapanmış oturuma sipariş eklenemez.
 
 ## Fonksiyonlar, prosedürler, view'lar
-- Fonksiyon (10): `fn_aktif_personel`, `fn_musait_adet`, `fn_ayrilan_adet`, `fn_hesap_detay`, `fn_hesap_hesapla`, `fn_musteri_bul`, `fn_personel_giris`, `fn_telefon_maskele`, `fn_email_maskele`, `fn_ad_maskele`
+- Fonksiyon (11): `fn_donem_ozeti`, `fn_aktif_personel`, `fn_musait_adet`, `fn_ayrilan_adet`, `fn_hesap_detay`, `fn_hesap_hesapla`, `fn_musteri_bul`, `fn_personel_giris`, `fn_telefon_maskele`, `fn_email_maskele`, `fn_ad_maskele`
 - Prosedür (15): `sp_musteri_kaydet`, `sp_oturum_ac`, `sp_sirayi_ilerlet`, `sp_bekleme_ekle`, `sp_bekleme_iptal`, `sp_oyun_baslat`, `sp_oyun_sec`, `sp_oyun_bitir`, `sp_secim_suresi_doldur`, `sp_siparis_ver`, `sp_siparis_iptal`, `sp_oturum_kapat`, `sp_personel_ekle`, `sp_personel_parola`, `sp_stok_ekle`
 - View (13): `v_musait_oyunlar`, `v_masa_durumu`, `v_bekleme_sirasi`, `v_musteri_maskeli`, `v_menu`, `v_oturum_siparisleri`, `v_acik_hesaplar`, `v_gunluk_ciro`, `v_oyun_populerlik`, `v_personel_maskeli`, `v_personel_performans`, `v_kritik_stok`, `v_urun_satis`
 

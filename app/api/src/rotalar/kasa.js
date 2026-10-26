@@ -28,6 +28,14 @@ export function kasaRotalari() {
         res.json({ toplam: o.p_toplam });
     });
 
+    // Dönem özeti (gün sonu fişi): ?bas=ISO&bit=ISO, bit verilmezse şimdi
+    r.get('/raporlar/donem', async (req, res) => {
+        const bas = new Date(req.query.bas), bit = req.query.bit ? new Date(req.query.bit) : new Date();
+        if (Number.isNaN(bas.getTime()) || Number.isNaN(bit.getTime())) throw new HttpHata(400, 'bas ve bit geçerli bir zaman olmalı');
+        const [o] = await req.vt((q) => q('SELECT * FROM fn_donem_ozeti($1, $2)', [bas.toISOString(), bit.toISOString()]));
+        res.json(o);
+    });
+
     r.get('/raporlar/ciro', async (req, res) => {
         res.json(await req.vt((q) => q('SELECT gun::text AS gun, hesap_sayisi, nakit, kart, ciro FROM v_gunluk_ciro ORDER BY gun DESC LIMIT 60')));
     });

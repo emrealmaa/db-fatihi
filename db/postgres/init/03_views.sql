@@ -65,7 +65,8 @@ JOIN personel p ON p.id = s.personel_id;
 CREATE VIEW v_acik_hesaplar AS
 SELECT m.masa_no, t.id AS oturum_id,
        COALESCE(fn_ad_maskele(k.ad) || ' ' || fn_ad_maskele(k.soyad), 'Kayıtsız müşteri') AS musteri,
-       t.kisi_sayisi, t.giris_ucreti, t.acilis, d.giris_toplam, d.siparis_toplam, d.indirim, d.toplam
+       t.kisi_sayisi, t.ogrenci_sayisi, t.giris_ucreti, t.acilis,
+       d.giris_toplam, d.ogrenci_indirimi, d.siparis_toplam, d.indirim, d.toplam
 FROM oturum t
 JOIN masa m ON m.id = t.masa_id
 LEFT JOIN kullanici k ON k.id = t.kullanici_id

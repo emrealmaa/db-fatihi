@@ -35,7 +35,7 @@ GRANT EXECUTE ON PROCEDURE sp_musteri_kaydet, sp_oturum_ac, sp_bekleme_ekle, sp_
 GRANT rol_garson TO rol_kasiyer;
 GRANT SELECT ON v_acik_hesaplar, v_gunluk_ciro TO rol_kasiyer;
 GRANT EXECUTE ON PROCEDURE sp_oturum_kapat TO rol_kasiyer;
-GRANT EXECUTE ON FUNCTION fn_hesap_hesapla(bigint), fn_hesap_detay(bigint) TO rol_kasiyer;  -- DEFINER: tablolara kasiyer doğrudan erişmez
+GRANT EXECUTE ON FUNCTION fn_hesap_hesapla(bigint), fn_hesap_detay(bigint), fn_donem_ozeti(timestamptz, timestamptz) TO rol_kasiyer;  -- DEFINER: tablolara kasiyer doğrudan erişmez
 
 -- Yönetici: her şey (maskesiz ham veri dahil)
 GRANT rol_kasiyer TO rol_yonetici;

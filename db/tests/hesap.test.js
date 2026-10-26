@@ -76,3 +76,36 @@ test('kritik stok ve ürün satış raporları', async () => {
     assert.equal(Number(kahve.satilan_adet), 2);
     assert.equal(Number(kahve.gelir), 120);
 });
+
+test('öğrenci indirimi: öğrenci başına giriş ücretinin ayardaki oranı (%50) düşülür', async () => {
+    const [r] = await vt.garson('CALL sp_oturum_ac($1, $2, $3, NULL, $4)', [4, 4, 4, 2]);
+    const [d] = await vt.kasiyer('SELECT * FROM fn_hesap_detay($1)', [r.p_oturum_id]);
+    assert.equal(Number(d.giris_toplam), 400);
+    assert.equal(Number(d.ogrenci_indirimi), 100);
+    assert.equal(Number(d.toplam), 300);
+    const [h] = await vt.kasiyer('SELECT ogrenci_sayisi, ogrenci_indirimi FROM v_acik_hesaplar WHERE oturum_id = $1', [r.p_oturum_id]);
+    assert.equal(h.ogrenci_sayisi, 2);
+});
+
+test('öğrenci oranı açılışta oturuma kopyalanır; öğrenci sayısı kişi sayısını aşamaz', async () => {
+    const [r] = await vt.garson('CALL sp_oturum_ac($1, $2, $3, NULL, $4)', [4, 2, 4, 2]);
+    await vt.admin('UPDATE ayar SET ogrenci_indirim_orani = 0');
+    assert.equal(Number((await vt.kasiyer('SELECT fn_hesap_hesapla($1) AS t', [r.p_oturum_id]))[0].t), 100);
+    await hataBekle(vt.garson('CALL sp_oturum_ac($1, $2, $3, NULL, $4)', [5, 2, 4, 3]), { kod: '23514' });
+    await hataBekle(vt.admin('UPDATE ayar SET ogrenci_indirim_orani = 1.5'), { kod: '23514' });
+});
+
+test('dönem özeti: normal/öğrenci giriş, sipariş, ciro ve ödeme türü kırılımı', async () => {
+    const bas = (await vt.admin('SELECT clock_timestamp() AS t'))[0].t;
+    const [r] = await vt.garson('CALL sp_oturum_ac($1, $2, $3, NULL, $4)', [4, 3, 4, 1]);
+    await vt.garson('CALL sp_siparis_ver($1, 3, 2, NULL)', [r.p_oturum_id]);           // 2 × çay = 50
+    await vt.kasiyer("CALL sp_oturum_kapat($1, 'KART', NULL)", [r.p_oturum_id]);       // 200 + 50 + 50 = 300
+    await vt.kasiyer("CALL sp_oturum_kapat($1, 'NAKIT', NULL)", [await oturum(1)]);     // 640
+    const [o] = await vt.kasiyer("SELECT * FROM fn_donem_ozeti($1, clock_timestamp() + interval '1 minute')", [bas]);
+    assert.deepEqual(
+        { ...o, normal_giris: Number(o.normal_giris), ogrenci_giris: Number(o.ogrenci_giris), siparis: Number(o.siparis),
+            ciro: Number(o.ciro), nakit: Number(o.nakit), kart: Number(o.kart), diger_indirim: Number(o.diger_indirim) },
+        { hesap_sayisi: 2, kisi: 7, ogrenci: 1, normal_giris: 600, ogrenci_giris: 50, siparis: 290, diger_indirim: 0,
+            ciro: 940, nakit: 640, kart: 300 });
+    await hataBekle(vt.garson('SELECT * FROM fn_donem_ozeti(now(), now())'), { kod: '42501' });
+});

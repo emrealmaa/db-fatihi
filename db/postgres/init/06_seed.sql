@@ -1,12 +1,16 @@
 -- Örnek veri — GEÇİCİ. Karavana'nın gerçek masa/oyun/menü/personel verileri gelince bu dosya değişecek.
 -- Personel parolaları yalnızca geliştirme içindir.
 
-INSERT INTO ayar (giris_ucreti, secim_suresi_dk, kayit_zorunlu) VALUES (100, 5, true);
+INSERT INTO ayar (giris_ucreti, secim_suresi_dk, kayit_zorunlu, ogrenci_indirim_orani) VALUES (100, 5, true, 0.50);
 
 CALL sp_personel_ekle('Deniz', 'Aydın', '05301110001', 'YONETICI', 'yonetici', 'karavana123', 'deniz@karavana.cafe');
 CALL sp_personel_ekle('Ali',   'Koç',   '05301110002', 'KASIYER',  'kasiyer',  'karavana123');
 CALL sp_personel_ekle('Selin', 'Er',    '05301110003', 'GARSON',   'garson',   'karavana123');
 CALL sp_personel_ekle('Mert',  'Tan',   '05301110004', 'GARSON',   'garson2',  'karavana123');
+CALL sp_personel_ekle('Ece',   'Yurt',  '05301110005', 'GARSON',   'garson3',  'karavana123');
+CALL sp_personel_ekle('Baran', 'Ok',    '05301110006', 'GARSON',   'garson4',  'karavana123');
+CALL sp_personel_ekle('Defne', 'Su',    '05301110007', 'GARSON',   'garson5',  'karavana123');
+CALL sp_personel_ekle('Kaan',  'Ateş',  '05301110008', 'GARSON',   'garson6',  'karavana123');
 
 INSERT INTO kullanici (ad, soyad, email, telefon, dogum_tarihi, ogrenci) VALUES
  ('Ayşe','Yılmaz','ayse.yilmaz@mail.com','05321234567','1999-04-12', false),
@@ -33,7 +37,7 @@ INSERT INTO oyun (ad, kategori_id, min_oyuncu, max_oyuncu, sure_dk, toplam_adet)
 -- Kat 1: giriş & espresso bar (10 küçük masa) · Kat 2: strateji salonu (10 masa) · Kat 3: VIP / FRP (4 büyük masa)
 INSERT INTO masa (masa_no, kapasite, kat) VALUES
  (1,4,1),(2,4,1),(3,6,2),(4,6,2),(5,8,3),(6,2,1),(7,2,1),(8,4,2),(9,4,2),(10,10,3),
- (11,2,1),(12,2,1),(13,4,1),(14,4,1),(15,2,1),(16,4,1),
+ (11,2,1),(12,2,1),(13,6,1),(14,4,1),(15,2,1),(16,6,1),
  (17,4,2),(18,6,2),(19,4,2),(20,6,2),(21,4,2),(22,6,2),
  (23,12,3),(24,8,3);
 

@@ -164,6 +164,22 @@ test('yönetici: ürün, personel ve ayar yönetimi', async () => {
     assert.match(kotuAyar.govde.hata, /1-60/);
 });
 
+test('öğrenci indirimi ve dönem özeti (gün sonu fişi)', async () => {
+    const bas = new Date(Date.now() - 1000).toISOString();
+    const masa9 = (await istek('GET', '/masalar', null, 'garson')).govde.find((m) => m.masa_no === 9);
+    const ac = await istek('POST', `/masalar/${masa9.masa_id}/ac`, { kisiSayisi: 4, ogrenciSayisi: 2, kullaniciId: 3 }, 'garson');
+    assert.equal(ac.durum, 201);
+    const hesap = await istek('GET', `/oturumlar/${ac.govde.oturumId}/hesap`, null, 'kasiyer');
+    assert.equal(hesap.govde.ogrenci_indirimi, hesap.govde.giris_ucreti);       // 2 öğrenci × %50
+    const fazla = await istek('POST', `/masalar/${masa9.masa_id + 1}/ac`, { kisiSayisi: 2, ogrenciSayisi: 3, kullaniciId: 3 }, 'garson');
+    assert.match(fazla.govde.hata, /Öğrenci sayısı/);
+    await istek('POST', `/oturumlar/${ac.govde.oturumId}/kapat`, { odemeTuru: 'NAKIT' }, 'kasiyer');
+    const o = (await istek('GET', `/raporlar/donem?bas=${encodeURIComponent(bas)}`, null, 'kasiyer')).govde;
+    assert.equal(o.ogrenci, 2);
+    assert.ok(o.ciro >= hesap.govde.toplam);
+    assert.equal((await istek('GET', '/raporlar/donem?bas=x', null, 'kasiyer')).durum, 400);
+});
+
 test('yönetici personel adına işlem yapar; işlem o personelin rolü ve kimliğiyle kaydedilir', async () => {
     const masa5 = (await istek('GET', '/masalar', null, 'garson')).govde.find((m) => m.masa_no === 5);
     const ac = await istek('POST', `/masalar/${masa5.masa_id}/ac`, { kisiSayisi: 6, kullaniciId: 2 }, 'yonetici', 4);

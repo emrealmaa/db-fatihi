@@ -38,6 +38,8 @@ const KISIT_MESAJLARI = {
     uq_urun_kategori_ad: 'Bu kategori zaten var',
     ck_ayar_ucret: 'Giriş ücreti negatif olamaz',
     ck_ayar_secim: 'Seçim süresi 1-60 dakika olmalı',
+    ck_ayar_ogrenci: 'Öğrenci indirim oranı 0 ile 1 arasında olmalı (0,5 = %50)',
+    ck_oturum_ogrenci: 'Öğrenci sayısı kişi sayısından fazla olamaz',
 };
 
 // SQLSTATE -> HTTP durum kodu

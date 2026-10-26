@@ -25,7 +25,7 @@ Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum 
 - [ ] Gerçek PostgreSQL'de `npm run db:performans` ve `npm run db:yetki` ile raporları yenile
 - [ ] Sunum şablonunu (`docs/Proje_Sunum_Şablonu.pptx`) doldur, ekran görüntüleri ekle
 - [ ] Repo herkese açık mı kontrol et, linki sunuma ekle
-- [ ] Öğrenci indirimi kuralı (alanlar hazır: `kullanici.ogrenci`, `oturum.indirim_tutari`)
+- [x] Öğrenci indirimi: öğrenci başına giriş ücretinin `ayar.ogrenci_indirim_orani` kadarı (varsayılan %50), oturuma kopyalanır
 
 ## Puan kriteri eşlemesi (RDBMS)
 | Kriter | İstenen | Karşılığı | Nerede |
@@ -36,7 +36,7 @@ Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum 
 | Sorgu performansı | – | 11 index (7'si kısmi); 6 sorguda index'li/index'siz ölçüm | `docs/PERFORMANS.md` |
 | Stored procedure | ≥ 2 | 15 | `04_procedures.sql` |
 | View | ≥ 5 | 13 | `03_views.sql` |
-| Kullanıcı tanımlı fonksiyon | ≥ 2 | 10 | `02_functions.sql` |
+| Kullanıcı tanımlı fonksiyon | ≥ 2 | 11 | `02_functions.sql` |
 | Yetkilendirme ve maskeleme | – | 4 grup rol + 4 login rolü, SECURITY DEFINER, maskeli view'lar, bcrypt | `05_security.sql`, `docs/YETKI.md` |
 | Ön yüz | – | React uygulaması, rol bazlı ekranlar | `app/web` |
 | Test | – | 46 DB + 9 API testi | `db/tests`, `app/api/test` |

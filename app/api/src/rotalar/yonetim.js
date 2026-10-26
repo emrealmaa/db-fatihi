@@ -98,15 +98,15 @@ export function yonetimRotalari() {
 
     // ---------------------------------------------------------------- ayarlar
     r.get('/yonetim/ayar', async (req, res) => {
-        const [a] = await req.vt((q) => q('SELECT giris_ucreti, secim_suresi_dk, kayit_zorunlu FROM ayar'));
+        const [a] = await req.vt((q) => q('SELECT giris_ucreti, secim_suresi_dk, kayit_zorunlu, ogrenci_indirim_orani FROM ayar'));
         res.json(a);
     });
 
     r.patch('/yonetim/ayar', async (req, res) => {
-        const alanlar = ['giris_ucreti', 'secim_suresi_dk', 'kayit_zorunlu'].filter((s) => req.body[s] !== undefined);
+        const alanlar = ['giris_ucreti', 'secim_suresi_dk', 'kayit_zorunlu', 'ogrenci_indirim_orani'].filter((s) => req.body[s] !== undefined);
         if (!alanlar.length) throw new HttpHata(400, 'Güncellenecek alan yok');
         const [a] = await req.vt((q) => q(
-            `UPDATE ayar SET ${alanlar.map((s, i) => `${s} = $${i + 1}`).join(', ')} RETURNING giris_ucreti, secim_suresi_dk, kayit_zorunlu`,
+            `UPDATE ayar SET ${alanlar.map((s, i) => `${s} = $${i + 1}`).join(', ')} RETURNING giris_ucreti, secim_suresi_dk, kayit_zorunlu, ogrenci_indirim_orani`,
             alanlar.map((s) => req.body[s])));
         res.json(a);
     });

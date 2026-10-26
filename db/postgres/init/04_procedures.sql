@@ -17,9 +17,9 @@ BEGIN
     END IF;
 END $$;
 
--- Masa aç. Giriş ücreti ayardan oturuma kopyalanır.
+-- Masa aç. Giriş ücreti ve öğrenci indirim oranı ayardan oturuma kopyalanır.
 CREATE PROCEDURE sp_oturum_ac(p_masa_id int, p_kisi int, p_kullanici_id bigint DEFAULT NULL,
-                              INOUT p_oturum_id bigint DEFAULT NULL)
+                              INOUT p_oturum_id bigint DEFAULT NULL, p_ogrenci int DEFAULT 0)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE v_ayar ayar%ROWTYPE;
 BEGIN
@@ -30,8 +30,9 @@ BEGIN
     IF EXISTS (SELECT 1 FROM oturum WHERE masa_id = p_masa_id AND kapanis IS NULL) THEN
         RAISE EXCEPTION 'Masa zaten dolu' USING ERRCODE = 'unique_violation';
     END IF;
-    INSERT INTO oturum (masa_id, kullanici_id, personel_id, kisi_sayisi, giris_ucreti)
-    VALUES (p_masa_id, p_kullanici_id, fn_aktif_personel(), p_kisi, v_ayar.giris_ucreti)
+    INSERT INTO oturum (masa_id, kullanici_id, personel_id, kisi_sayisi, giris_ucreti, ogrenci_sayisi, ogrenci_orani)
+    VALUES (p_masa_id, p_kullanici_id, fn_aktif_personel(), p_kisi, v_ayar.giris_ucreti,
+            COALESCE(p_ogrenci, 0), v_ayar.ogrenci_indirim_orani)
     RETURNING id INTO p_oturum_id;
 END $$;
 

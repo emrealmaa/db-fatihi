@@ -90,6 +90,7 @@ function MasaPaneli({ masa, kapat, yenile }) {
 function MasaAc({ masa, acildi }) {
     const { islem } = useUygulama();
     const [kisi, setKisi] = useState(Math.min(2, masa.kapasite));
+    const [ogrenci, setOgrenci] = useState(0);
     const [telefon, setTelefon] = useState('');
     const [musteri, setMusteri] = useState(null);       // bulunan kayıtlı müşteri
     const [yeni, setYeni] = useState(null);             // yeni kayıt formu
@@ -109,7 +110,7 @@ function MasaAc({ masa, acildi }) {
 
     async function ac(musterisiz = false) {
         setBekliyor(true);
-        const govde = { kisiSayisi: kisi };
+        const govde = { kisiSayisi: kisi, ogrenciSayisi: Math.min(ogrenci, kisi) };
         if (!musterisiz && musteri) govde.kullaniciId = musteri.id;
         if (!musterisiz && yeni) govde.musteri = { ...yeni, telefon };
         const ok = await islem(() => gonder(`/masalar/${masa.masa_id}/ac`, govde), `Masa ${masa.masa_no} açıldı`);
@@ -124,6 +125,10 @@ function MasaAc({ masa, acildi }) {
             <label className="satir-etiket">
                 Kişi sayısı <small className="soluk">(en fazla {masa.kapasite})</small>
                 <Adet deger={kisi} degistir={setKisi} min={1} max={masa.kapasite} />
+            </label>
+            <label className="satir-etiket">
+                Öğrenci <small className="soluk">(giriş ücretinde öğrenci indirimi)</small>
+                <Adet deger={Math.min(ogrenci, kisi)} degistir={setOgrenci} min={0} max={kisi} />
             </label>
 
             <form className="satir" onSubmit={ara}>

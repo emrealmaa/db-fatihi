@@ -17,6 +17,7 @@ export function salonRotalari() {
     r.post('/masalar/:masaId/ac', async (req, res) => {
         const masaId = tamsayi(req.params.masaId, 'Masa');
         const kisi = tamsayi(req.body.kisiSayisi, 'Kişi sayısı');
+        const ogrenci = tamsayi(req.body.ogrenciSayisi, 'Öğrenci sayısı', { zorunlu: false }) ?? 0;
         let kullaniciId = tamsayi(req.body.kullaniciId, 'Müşteri', { zorunlu: false });
         const m = req.body.musteri;
         const oturumId = await req.vt(async (q) => {
@@ -27,7 +28,7 @@ export function salonRotalari() {
                 ]);
                 kullaniciId = k.p_kullanici_id;
             }
-            const [o] = await q('CALL sp_oturum_ac($1, $2, $3, NULL)', [masaId, kisi, kullaniciId]);
+            const [o] = await q('CALL sp_oturum_ac($1, $2, $3, NULL, $4)', [masaId, kisi, kullaniciId, ogrenci]);
             return o.p_oturum_id;
         });
         res.status(201).json({ oturumId, kullaniciId });

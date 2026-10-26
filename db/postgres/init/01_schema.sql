@@ -12,8 +12,10 @@ CREATE TABLE ayar (
     giris_ucreti     numeric(8,2) NOT NULL DEFAULT 0,   -- kişi başı
     secim_suresi_dk  smallint     NOT NULL DEFAULT 5,
     kayit_zorunlu    boolean      NOT NULL DEFAULT true, -- masa açarken müşteri kaydı şart mı
+    ogrenci_indirim_orani numeric(3,2) NOT NULL DEFAULT 0.50, -- öğrenciler giriş ücretinin bu oranı kadar indirim alır
     CONSTRAINT ck_ayar_tek_satir CHECK (id),
     CONSTRAINT ck_ayar_ucret     CHECK (giris_ucreti >= 0),
+    CONSTRAINT ck_ayar_ogrenci   CHECK (ogrenci_indirim_orani BETWEEN 0 AND 1),
     CONSTRAINT ck_ayar_secim     CHECK (secim_suresi_dk BETWEEN 1 AND 60)
 );
 
@@ -102,12 +104,16 @@ CREATE TABLE oturum (
     personel_id      int          NOT NULL REFERENCES personel(id)  ON DELETE RESTRICT,  -- masayı açan
     kisi_sayisi      smallint     NOT NULL,
     giris_ucreti     numeric(8,2) NOT NULL,             -- açılış anındaki kişi başı ücret
-    indirim_tutari   numeric(8,2) NOT NULL DEFAULT 0,   -- öğrenci indirimi vb. (kural sonra)
+    ogrenci_sayisi   smallint     NOT NULL DEFAULT 0,   -- gruptaki öğrenci sayısı
+    ogrenci_orani    numeric(3,2) NOT NULL DEFAULT 0,   -- açılış anındaki öğrenci indirim oranı
+    indirim_tutari   numeric(8,2) NOT NULL DEFAULT 0,   -- öğrenci dışı ek indirim (kampanya vb.)
     acilis           timestamptz  NOT NULL DEFAULT clock_timestamp(),
     kapanis          timestamptz,
     CONSTRAINT ck_oturum_kisi    CHECK (kisi_sayisi > 0),
     CONSTRAINT ck_oturum_ucret   CHECK (giris_ucreti >= 0),
     CONSTRAINT ck_oturum_indirim CHECK (indirim_tutari >= 0),
+    CONSTRAINT ck_oturum_ogrenci CHECK (ogrenci_sayisi BETWEEN 0 AND kisi_sayisi),
+    CONSTRAINT ck_oturum_oran    CHECK (ogrenci_orani BETWEEN 0 AND 1),
     CONSTRAINT ck_oturum_zaman   CHECK (kapanis IS NULL OR kapanis >= acilis)
 );
 -- Bir masada aynı anda yalnızca bir açık oturum olabilir

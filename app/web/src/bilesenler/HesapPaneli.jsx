@@ -31,7 +31,8 @@ export default function HesapPaneli({ oturumId, kapandi }) {
                             {h.kalemler.map((k) => (
                                 <tr key={k.siparis_id}><td>{k.adet} × {k.urun}</td><td className="sag">{tl(k.tutar)}</td></tr>
                             ))}
-                            {h.indirim > 0 && <tr><td>İndirim</td><td className="sag">−{tl(h.indirim)}</td></tr>}
+                            {h.ogrenci_indirimi > 0 && <tr><td>🎓 Öğrenci indirimi ({h.ogrenci_sayisi} kişi)</td><td className="sag">−{tl(h.ogrenci_indirimi)}</td></tr>}
+                            {h.indirim - h.ogrenci_indirimi > 0 && <tr><td>Ek indirim</td><td className="sag">−{tl(h.indirim - h.ogrenci_indirimi)}</td></tr>}
                         </tbody>
                         <tfoot><tr><th>Toplam</th><th className="sag hesap-toplam">{tl(h.toplam)}</th></tr></tfoot>
                     </table>

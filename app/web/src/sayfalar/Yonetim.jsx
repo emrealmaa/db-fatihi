@@ -341,12 +341,14 @@ function Ayarlar() {
     const { islem } = useUygulama();
     const { veri, hata, yukleniyor, yenile } = useVeri('/yonetim/ayar');
     const [form, setForm] = useState(null);
-    const d = form ?? veri;
+    // Öğrenci oranı formda yüzde olarak tutulur (0.5 -> 50)
+    const d = form ?? (veri && { ...veri, ogrenci_indirim_orani: Math.round(veri.ogrenci_indirim_orani * 100) });
 
     async function kaydet(e) {
         e.preventDefault();
         const ok = await islem(() => guncelle('/yonetim/ayar', {
             giris_ucreti: Number(d.giris_ucreti), secim_suresi_dk: Number(d.secim_suresi_dk), kayit_zorunlu: d.kayit_zorunlu,
+            ogrenci_indirim_orani: Number(d.ogrenci_indirim_orani) / 100,
         }), 'Ayarlar kaydedildi');
         if (ok !== undefined) { setForm(null); yenile(); }
     }
@@ -360,6 +362,12 @@ function Ayarlar() {
                         <input type="number" min="0" step="0.01" value={d.giris_ucreti} required
                                onChange={(e) => setForm({ ...d, giris_ucreti: e.target.value })} />
                         <small className="soluk">Yeni açılan masalara uygulanır; açık masaların ücreti değişmez.</small>
+                    </label>
+                    <label>
+                        Öğrenci indirimi (giriş ücretinin yüzdesi)
+                        <input type="number" min="0" max="100" step="5" value={d.ogrenci_indirim_orani} required
+                               onChange={(e) => setForm({ ...d, ogrenci_indirim_orani: e.target.value })} />
+                        <small className="soluk">Yeni açılan masalara uygulanır; %50 = öğrenci yarı fiyat öder.</small>
                     </label>
                     <label>
                         Seçim hakkı süresi (dakika)

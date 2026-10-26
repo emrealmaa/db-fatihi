@@ -52,9 +52,10 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     SELECT count(*)::int FROM bekleme WHERE oyun_id = p_oyun_id AND durum = 'SECIM_HAKKI';
 $$;
 
--- Hesap dökümü: kişi başı giriş ücreti + siparişler - indirim
+-- Hesap dökümü: kişi başı giriş ücreti + siparişler - indirim.
+-- Öğrenci indirimi = öğrenci sayısı × giriş ücreti × (açılıştaki) öğrenci oranı; indirim = öğrenci + ek indirim
 CREATE FUNCTION fn_hesap_detay(p_oturum_id bigint)
-RETURNS TABLE (giris_toplam numeric, siparis_toplam numeric, indirim numeric, toplam numeric)
+RETURNS TABLE (giris_toplam numeric, ogrenci_indirimi numeric, siparis_toplam numeric, indirim numeric, toplam numeric)
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
 DECLARE v_oturum oturum%ROWTYPE;
 BEGIN
@@ -66,7 +67,8 @@ BEGIN
     giris_toplam := v_oturum.kisi_sayisi * v_oturum.giris_ucreti;
     SELECT COALESCE(sum(adet * birim_fiyat), 0) INTO siparis_toplam
       FROM siparis WHERE oturum_id = p_oturum_id;
-    indirim := least(v_oturum.indirim_tutari, giris_toplam + siparis_toplam);
+    ogrenci_indirimi := round(v_oturum.ogrenci_sayisi * v_oturum.giris_ucreti * v_oturum.ogrenci_orani, 2);
+    indirim := least(ogrenci_indirimi + v_oturum.indirim_tutari, giris_toplam + siparis_toplam);
     toplam  := giris_toplam + siparis_toplam - indirim;
     RETURN NEXT;
 END $$;
@@ -75,6 +77,25 @@ END $$;
 CREATE FUNCTION fn_hesap_hesapla(p_oturum_id bigint) RETURNS numeric
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
     SELECT toplam FROM fn_hesap_detay(p_oturum_id);
+$$;
+
+-- Dönem özeti (gün sonu fişi): verilen zaman aralığında ödemesi alınan hesapların kırılımı
+CREATE FUNCTION fn_donem_ozeti(p_bas timestamptz, p_bit timestamptz)
+RETURNS TABLE (hesap_sayisi int, kisi int, ogrenci int, normal_giris numeric, ogrenci_giris numeric,
+               siparis numeric, diger_indirim numeric, ciro numeric, nakit numeric, kart numeric)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+    SELECT count(*)::int,
+           COALESCE(sum(t.kisi_sayisi), 0)::int,
+           COALESCE(sum(t.ogrenci_sayisi), 0)::int,
+           COALESCE(sum((t.kisi_sayisi - t.ogrenci_sayisi) * t.giris_ucreti), 0),
+           COALESCE(sum(t.ogrenci_sayisi * t.giris_ucreti * (1 - t.ogrenci_orani)), 0),
+           COALESCE(sum((SELECT COALESCE(sum(s.adet * s.birim_fiyat), 0) FROM siparis s WHERE s.oturum_id = t.id)), 0),
+           COALESCE(sum(t.indirim_tutari), 0),
+           COALESCE(sum(o.tutar), 0),
+           COALESCE(sum(o.tutar) FILTER (WHERE o.tur = 'NAKIT'), 0),
+           COALESCE(sum(o.tutar) FILTER (WHERE o.tur = 'KART'), 0)
+    FROM odeme o JOIN oturum t ON t.id = o.oturum_id
+    WHERE o.zaman >= p_bas AND o.zaman < p_bit;
 $$;
 
 -- Telefonla müşteri arama (garson ham tabloyu göremez; yalnızca id ve maskeli ad döner)
