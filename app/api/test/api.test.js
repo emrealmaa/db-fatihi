@@ -3,9 +3,14 @@
 // Testler sırayla çalışır ve aynı veritabanını paylaşır (akış adım adım ilerler).
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import dotenv from 'dotenv';
 import { ayarlar, baglan, kur } from '../../../db/lib/veritabani.js';
 import { uygulamaOlustur } from '../src/uygulama.js';
+
+// npm workspace testleri app/api klasöründe çalıştırır; .env kök dizinde (sunucu.js ile aynı)
+dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '.env') });
 
 let vt, sunucu, adres;
 const token = {};

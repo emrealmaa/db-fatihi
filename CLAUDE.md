@@ -18,5 +18,5 @@ Seçilen yol: **PostgreSQL (RDBMS)**. Puan kriterleri `docs/ROADMAP.md` içinde.
 - Uygulama rolleri tablolara doğrudan erişmez: view okur, `sp_*` prosedürlerini çağırır (bkz. `docs/ARCHITECTURE.md`).
 - Kullanıcı verisi (ad, e-posta, telefon) garson/kasiyer için daima maskeli view'dan okunur.
 - Yeni iş kuralı önce constraint/trigger olarak veritabanında yazılır, uygulama katmanı tekrar etmez.
-- Postgres sürümü 15 (yerelde mevcut imaj). 17'ye geçilirse compose'ta değiştir.
+- Postgres sürümü 18 (yerel kurulum). Docker imajı farklıysa compose'ta eşitle.
 - `.env` git'e girmez; parolalar yalnızca geliştirme içindir.
