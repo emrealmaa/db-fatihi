@@ -41,6 +41,13 @@ değişse bile geçmiş kayıt doğru kalmalıdır. Bu, 3NF ihlali değil, zaman
 | `oturum.giris_ucreti` | `ayar.giris_ucreti` | Giriş ücreti değişse açık/kapanmış masaların hesabı değişmemeli |
 | `odeme.tutar` | `fn_hesap_hesapla` | Tahsil edilen tutar kesinleşmiş bir finansal kayıttır |
 
+### VIP Kulüp eklemesi (07_vip_kulup.sql)
+Yeni sütunlar yalnızca sahibi olan varlığın özelliğidir ve 3NF'yi bozmaz: `kullanici.vip_mi` / `vip_baslangic` (üyelik müşteriye ait),
+`oyun.vip_ozel` (oyuna ait), `urun_kategori.mutfak` (kategoriye ait), `ayar.vip_kat` (tek satırlık ayar). "Oturumun sahibi VIP mi"
+ve "masa VIP katta mı" saklanmaz; `fn_oturum_vip_mi` ve `masa.kat = ayar.vip_kat` ile hesaplanır (türetilmiş değer saklanmaz).
+`ck_kullanici_vip` (`vip_mi OR vip_baslangic IS NULL`) bayrak ile tarih arasında tutarsızlığı önler. Hepsi `NOT NULL DEFAULT false`
+olduğu için mevcut kayıtlar bozulmadan geçer.
+
 ## Anomali örnekleri ve önlemleri
 | Anomali | Bu şemada nasıl önlendi |
 |---|---|

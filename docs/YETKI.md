@@ -2,7 +2,7 @@
 
 > Bu dosya `npm run db:yetki` ile otomatik üretilir: her satır, ilgili rolle veritabanına bağlanıp
 > gerçekten çalıştırılan bir sorgunun sonucudur. Yazma denemeleri geri alınır.
-> Son çalıştırma: 26.10.2026 21:48:43 · PGlite
+> Son çalıştırma: 27.10.2026 11:50:20 · PostgreSQL
 
 ## Özet matris
 ✅ izin verildi · ⛔ veritabanı reddetti
@@ -23,6 +23,11 @@
 | Personel performans raporu | ⛔ | ⛔ | ⛔ | ✅ |
 | Personel ekleme (sp_personel_ekle) | ⛔ | ⛔ | ⛔ | ✅ |
 | Parola doğrulama (fn_personel_giris) | ✅ | ⛔ | ⛔ | ✅ |
+| VIP üyelik verme (sp_musteri_vip) | ⛔ | ⛔ | ⛔ | ✅ |
+| VIP oyun raporu | ⛔ | ⛔ | ⛔ | ✅ |
+| Kat bazında gelir raporu | ⛔ | ⛔ | ⛔ | ✅ |
+| VIP olmayan müşteriye VIP oyun (tetikleyici) | ⛔ | ⛔ | ⛔ | ⛔ |
+| VIP olmayan müşteriyi VIP kata oturtma (tetikleyici) | ⛔ | ⛔ | ⛔ | ⛔ |
 
 ## Maskeleme: aynı müşteri, farklı roller
 | Rol | Sonuç |
@@ -71,7 +76,7 @@ SELECT kullanici_adi, parola_hash FROM personel LIMIT 1
 - **giris_app:** ⛔ permission denied for table personel
 - **garson_app:** ⛔ permission denied for table personel
 - **kasiyer_app:** ⛔ permission denied for table personel
-- **yonetici_app:** `{"kullanici_adi":"yonetici","parola_hash":"$2a$06$hGC4VEjTsWSHy2jUxli.o.gpB7qwPSoA52DAG06TitVH6acsfoMLW"}`
+- **yonetici_app:** `{"kullanici_adi":"yonetici","parola_hash":"$2a$06$S8qayQtuC71ajzJKnZRLSetHUd/Pwxrnovs25iXv.9Juc12r3/0I2"}`
 
 ### Masa durumu
 ```sql
@@ -152,7 +157,7 @@ CALL sp_personel_ekle('A','B','05301119999','GARSON','kanit','parola12',NULL,NUL
 - **giris_app:** ⛔ permission denied for procedure sp_personel_ekle
 - **garson_app:** ⛔ permission denied for procedure sp_personel_ekle
 - **kasiyer_app:** ⛔ permission denied for procedure sp_personel_ekle
-- **yonetici_app:** `{"p_personel_id":5}`
+- **yonetici_app:** `{"p_personel_id":9}`
 
 ### Parola doğrulama (fn_personel_giris)
 ```sql
@@ -162,3 +167,48 @@ SELECT personel_id, rol FROM fn_personel_giris('garson','karavana123')
 - **garson_app:** ⛔ permission denied for function fn_personel_giris
 - **kasiyer_app:** ⛔ permission denied for function fn_personel_giris
 - **yonetici_app:** `{"personel_id":3,"rol":"GARSON"}`
+
+### VIP üyelik verme (sp_musteri_vip)
+```sql
+CALL sp_musteri_vip(4, true)
+```
+- **giris_app:** ⛔ permission denied for procedure sp_musteri_vip
+- **garson_app:** ⛔ permission denied for procedure sp_musteri_vip
+- **kasiyer_app:** ⛔ permission denied for procedure sp_musteri_vip
+- **yonetici_app:** çalıştı
+
+### VIP oyun raporu
+```sql
+SELECT ad, oturum_sayisi FROM v_vip_oyun_kullanimi LIMIT 1
+```
+- **giris_app:** ⛔ permission denied for view v_vip_oyun_kullanimi
+- **garson_app:** ⛔ permission denied for view v_vip_oyun_kullanimi
+- **kasiyer_app:** ⛔ permission denied for view v_vip_oyun_kullanimi
+- **yonetici_app:** `{"ad":"Brass: Birmingham (Deluxe)","oturum_sayisi":0}`
+
+### Kat bazında gelir raporu
+```sql
+SELECT kat, ciro FROM v_kat_gelir LIMIT 1
+```
+- **giris_app:** ⛔ permission denied for view v_kat_gelir
+- **garson_app:** ⛔ permission denied for view v_kat_gelir
+- **kasiyer_app:** ⛔ permission denied for view v_kat_gelir
+- **yonetici_app:** çalıştı
+
+### VIP olmayan müşteriye VIP oyun (tetikleyici)
+```sql
+DO $$ DECLARE v int; BEGIN SELECT id INTO v FROM oyun WHERE ad = 'Spirit Island'; CALL sp_oyun_baslat(3, v, NULL); END $$
+```
+- **giris_app:** ⛔ permission denied for table oyun
+- **garson_app:** ⛔ permission denied for table oyun
+- **kasiyer_app:** ⛔ permission denied for table oyun
+- **yonetici_app:** ⛔ procedure parameter "p_oturum_oyun_id" is an output parameter but corresponding argument is not writable
+
+### VIP olmayan müşteriyi VIP kata oturtma (tetikleyici)
+```sql
+CALL sp_oturum_ac(5, 2, 4, NULL)
+```
+- **giris_app:** ⛔ permission denied for procedure sp_oturum_ac
+- **garson_app:** ⛔ VIP_KAT_YETKISIZ: Masa 5 VIP Kulüp katında; yalnızca VIP üyeler oturabilir
+- **kasiyer_app:** ⛔ VIP_KAT_YETKISIZ: Masa 5 VIP Kulüp katında; yalnızca VIP üyeler oturabilir
+- **yonetici_app:** ⛔ VIP_KAT_YETKISIZ: Masa 5 VIP Kulüp katında; yalnızca VIP üyeler oturabilir
