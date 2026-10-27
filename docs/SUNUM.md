@@ -1,6 +1,6 @@
 # Sunum içeriği ve demo akışı
 
-`Proje_Sunum_Şablonu.pptx` doldurulurken kullanılacak metinler. Hedef: ~10 dk anlatım + ~5 dk canlı demo. Hazır ekran görüntüleri: `docs/ekran/` (açıklamalı liste orada).
+Hazır sunum: `docs/Karavana_Sunum.pptx` (şablon doldurulmuş, konuşma notlarıyla). Bu dosya içeriğin kaynağıdır. Hedef: ~10 dk anlatım + ~5 dk canlı demo. Hazır ekran görüntüleri: `docs/ekran/` (açıklamalı liste orada).
 
 ## Slayt akışı
 1. **Karavana** — Kutu oyunu cafe işletme sistemi. Enes Öztürk, Emre Alma. GitHub linki.
