@@ -307,6 +307,18 @@ function zeminVeDuvarlar(kat, d, evre, parca = 'zemin') {
     return sakla();
 }
 
+// Bir katın yüksekliği (doğal piksel): duvar + üst katın döşeme plakası. Kat geçişinde katlar bu kadar üst üste dizilir.
+export const KAT_YUKSEKLIGI = DUVAR + PLAKA;
+
+// Kat geçişinde ilk karenin takılmaması için diğer katların katmanları boşta önceden çizilir: her çağrı tek parça üretir,
+// iş kalmadıysa false döner
+export function katmanIsit(d, evre) {
+    for (const kat of [1, 2, 3]) for (const parca of ['zemin', 'duvar']) {
+        if (!katmanOnbellek.has(`${kat}-${d}-${parca}-${parca === 'duvar' ? evre : ''}`)) { zeminVeDuvarlar(kat, d, evre, parca); return true; }
+    }
+    return false;
+}
+
 function duvarlariCiz(c, P, kat, d, evre = 'gun') {
     const renk = DUVAR_RENK[kat];
     // Duvarlar iç mekânın (20 x IC_DERINLIK) döndürülmüş dikdörtgeninin arka kenarları boyunca
@@ -1499,7 +1511,9 @@ export function sahneCiz(c, sahne, bolge) {
     const evre = sahne.evre || 'gun';
     const b0 = bolge || { x0: 0, y0: 0, x1: DOGAL_G, y1: DOGAL_Y };
     const BW = b0.x1 - b0.x0, BH = b0.y1 - b0.y0;
-    c.fillStyle = ARKA_RENK[evre]; c.fillRect(b0.x0, b0.y0, BW, BH);
+    // saydam: kat geçişinde üst kat alttaki katın üstüne bindirilir (arka plan boyanmaz)
+    if (sahne.saydam) c.clearRect(b0.x0, b0.y0, BW, BH);
+    else { c.fillStyle = ARKA_RENK[evre]; c.fillRect(b0.x0, b0.y0, BW, BH); }
     const dis = kat === 1 && disGorunur(d);
     const sehir = kat === 1;
     const isik = sehir ? gunIsigi(sahne.dakika ?? 720) : null;
@@ -1638,8 +1652,11 @@ export function sahneCiz(c, sahne, bolge) {
     // Loş katlar: karartma + lamba ışık havuzları
     const los = KATLAR[kat].isik;
     if (los) {
+        // saydam katmanda karartma yalnızca çizilmiş piksellere (arka planınki geçişte ekranda uygulanır)
+        c.save(); if (sahne.saydam) c.globalCompositeOperation = 'source-atop';
         c.fillStyle = `rgba(12,6,24,${los})`;
         c.fillRect(b0.x0, b0.y0, BW, BH);
+        c.restore();
         c.save();
         c.globalCompositeOperation = 'lighter';
         for (const o of KATLAR[kat].nesneler.filter((x) => x.tur === 'lamba')) {
@@ -1972,6 +1989,38 @@ export function nesneBul(sahne, x, y) {
         if (icinde(tabanKutusu(P, sahne.d, y0.gx - 0.6, y0.gy - 0.6, y0.gw + 1.2, y0.gd + 1.2, 20), x, y)) return { tur: 'masa', masa: ms };
     }
     return null;
+}
+
+// ------------------------------------------------------------------ kat geçişi: inşa maskesi
+// Üst kat aşağıdan yukarı "inşa ediliyormuş" gibi belirir (inerken aynı maske tersine işler, kat yukarıdan sökülür).
+// Maske kenarı doğal pikselde BANT satırlık sıralı (Bayer) bir dither şerididir; en alttaki dolu satır kaynak ışığıyla parlar.
+// c: üst katın saydam ara tuvali, alan: üst katın gorunurAlan'ı, p: 0 (hiç yok) … 1 (tamamı).
+const BANT = 8;
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+let ditherDesenleri = null;
+export function insaMaskesi(c, bolge, alan, p) {
+    if (p >= 1) return;
+    if (!ditherDesenleri) {
+        // seviye i: piksellerin (BANT - i) / (BANT + 1)'i silinir
+        ditherDesenleri = Array.from({ length: BANT }, (_, i) => {
+            const t = document.createElement('canvas'); t.width = t.height = 4;
+            const tc = t.getContext('2d'); tc.fillStyle = '#000';
+            BAYER.forEach((v, j) => { if ((v + 0.5) / 16 < (BANT - i) / (BANT + 1)) tc.fillRect(j % 4, j >> 2, 1, 1); });
+            return t;
+        });
+    }
+    const x0 = bolge.x0, w = bolge.x1 - bolge.x0;
+    const e = Math.round(alan.y1 + BANT - (alan.y1 - alan.y0 + 2 * BANT) * p);   // ilk tam dolu satır
+    c.save();
+    c.globalCompositeOperation = 'destination-out';
+    c.fillStyle = '#000';
+    if (e - BANT > bolge.y0) c.fillRect(x0, bolge.y0, w, e - BANT - bolge.y0);
+    for (let i = 0; i < BANT; i++) { c.fillStyle = c.createPattern(ditherDesenleri[i], 'repeat'); c.fillRect(x0, e - BANT + i, w, 1); }
+    // kaynak ışığı: yalnızca katın kendi pikselleri üzerinde
+    c.globalCompositeOperation = 'source-atop';
+    c.fillStyle = 'rgba(255,214,110,.85)'; c.fillRect(x0, e - BANT, w, BANT);
+    c.fillStyle = 'rgba(255,244,214,.9)'; c.fillRect(x0, e, w, 1);
+    c.restore();
 }
 
 // Ara tuval: tüm fillRect çağrıları tam piksele yuvarlanır (bulanık kenar olmaz)
