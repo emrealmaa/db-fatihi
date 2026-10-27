@@ -1,0 +1,362 @@
+{
+ "Root": {
+  "dosya": "root.png",
+  "bgg": 237182,
+  "w": 56,
+  "h": 44
+ },
+ "Carcassonne": {
+  "dosya": "carcassonne.png",
+  "bgg": 822,
+  "w": 30,
+  "h": 44
+ },
+ "Ticket to Ride": {
+  "dosya": "ticket-to-ride.png",
+  "bgg": 9209,
+  "w": 44,
+  "h": 44
+ },
+ "Codenames": {
+  "dosya": "codenames.png",
+  "bgg": 178900,
+  "w": 31,
+  "h": 44
+ },
+ "Dixit": {
+  "dosya": "dixit.png",
+  "bgg": 39856,
+  "w": 44,
+  "h": 44
+ },
+ "Pandemic": {
+  "dosya": "pandemic.png",
+  "bgg": 30549,
+  "w": 32,
+  "h": 44
+ },
+ "7 Wonders": {
+  "dosya": "7-wonders.png",
+  "bgg": 68448,
+  "w": 44,
+  "h": 44
+ },
+ "Azul": {
+  "dosya": "azul.png",
+  "bgg": 230802,
+  "w": 44,
+  "h": 44
+ },
+ "Splendor": {
+  "dosya": "splendor.png",
+  "bgg": 148228,
+  "w": 34,
+  "h": 44
+ },
+ "Uno": {
+  "dosya": "uno.png",
+  "bgg": 2223,
+  "w": 35,
+  "h": 44
+ },
+ "Catan": {
+  "dosya": "catan.png",
+  "bgg": 13,
+  "w": 44,
+  "h": 44
+ },
+ "Monopoly": {
+  "dosya": "monopoly.png",
+  "bgg": 1406,
+  "w": 56,
+  "h": 38
+ },
+ "Okey": {
+  "dosya": "okey.png",
+  "bgg": 29146,
+  "w": 44,
+  "h": 44
+ },
+ "Tavla": {
+  "dosya": "tavla.png",
+  "bgg": 2397,
+  "w": 56,
+  "h": 39
+ },
+ "Rummikub": {
+  "dosya": "rummikub.png",
+  "bgg": 811,
+  "w": 43,
+  "h": 44
+ },
+ "Mangala": {
+  "dosya": "mangala.png",
+  "bgg": 39492,
+  "w": 56,
+  "h": 37
+ },
+ "Satranç": {
+  "dosya": "satranc.png",
+  "bgg": 171,
+  "w": 56,
+  "h": 40
+ },
+ "Tabu": {
+  "dosya": "tabu.png",
+  "bgg": 1111,
+  "w": 31,
+  "h": 44
+ },
+ "Jenga": {
+  "dosya": "jenga.png",
+  "bgg": 2452,
+  "w": 19,
+  "h": 44
+ },
+ "Risk": {
+  "dosya": "risk.png",
+  "bgg": 181,
+  "w": 56,
+  "h": 38
+ },
+ "Scrabble": {
+  "dosya": "scrabble.png",
+  "bgg": 320,
+  "w": 46,
+  "h": 44
+ },
+ "Exploding Kittens": {
+  "dosya": "exploding-kittens.png",
+  "bgg": 172225,
+  "w": 56,
+  "h": 39
+ },
+ "Kingdomino": {
+  "dosya": "kingdomino.png",
+  "bgg": 204583,
+  "w": 44,
+  "h": 44
+ },
+ "King of Tokyo": {
+  "dosya": "king-of-tokyo.png",
+  "bgg": 70323,
+  "w": 44,
+  "h": 44
+ },
+ "Sushi Go!": {
+  "dosya": "sushi-go.png",
+  "bgg": 133473,
+  "w": 31,
+  "h": 44
+ },
+ "Love Letter": {
+  "dosya": "love-letter.png",
+  "bgg": 129622,
+  "w": 44,
+  "h": 44
+ },
+ "The Mind": {
+  "dosya": "the-mind.png",
+  "bgg": 244992,
+  "w": 33,
+  "h": 44
+ },
+ "Coup": {
+  "dosya": "coup.png",
+  "bgg": 131357,
+  "w": 29,
+  "h": 44
+ },
+ "Avalon": {
+  "dosya": "avalon.png",
+  "bgg": 128882,
+  "w": 33,
+  "h": 44
+ },
+ "Vampir Köylü": {
+  "dosya": "vampir-koylu.png",
+  "bgg": 925,
+  "w": 33,
+  "h": 44
+ },
+ "Bang!": {
+  "dosya": "bang.png",
+  "bgg": 3955,
+  "w": 32,
+  "h": 44
+ },
+ "Hanabi": {
+  "dosya": "hanabi.png",
+  "bgg": 98778,
+  "w": 55,
+  "h": 44
+ },
+ "Patchwork": {
+  "dosya": "patchwork.png",
+  "bgg": 163412,
+  "w": 44,
+  "h": 44
+ },
+ "Jaipur": {
+  "dosya": "jaipur.png",
+  "bgg": 54043,
+  "w": 32,
+  "h": 44
+ },
+ "Terraforming Mars": {
+  "dosya": "terraforming-mars.png",
+  "bgg": 167791,
+  "w": 44,
+  "h": 44
+ },
+ "Scythe": {
+  "dosya": "scythe.png",
+  "bgg": 169786,
+  "w": 56,
+  "h": 41
+ },
+ "Wingspan": {
+  "dosya": "wingspan.png",
+  "bgg": 266192,
+  "w": 44,
+  "h": 44
+ },
+ "Gloomhaven": {
+  "dosya": "gloomhaven.png",
+  "bgg": 174430,
+  "w": 56,
+  "h": 40
+ },
+ "Brass: Birmingham": {
+  "dosya": "brass-birmingham.png",
+  "bgg": 224517,
+  "w": 44,
+  "h": 44
+ },
+ "Everdell": {
+  "dosya": "everdell.png",
+  "bgg": 199792,
+  "w": 44,
+  "h": 44
+ },
+ "Cascadia": {
+  "dosya": "cascadia.png",
+  "bgg": 295947,
+  "w": 44,
+  "h": 44
+ },
+ "Concordia": {
+  "dosya": "concordia.png",
+  "bgg": 124361,
+  "w": 31,
+  "h": 44
+ },
+ "Agricola": {
+  "dosya": "agricola.png",
+  "bgg": 31260,
+  "w": 31,
+  "h": 44
+ },
+ "Puerto Rico": {
+  "dosya": "puerto-rico.png",
+  "bgg": 3076,
+  "w": 31,
+  "h": 44
+ },
+ "Dominion": {
+  "dosya": "dominion.png",
+  "bgg": 36218,
+  "w": 44,
+  "h": 44
+ },
+ "Small World": {
+  "dosya": "small-world.png",
+  "bgg": 40692,
+  "w": 44,
+  "h": 44
+ },
+ "Takenoko": {
+  "dosya": "takenoko.png",
+  "bgg": 70919,
+  "w": 45,
+  "h": 44
+ },
+ "İstanbul": {
+  "dosya": "istanbul.png",
+  "bgg": 148949,
+  "w": 32,
+  "h": 44
+ },
+ "Quacks of Quedlinburg": {
+  "dosya": "quacks-of-quedlinburg.png",
+  "bgg": 244521,
+  "w": 44,
+  "h": 44
+ },
+ "Dune: Imperium": {
+  "dosya": "dune-imperium.png",
+  "bgg": 316554,
+  "w": 44,
+  "h": 44
+ },
+ "Twilight Imperium (4. baskı)": {
+  "dosya": "twilight-imperium-4-baski.png",
+  "bgg": 233078,
+  "w": 56,
+  "h": 38
+ },
+ "Gloomhaven (2. baskı)": {
+  "dosya": "gloomhaven-2-baski.png",
+  "bgg": 174430,
+  "w": 56,
+  "h": 40
+ },
+ "Brass: Birmingham (Deluxe)": {
+  "dosya": "brass-birmingham-deluxe.png",
+  "bgg": 224517,
+  "w": 44,
+  "h": 44
+ },
+ "Spirit Island": {
+  "dosya": "spirit-island.png",
+  "bgg": 162886,
+  "w": 44,
+  "h": 44
+ },
+ "Mage Knight": {
+  "dosya": "mage-knight.png",
+  "bgg": 96848,
+  "w": 56,
+  "h": 40
+ },
+ "Through the Ages: A New Story of Civilization": {
+  "dosya": "through-the-ages-a-new-story-of-civilization.png",
+  "bgg": 182028,
+  "w": 56,
+  "h": 39
+ },
+ "Gaia Project": {
+  "dosya": "gaia-project.png",
+  "bgg": 220308,
+  "w": 53,
+  "h": 44
+ },
+ "Food Chain Magnate": {
+  "dosya": "food-chain-magnate.png",
+  "bgg": 175914,
+  "w": 31,
+  "h": 44
+ },
+ "War of the Ring (2. baskı)": {
+  "dosya": "war-of-the-ring-2-baski.png",
+  "bgg": 115746,
+  "w": 56,
+  "h": 38
+ },
+ "Twilight Struggle": {
+  "dosya": "twilight-struggle.png",
+  "bgg": 12333,
+  "w": 32,
+  "h": 44
+ }
+}
