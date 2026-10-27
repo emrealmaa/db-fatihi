@@ -25,7 +25,7 @@ Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum 
 - [x] Sunum içeriği ve demo akışı (`docs/SUNUM.md`)
 - [x] Gerçek PostgreSQL 18'de `npm run db:performans` ve `npm run db:yetki` ile raporlar yenilendi (yetki kanıtına VIP denemeleri eklendi)
 - [x] Ekran görüntüleri alındı (`docs/ekran/`)
-- [ ] Sunum şablonunu (`docs/Proje_Sunum_Şablonu.pptx`) doldur (içerik `docs/SUNUM.md`, görseller `docs/ekran/`)
+- [x] Sunum şablonu dolduruldu: `docs/Karavana_Sunum.pptx` (16 slayt, konuşma notlarıyla)
 - [ ] Repo herkese açık mı kontrol et, linki sunuma ekle
 - [x] Öğrenci indirimi: öğrenci başına giriş ücretinin `ayar.ogrenci_indirim_orani` kadarı (varsayılan %50), oturuma kopyalanır
 
@@ -38,7 +38,7 @@ Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum 
 | Sorgu performansı | – | 11 index (7'si kısmi); 6 sorguda index'li/index'siz ölçüm | `docs/PERFORMANS.md` |
 | Stored procedure | ≥ 2 | 16 | `04_procedures.sql`, `07_vip_kulup.sql` |
 | View | ≥ 5 | 15 | `03_views.sql`, `07_vip_kulup.sql` |
-| Kullanıcı tanımlı fonksiyon | ≥ 2 | 11 | `02_functions.sql` |
+| Kullanıcı tanımlı fonksiyon | ≥ 2 | 12 | `02_functions.sql`, `07_vip_kulup.sql` |
 | Yetkilendirme ve maskeleme | – | 4 grup rol + 4 login rolü, SECURITY DEFINER, maskeli view'lar, bcrypt | `05_security.sql`, `docs/YETKI.md` |
 | Ön yüz | – | React uygulaması, rol bazlı ekranlar | `app/web` |
 | Test | – | 62 DB + 12 API testi | `db/tests`, `app/api/test` |

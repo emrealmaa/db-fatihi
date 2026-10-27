@@ -31,9 +31,19 @@ Tarayıcıda `http://localhost:3001` → örnek personel: `yonetici`, `kasiyer`,
    ```
 
 ## Ekran görüntüleri
-[`docs/ekran/`](docs/ekran/README.md): masa panosu, VIP oyun reddi (veritabanı tetikleyicisi), raporlar ve simülasyonun üç katı.
 
-![VIP Kulüp (kat 3)](docs/ekran/10-simulasyon-kat3-vip.jpg)
+<table>
+<tr><td width="50%"><img src="docs/ekran/10-simulasyon-kat3-vip.jpg" alt="Kat 3 · VIP Kulüp (simülasyon): yıldız rozetli üyeler, VIP vitrin, şömine"><br><sub>Kat 3 · VIP Kulüp (simülasyon): yıldız rozetli üyeler, VIP vitrin, şömine</sub></td><td width="50%"><img src="docs/ekran/09-simulasyon-kat2-bistro.jpg" alt="Kat 2 · Strateji Salonu & Bistro: yemek asansörü, servis tezgâhı"><br><sub>Kat 2 · Strateji Salonu & Bistro: yemek asansörü, servis tezgâhı</sub></td></tr>
+<tr><td width="50%"><img src="docs/ekran/04-vip-oyun-reddi.jpg" alt="Standart müşteriye VIP oyun verilmeye çalışılınca veritabanı reddediyor"><br><sub>Standart müşteriye VIP oyun verilmeye çalışılınca veritabanı reddediyor</sub></td><td width="50%"><img src="docs/ekran/03-oyunlar-vip.jpg" alt="Oyunlar → VIP süzgeci: 10 ağır strateji oyunu"><br><sub>Oyunlar → VIP süzgeci: 10 ağır strateji oyunu</sub></td></tr>
+<tr><td width="50%"><img src="docs/ekran/01-masalar.jpg" alt="Masa panosu"><br><sub>Masa panosu</sub></td><td width="50%"><img src="docs/ekran/02-masalar-vip-kat.jpg" alt="Kat 3 · VIP Kulüp masaları"><br><sub>Kat 3 · VIP Kulüp masaları</sub></td></tr>
+<tr><td width="50%"><img src="docs/ekran/07-rapor-kat-geliri.jpg" alt="Raporlar → Kat geliri (v_kat_gelir)"><br><sub>Raporlar → Kat geliri (v_kat_gelir)</sub></td><td width="50%"><img src="docs/ekran/06-rapor-vip-oyunlar.jpg" alt="Raporlar → VIP oyunlar (v_vip_oyun_kullanimi)"><br><sub>Raporlar → VIP oyunlar (v_vip_oyun_kullanimi)</sub></td></tr>
+<tr><td width="50%"><img src="docs/ekran/08-simulasyon-kat1.jpg" alt="Kat 1 ve çevresindeki şehir (akşam)"><br><sub>Kat 1 ve çevresindeki şehir (akşam)</sub></td><td width="50%"><img src="docs/ekran/05-gun-sonu-fisi.jpg" alt="Simülasyon günü sonu fişi"><br><sub>Simülasyon günü sonu fişi</sub></td></tr>
+</table>
+
+Açıklamalı liste: [`docs/ekran/`](docs/ekran/README.md). Görüntüler `npm run db:kur` sonrası temiz seed üzerinde bir simülasyon günü çalıştırılarak alındı.
+
+## Sunum
+[`docs/Karavana_Sunum.pptx`](docs/Karavana_Sunum.pptx): proje sunumu (16 slayt, konuşma notlarıyla); içerik ve demo akışı [`docs/SUNUM.md`](docs/SUNUM.md).
 
 ## Komutlar
 | Komut | Ne yapar |
