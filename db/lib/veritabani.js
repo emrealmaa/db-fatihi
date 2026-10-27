@@ -34,6 +34,12 @@ export function ayarlar(env = process.env) {
     };
 }
 
+// Testler ayrı bir veritabanını (varsayılan karavana_test) her seferinde sıfırdan kurar; geliştirme veritabanına
+// (POSTGRES_DB, simülasyon verisi) dokunmaz. PGlite testleri zaten bellekte çalışır.
+export function testAyarlari(env = process.env) {
+    return { ...ayarlar(env), database: env.POSTGRES_TEST_DB || 'karavana_test', pgliteDizini: '' };
+}
+
 export function initDosyalari() {
     return fs.readdirSync(INIT_DIZINI)
         .filter((f) => /^\d+_.*\.sql$/.test(f))

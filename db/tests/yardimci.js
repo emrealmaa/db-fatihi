@@ -1,14 +1,15 @@
 // Test yardımcıları. Her test temiz bir veritabanıyla (06_seed verisiyle) başlar.
-// DB_SURUCU=pglite ise bellekte PGlite, değilse .env içindeki PostgreSQL kullanılır.
+// DB_SURUCU=pglite ise bellekte PGlite, değilse .env'deki PostgreSQL'de ayrı test veritabanı
+// (POSTGRES_TEST_DB, varsayılan karavana_test); geliştirme veritabanına dokunulmaz.
 import 'dotenv/config';
 import assert from 'node:assert/strict';
-import { ayarlar, baglan, kur } from '../lib/veritabani.js';
+import { baglan, kur, testAyarlari } from '../lib/veritabani.js';
 
 // 06_seed.sql'deki personel id'leri
 export const P = { yonetici: 1, kasiyer: 2, garson: 3, garson2: 4 };
 
 export async function yeniVt() {
-    const a = { ...ayarlar(), pgliteDizini: '' };
+    const a = testAyarlari();
     if (a.surucu === 'pg') await kur(a);
     const vt = await baglan(a);
     // Kısa yollar: rol adıyla tek sorgu

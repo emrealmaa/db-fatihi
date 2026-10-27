@@ -1,12 +1,13 @@
 // API uçtan uca testleri: giriş, rol kısıtları, hata çevirisi ve tam bir masa akışı.
-// Veritabanı: DB_SURUCU=pglite ise bellekte PGlite, değilse .env'deki PostgreSQL (sıfırdan kurulur).
+// Veritabanı: DB_SURUCU=pglite ise bellekte PGlite, değilse .env'deki PostgreSQL'de test veritabanı
+// (POSTGRES_TEST_DB, varsayılan karavana_test; sıfırdan kurulur, geliştirme veritabanına dokunulmaz).
 // Testler sırayla çalışır ve aynı veritabanını paylaşır (akış adım adım ilerler).
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
-import { ayarlar, baglan, kur } from '../../../db/lib/veritabani.js';
+import { baglan, kur, testAyarlari } from '../../../db/lib/veritabani.js';
 import { uygulamaOlustur } from '../src/uygulama.js';
 
 // npm workspace testleri app/api klasöründe çalıştırır; .env kök dizinde (sunucu.js ile aynı)
@@ -16,7 +17,7 @@ let vt, sunucu, adres;
 const token = {};
 
 before(async () => {
-    const a = { ...ayarlar(), pgliteDizini: '' };
+    const a = testAyarlari();
     if (a.surucu === 'pg') await kur(a);
     vt = await baglan(a);
     const app = uygulamaOlustur({ vt, gizliAnahtar: 'test', log: () => {} });
