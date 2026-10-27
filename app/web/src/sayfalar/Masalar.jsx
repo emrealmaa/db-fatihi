@@ -4,7 +4,7 @@ import { al, gonder, sil } from '../api.js';
 import { useUygulama } from '../baglam.jsx';
 import { useSimdi, useVeri } from '../kancalar.js';
 import { gecenSure, KAT_ADI, kalanSure, saatBicim } from '../bicim.js';
-import { Adet, Durum, Etiket, Modal, SayfaBaslik } from '../bilesenler/ortak.jsx';
+import { Adet, Durum, Etiket, Modal, SayfaBaslik, VipRozet } from '../bilesenler/ortak.jsx';
 import OyunSecici from '../bilesenler/OyunSecici.jsx';
 import SiparisPaneli from '../bilesenler/SiparisPaneli.jsx';
 import HesapPaneli from '../bilesenler/HesapPaneli.jsx';
@@ -32,13 +32,14 @@ export default function Masalar() {
             <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!veri?.length} bosMesaj="Tanımlı masa yok">
                 {[1, 2, 3].filter((k) => veri?.some((m) => m.kat === k)).map((k) => (
                 <section key={k} className="kat-bolum">
-                <h2>{KAT_ADI[k]}</h2>
+                <h2>{KAT_ADI[k]}{veri.some((m) => m.kat === k && m.vip_masa) && <VipRozet baslik="Bu katta yalnızca VIP üyeler oturabilir" />}</h2>
                 <div className="masa-izgara">
                     {veri.filter((m) => m.kat === k).map((m) => {
                         const d = masaDurumu(m);
                         return (
-                            <button key={m.masa_id} className={`masa-kart masa-${d.tur}`} onClick={() => setSeciliNo(m.masa_no)}>
+                            <button key={m.masa_id} className={`masa-kart masa-${d.tur}${m.vip_masa ? ' masa-vip' : ''}`} onClick={() => setSeciliNo(m.masa_no)}>
                                 <span className="masa-no">Masa {m.masa_no}</span>
+                                {m.vip_masa && <VipRozet baslik="VIP masa: yalnızca VIP üyeler oturabilir" />}
                                 <span className="masa-durum">{d.metin}</span>
                                 {m.durum === 'BOS' ? (
                                     <span className="soluk">{m.kapasite} kişilik</span>
@@ -201,6 +202,7 @@ function MasaOyun({ masa, yenile }) {
                 <div><dt>Kişi</dt><dd>{masa.kisi_sayisi}/{masa.kapasite}</dd></div>
                 <div><dt>Açılış</dt><dd>{saatBicim(masa.acilis)} ({gecenSure(masa.acilis)})</dd></div>
                 <div><dt>Oyun</dt><dd>{masa.oynanan_oyun || '–'}</dd></div>
+                <div><dt>Üyelik</dt><dd>{masa.musteri_vip ? <VipRozet baslik="VIP Kulüp üyesi: VIP oyunları oynayabilir" /> : 'Standart'}</dd></div>
             </dl>
 
             {masa.oynanan_oyun && (
@@ -239,7 +241,7 @@ function MasaOyun({ masa, yenile }) {
             {!masa.oynanan_oyun && masa.bekleme_durumu !== 'SECIM_HAKKI' && (
                 <>
                     <h3>{masa.bekleme_durumu ? 'Beklerken başka bir oyun başlat' : 'Oyun başlat'}</h3>
-                    <OyunSecici kisiSayisi={masa.kisi_sayisi} sec={oyunBaslat}
+                    <OyunSecici kisiSayisi={masa.kisi_sayisi} sec={oyunBaslat} vipUye={masa.musteri_vip}
                                 siraya={masa.bekleme_durumu ? null : siraya} bekliyor={bekliyor} />
                 </>
             )}

@@ -5,8 +5,9 @@ Seçilen yol: **PostgreSQL (RDBMS)**. Puan kriterleri `docs/ROADMAP.md` içinde.
 
 ## Komutlar
 - Bağımlılıklar: `npm install` (kök dizinde; workspaces: `app/api`, `app/web`)
-- Veritabanını sıfırdan kur: `npm run db:kur` (`.env` içindeki PostgreSQL; yerel kurulum veya Docker)
-- Testler: `npm run db:test` (PostgreSQL) / `npm run db:test:lite` (kurulumsuz PGlite)
+- Geliştirme verisini sıfırla: `npm run db:kur` (`.env`'deki `POSTGRES_DB` = karavana silinip yeniden kurulur; simülasyon verisi gider)
+- Silmeden migration: `npm run db:goc` (07 ve sonrası; eklemeli dosyalar)
+- Testler: `npm run db:test` (PostgreSQL, ayrı `karavana_test` / `POSTGRES_TEST_DB`; karavana'ya dokunmaz) / `npm run db:test:lite` (kurulumsuz PGlite)
 - Docker ile: `make up DB=postgres` (port **5433**); sıfırlama `make reset && make up DB=postgres`
 - Shell: `psql -U postgres karavana` (yerel) veya `docker compose exec postgres psql -U app karavana`
 - Rol testi: `psql -U garson_app karavana` (parola `garson_dev_pw`)
@@ -18,5 +19,5 @@ Seçilen yol: **PostgreSQL (RDBMS)**. Puan kriterleri `docs/ROADMAP.md` içinde.
 - Uygulama rolleri tablolara doğrudan erişmez: view okur, `sp_*` prosedürlerini çağırır (bkz. `docs/ARCHITECTURE.md`).
 - Kullanıcı verisi (ad, e-posta, telefon) garson/kasiyer için daima maskeli view'dan okunur.
 - Yeni iş kuralı önce constraint/trigger olarak veritabanında yazılır, uygulama katmanı tekrar etmez.
-- Postgres sürümü 15 (yerelde mevcut imaj). 17'ye geçilirse compose'ta değiştir.
+- Postgres sürümü 18 (yerel kurulum ve Docker `postgres:18`). Eski 15 Docker volume'u varsa `make reset`.
 - `.env` git'e girmez; parolalar yalnızca geliştirme içindir.

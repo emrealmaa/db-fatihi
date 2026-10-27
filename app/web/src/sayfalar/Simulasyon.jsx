@@ -13,6 +13,7 @@ import {
     DOGAL_G, DOGAL_Y, gorunurAlan, kapakCiz, nesneBul, pikselBaglami, ruhHali, sahneCiz, ustKatmanCiz,
 } from '../simulasyon/cizim.js';
 import { KATLAR } from '../simulasyon/harita.js';
+import { VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
 
 const HIZLAR = [1, 2, 4, 10];
 const YAKINLIK = { min: 0.6, max: 5 };
@@ -337,7 +338,7 @@ function GarsonPaneli({ ozet }) {
             <ul className="sim-garsonlar">
                 {ozet.garsonlar.map((w) => (
                     <li key={w.id}>
-                        <div className="satir arasi"><strong>{w.ad}</strong><small>Kat {w.kat}</small></div>
+                        <div className="satir arasi"><strong>{w.ad}{w.vip && <VipRozet baslik="VIP Kulüp servisi" />}</strong><small>Kat {w.kat}</small></div>
                         <div className={`sim-gorev ${w.durum === 'Boşta' ? 'bos' : ''}`}>{w.durum}</div>
                         <dl>
                             <dt>Hız</dt><dd><Yildiz n={Math.round(w.stat.hiz - 1)} /></dd>
@@ -358,7 +359,7 @@ function GarsonPaneli({ ozet }) {
                     </li>
                 ))}
             </ul>
-            <p className="sim-soluk">Bekleyen fiş: {ozet.mutfak.bekleyen} · tezgahta hazır: {ozet.mutfak.hazir}</p>
+            <p className="sim-soluk">Bekleyen fiş: {ozet.mutfak.bekleyen} · yemek asansöründe: {ozet.mutfak.asansorde} · tezgahta hazır: {ozet.mutfak.hazir}</p>
             <h2>Son olaylar</h2>
             <OlayGunlugu kayitlar={ozet.kayitlar.slice(0, 8)} basliksiz />
         </>
@@ -449,7 +450,7 @@ function MasaDetay({ motor, masaId, kapat }) {
     if (!b) return null;
     const oyunAdi = b.oyun || b.bekledigiOyun;
     return (
-        <SimPencere baslik={`Masa ${b.masaNo} · Kat ${b.kat}${b.vip ? ' · VIP' : ''}`} kapat={kapat} genis>
+        <SimPencere baslik={`Masa ${b.masaNo} · Kat ${b.kat}${b.vip ? ' · VIP Kulüp' : ''}`} kapat={kapat} genis>
             <div className="sim-detay-ust">
                 {oyunAdi ? <Kapak ad={oyunAdi} no={b.oyunId ?? oyunAdi.length} /> : <div className="sim-kapak bos">Oyun yok</div>}
                 <div>
@@ -475,6 +476,7 @@ function MasaDetay({ motor, masaId, kapat }) {
                     {b.ogrenci > 0 && <span className="sim-ogrenci">🎓 {b.ogrenci} öğrenci · giriş yarı fiyat</span>}</dd>
                 <dt>Siparişler</dt><dd>{toplu.length ? toplu.map(([u, a]) => `${a}× ${u}`).join(', ') : '–'}
                     {b.bekleyenSiparis && <div className="sim-uyari">Bekleyen istek: {b.bekleyenSiparis}</div>}</dd>
+                <dt>Üyelik</dt><dd>{b.kisi ? (b.vipUye ? <VipRozet baslik="VIP Kulüp üyesi" /> : 'Standart') : '–'}</dd>
                 <dt>Garson</dt><dd>{b.garson || '–'}</dd>
                 <dt>Son servis</dt><dd>{b.sonServis ? `${b.sonServis.saat} · ${b.sonServis.garson}` : '–'}</dd>
                 <dt>Kalış süresi</dt><dd>{b.kalisDk != null ? `${b.kalisDk} dk` : '–'}</dd>
@@ -541,15 +543,20 @@ function Kutuphane({ motor, kapat }) {
         const t = setInterval(() => yenile((x) => x + 1), 1000);
         return () => clearInterval(t);
     }, []);
-    const oyunlar = [...motor.oyunlar].sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
+    const [tur, setTur] = useState('');
+    const oyunlar = motor.oyunlar.filter((o) => vipSuzgecUyar(tur, o)).sort((a, b) => a.ad.localeCompare(b.ad, 'tr'));
     return (
         <SimPencere baslik="Oyun kütüphanesi" kapat={kapat} genis>
+            <div className="segmentli" role="group" aria-label="Oyun türü">
+                {VIP_SUZGEC.map(([k, ad]) => <button key={k} className={tur === k ? 'secili' : ''} aria-pressed={tur === k} onClick={() => setTur(k)}>{ad}</button>)}
+            </div>
             <table className="sim-tablo">
                 <thead><tr><th>Oyun</th><th>Kategori</th><th>Kişi</th><th>Rafta</th><th>Sırada</th></tr></thead>
                 <tbody>
                     {oyunlar.map((o) => (
                         <tr key={o.oyun_id}>
-                            <td><strong>{o.ad}</strong></td><td>{o.kategori}</td><td>{o.min_oyuncu}–{o.max_oyuncu}</td>
+                            <td><strong>{o.ad}</strong>{o.vip_ozel && <VipRozet />}{o.vip_ozel && <span className="vip-not">Sadece VIP üyeler oynayabilir</span>}</td>
+                            <td>{o.kategori}</td><td>{o.min_oyuncu}–{o.max_oyuncu}</td>
                             <td className={o.alinabilir_adet ? '' : 'sim-uyari'}>{o.alinabilir_adet}/{o.toplam_adet}</td>
                             <td>{o.bekleyen_masa || '–'}</td>
                         </tr>

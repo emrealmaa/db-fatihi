@@ -10,16 +10,27 @@ veriyle dolar. Kurallar (kapasite, oyun sırası, stok, ödeme) veritabanında u
 |---|---|---|---|
 | 1 | Giriş & Espresso Bar | 10: bar önü ve duvar kenarlarında 6 × 2 kişilik, iç salonda 4 × 4 kişilik; mutfağın önü boş | Kapı ve paspas, kasa ve kasiyer, vitrinli espresso barı, menü tabelası, bekleme alanı (koltuk) |
 | 1 | (ek) | – | **Mutfak**: ocak, fırın, buzdolabı, evye, hazırlık tezgahı, ısıtıcı lambalı servis tezgahı; şef ve yardımcı şef |
-| 2 | Strateji & Kütüphane Salonu | 10 (4–6 kişilik) | Kuzey duvarında tek, şık kitaplık; batı duvarında neon halı üstünde 4 **retro atari kabini** (yanıp sönen ekran), doğu duvarında 2 **tilt (pinball)** makinesi, yeni oyunlar standı, okuma köşesi, oyun barı, loş ışık |
-| 3 | VIP & FRP Özel Bölgesi | 4 ferah (6–8 kişilik) | Batı duvarından ayrık, zeminden **iki kademeyle yükselen yarım daire VIP sahnesi** (arkasında kırmızı kadife perdeli kulis, kenarında yanıp sönen ışıklar, önünde loş pembe ışık havuzu; masalar etrafında yay çizer): şarkıcı, gitarist, piyanist, amfiler ve renkli spot ışıkları; boyalı nadir FRP figür kaideleri (ejderha, şövalye, büyücü), koleksiyon vitrinleri, tablolar; FRP harita masaları, deri koltuklar, VIP ışığı |
+| 2 | Strateji Salonu & Bistro | 10 (4–6 kişilik) | Kuzey duvarında uzun oyun kütüphanesi rafı; batı duvarında siyah-beyaz dama zeminli **bistro köşesi**: kat 1 mutfağından **yemek asansörü** (içinde tepsi, çağrı lambası), turuncu ısıtıcı lambalı servis tezgâhı (gelen tabaklar), duvarda kara tahta menü; her yeşil çuhalı masanın üstünde **sarkıt lamba** ve masaya düşen ışık halkası; doğu duvarında sokağa ve bahçeye bakan pencereler, aralarında **turnuva panosu** (bugün en çok oynanan oyunlar, oyun renginde skor çubukları); iki koltuk, sehpa ve ayaklı lambalı okuma köşesi, saksılar, yeşil duvar + ahşap lambri, oyun barı |
+| 3 | VIP Kulüp (yalnızca VIP üyeler) | 5 (2–8 kişilik) | Koyu ahşap zemin, bordo baklava desenli duvar kâğıdı + koyu ahşap lambri + **altın şerit**, altın kenarlı bordo halılar, loş sıcak ışık. Asansör önünde **kadife bariyer** (altın direkler, kırmızı ip), karşılama kürsüsü ve siyah takımlı **host**. Ortada **avizeli** büyük ağır strateji masası, ikili masa (2 kişilik oyunlar), iki geniş yuvarlak masa; batı duvarında titreşen ateşli **şömine**, önünde chesterfield kanepe, deri koltuk ve sehpa; altında yüksek sırtlı, **kadife perdeli özel loca**; kuzeyde camlı altın çerçeveli **VIP oyun vitrini** (veritabanındaki VIP oyunların kutuları, masadaki oyunun yeri boş), şişe raflı koyu ahşap **VIP bar** ve bar tabureleri; piyano başında piyanist; altın çerçeveli tablolar, saksılar |
 
 Kat 1 ve 2 **organik** yerleşimlidir: masalar elle düzensiz konumlara yerleştirildi, her masanın sandalye halkası ile komşusununki
 arasında en az bir karo yürüme boşluğu vardır (yerleşim denetimi betikle doğrulandı). 1x1 masalar 2 veya 4, 2x1 masalar 6 kişiliktir;
 veritabanındaki masalar kapasitelerine uyan en küçük yuvaya yerleşir. Masalar, sandalyeler ve karakterler (%25 büyütülmüş sprite) daha
 büyük çizilir.
 
-VIP (kat 3) grupları daha uzun oynar (×1.4), daha sık ve bol sipariş verir (en fazla 6 sipariş, kalem başına 1–3 adet)
-ve ikinci/üçüncü oyuna kalma olasılıkları daha yüksektir.
+**VIP Kulüp.** Gelen grupların `VIP_GRUP_ORANI` (%14) kadarı VIP üyedir (2–8 kişi). Kaydı garson adına `sp_musteri_kaydet`,
+üyeliği yönetici prosedürü `sp_musteri_vip` ile yazılır (simülasyonu yönetici çalıştırır). VIP grup kulüpte yer varsa kuyruğu
+beklemeden kat 3'e çıkar; kulüp doluysa `VIP_BEKLEME_DK` (8 dk) bekler, sonra alt katlarda standart masaya oturur. Oyun seçerken
+`VIP_OYUN_OLASILIGI` (%75) ile rafta olan bir **VIP oyun** ister, yoksa standart oyun oynar. Standart gruplar VIP oyunları ve VIP
+katını hiç görmez (seçim havuzunda süzülür); veritabanındaki tetikleyiciler (`trg_vip_oyun_kontrol`, `trg_vip_kat_kontrol`) son
+güvencedir. Standart grup boyu, VIP katı dışındaki en büyük masaya göre sınırlanır. VIP gruplar daha uzun oynar (×1.4), daha sık
+ve bol sipariş verir (en fazla 6 sipariş, kalem başına 1–3 adet), ikinci/üçüncü oyuna kalma olasılıkları daha yüksektir; liderin
+başında **altın yıldız** rozeti görünür. Kat 3 garsonu VIP servisi yapar (siyah yelek, altın papyon).
+
+**Yemek asansörü.** Kat 2 ve 3'teki yemek siparişleri (mutfak kategorileri: `urun_kategori.mutfak`) kat 1 mutfağına fiş olarak
+düşer; şef pişirir (`PISIRME`: tabak başına 4 + kalem başına 1,5 dk, içeceklerden uzun), tabak `YEMEK_ASANSORU_DK` (1,5 dk) içinde
+yemek asansörüyle çıkar; garson kendi katındaki servis tezgâhında bekler ("Masa 19 için yemek asansörüne", "Yemek asansöründe
+VIP masa 5 tabağını bekliyor"), tabağı alıp masaya götürür.
 
 Masalar `masa.kat` sütununa göre yerleşir (her katta `masa_no` sırasıyla yuvalara). Yerleşim `app/web/src/simulasyon/harita.js` içinde.
 
@@ -193,20 +204,21 @@ daraltmayalım"), servis sonrası teşekkürler ve bekleme türüne göre sabır
 - **Oda kutusu:** her kat, altında katmanlı kesiti görünen kalın bir **zemin plakası** üzerinde durur; arka duvarlar kalın
   kutulardır (üst kesit ve açık uçlarda duvar kesiti görünür), iç köşede ve süpürgelik hizasında ortam gölgesi vardır.
 - **Zemin dokuları:** kat 1 açık, kat 2 koyu **ahşap parke** (karo başına üç tahta, şaşırtmalı ek yerleri, parlama çizgileri);
-  kat 3 **derin mor desenli halı** (baklava motifleri, altın noktalar, çift bordür).
-- **Gölgeler:** masa, sandalye, bar, mutfak ekipmanı, atari ve pinball, kitaplık, asansör ve sahnenin altında iki katmanlı
+  kat 3 **koyu ahşap parke** üstünde altın kenarlı bordo halılar (baklava motifleri, altın noktalar, çift bordür).
+- **Gölgeler:** masa, sandalye, bar, mutfak ekipmanı, kitaplık, vitrin, şömine ve asansörün altında iki katmanlı
   yumuşak zemin gölgesi.
 - **Hacimli mobilya:** masalarda kalın ayaklar, etek tahtası ve kalın tabla; sandalyelerde dört ayak, ince oturak ve iki
   dikmeli, latalı sırtlık (arası boş); barda pirinç ayak barı ve süpürgelik.
-- **Kat 2:** kaideli, girintili kitaplık (dikmeler, raf tahtaları); atari kabinlerinde ekrandan öne **çıkıntı yapan kontrol
-  paneli** (joystick, düğmeler), ekran ve başlık ışıması ile zeminde renkli yansıma; pinball arka kutusu ışıması.
+- **Kat 2:** kaideli, girintili kitaplık (dikmeler, raf tahtaları); bistro tezgâhının ısıtıcı lambaları ve sarkıt lambaların
+  loş salonda sıcak ışık halkaları. **Kat 3:** şöminede titreşen ateş ve ışığı, avize mumları, kadife bariyerde sarkan ip.
+  Duvara asılı nesneler (turnuva panosu) yalnızca duvarları kameraya göre arkadayken görünür.
 - **Asansör:** çelik dikmeler arasında cam paneller; camdan ışıklı kabin, halatlar ve yansımalar görünür, kabin hafifçe hareket
   eder. **Kat geçişinde** kamera geri çekilir, eski kat kayarak çıkar, yenisi karşı yönden gelir ve kuyudaki döşeme kirişleri
   hareket yönünün tersine akar.
 
 ## Mobilya ve atmosfer
 - **Masalar:** dört ayak + köşeleri yumuşatılmış ahşap tabla (damarlı) + oyun matı: kat 1 krem örtü, kat 2 yeşil keçe,
-  kat 3 kırmızı örtü veya FRP harita masası.
+  kat 3 koyu yeşil çuha veya harita desenli büyük masa (üstünde avize).
 - **Masadaki oyun:** oynanan oyuna özel minyatürler — Catan altıgen karolar, ahşap yollar ve yerleşimler; Carcassonne karoları,
   kale ve meeple'lar; Ticket to Ride haritası, tren hatları ve kart destesi; Codenames kart ızgarası; Dixit resim kartları ve
   tavşan piyon; Uno desteleri; Pandemic salgın haritası ve küpler; Azul fabrika diskleri; Splendor mücevher fişleri; 7 Wonders

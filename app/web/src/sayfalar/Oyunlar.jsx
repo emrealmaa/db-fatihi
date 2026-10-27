@@ -1,7 +1,7 @@
-// Oyun kataloğu: müsait adetler, kişi sayısı ve kategoriye göre filtre
+// Oyun kataloğu: müsait adetler, kişi sayısı, kategori ve VIP/standart süzgeci
 import { useMemo, useState } from 'react';
 import { useVeri } from '../kancalar.js';
-import { Durum, Etiket, SayfaBaslik } from '../bilesenler/ortak.jsx';
+import { Durum, Etiket, SayfaBaslik, VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
 
 export default function Oyunlar() {
     const { veri, hata, yukleniyor } = useVeri('/oyunlar', { aralik: 10000 });
@@ -9,6 +9,7 @@ export default function Oyunlar() {
     const [kisi, setKisi] = useState('');
     const [kategori, setKategori] = useState('');
     const [musaitMi, setMusaitMi] = useState(false);
+    const [tur, setTur] = useState('');
 
     const kategoriler = useMemo(() => [...new Set((veri || []).map((o) => o.kategori))].sort((a, b) => a.localeCompare(b, 'tr')), [veri]);
     const liste = useMemo(() => {
@@ -18,15 +19,21 @@ export default function Oyunlar() {
             (!a || o.ad.toLocaleLowerCase('tr').includes(a))
             && (!k || (k >= o.min_oyuncu && k <= o.max_oyuncu))
             && (!kategori || o.kategori === kategori)
-            && (!musaitMi || o.musait_adet > 0));
-    }, [veri, ara, kisi, kategori, musaitMi]);
+            && (!musaitMi || o.musait_adet > 0)
+            && vipSuzgecUyar(tur, o));
+    }, [veri, ara, kisi, kategori, musaitMi, tur]);
 
     const toplamKopya = veri?.reduce((t, o) => t + o.toplam_adet, 0) ?? 0;
     const masada = veri?.reduce((t, o) => t + (o.toplam_adet - o.musait_adet), 0) ?? 0;
+    const vipSayisi = veri?.filter((o) => o.vip_ozel).length ?? 0;
 
     return (
         <>
-            <SayfaBaslik baslik="Oyunlar" aciklama={veri ? `${veri.length} oyun · ${toplamKopya} kopya · ${masada} kopya masada` : ''} />
+            <SayfaBaslik baslik="Oyunlar" aciklama={veri ? `${veri.length} oyun (${vipSayisi} VIP) · ${toplamKopya} kopya · ${masada} kopya masada` : ''}>
+                <div className="segmentli" role="group" aria-label="Oyun türü">
+                    {VIP_SUZGEC.map(([k, ad]) => <button key={k} className={tur === k ? 'secili' : ''} aria-pressed={tur === k} onClick={() => setTur(k)}>{ad}</button>)}
+                </div>
+            </SayfaBaslik>
             <div className="filtreler">
                 <input type="search" placeholder="Oyun ara…" value={ara} onChange={(e) => setAra(e.target.value)} aria-label="Oyun ara" />
                 <input type="number" min="1" max="20" placeholder="Kişi sayısı" value={kisi} onChange={(e) => setKisi(e.target.value)} aria-label="Kişi sayısı" />
@@ -42,7 +49,10 @@ export default function Oyunlar() {
                     <tbody>
                         {liste.map((o) => (
                             <tr key={o.oyun_id}>
-                                <td><strong>{o.ad}</strong></td>
+                                <td>
+                                    <strong>{o.ad}</strong>{o.vip_ozel && <VipRozet />}
+                                    {o.vip_ozel && <span className="vip-not">Sadece VIP üyeler oynayabilir</span>}
+                                </td>
                                 <td>{o.kategori}</td>
                                 <td>{o.min_oyuncu}–{o.max_oyuncu}</td>
                                 <td>{o.sure_dk} dk</td>

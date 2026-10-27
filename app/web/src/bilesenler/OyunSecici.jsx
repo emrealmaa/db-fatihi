@@ -1,10 +1,11 @@
 // Oyun seçimi. Alınabilir kopyası olan uygun oyun doğrudan başlatılır; kopyası kalmayan
-// (veya sıradaki masalara ayrılmış) uygun oyun için "Sıraya gir" çıkar.
+// (veya sıradaki masalara ayrılmış) uygun oyun için "Sıraya gir" çıkar. VIP oyunlar rozetle işaretlidir;
+// VIP olmayan masada denenirse veritabanı reddeder ve anlaşılır hata mesajı gösterilir.
 import { useMemo, useState } from 'react';
 import { useVeri } from '../kancalar.js';
-import { Durum } from './ortak.jsx';
+import { Durum, VipRozet } from './ortak.jsx';
 
-export default function OyunSecici({ kisiSayisi, sec, siraya, bekliyor }) {
+export default function OyunSecici({ kisiSayisi, sec, siraya, bekliyor, vipUye }) {
     const { veri, hata, yukleniyor } = useVeri('/oyunlar', { aralik: 5000 });
     const [ara, setAra] = useState('');
     const [hepsi, setHepsi] = useState(false);
@@ -36,7 +37,8 @@ export default function OyunSecici({ kisiSayisi, sec, siraya, bekliyor }) {
                     {liste.map((o) => (
                         <li key={o.oyun_id} className="oyun-satir-kap">
                             <div className={`oyun-satir ${o.uygun ? '' : 'pasif'}`}>
-                                <span className="oyun-ad">{o.ad}</span>
+                                <span className="oyun-ad">{o.ad}{o.vip_ozel && <VipRozet />}</span>
+                                {o.vip_ozel && !vipUye && <span className="vip-not">Sadece VIP üyeler oynayabilir</span>}
                                 <span className="soluk">
                                     {o.kategori} · {o.min_oyuncu}–{o.max_oyuncu} kişi · {o.sure_dk} dk
                                     {o.bekleyen_masa > 0 && ` · sırada ${o.bekleyen_masa} masa`}

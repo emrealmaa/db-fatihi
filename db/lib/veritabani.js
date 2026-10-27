@@ -34,6 +34,12 @@ export function ayarlar(env = process.env) {
     };
 }
 
+// Testler ayrı bir veritabanını (varsayılan karavana_test) her seferinde sıfırdan kurar; geliştirme veritabanına
+// (POSTGRES_DB, simülasyon verisi) dokunmaz. PGlite testleri zaten bellekte çalışır.
+export function testAyarlari(env = process.env) {
+    return { ...ayarlar(env), database: env.POSTGRES_TEST_DB || 'karavana_test', pgliteDizini: '' };
+}
+
 export function initDosyalari() {
     return fs.readdirSync(INIT_DIZINI)
         .filter((f) => /^\d+_.*\.sql$/.test(f))
@@ -151,6 +157,34 @@ export async function kur(a = ayarlar(), secenek = {}) {
         return;
     }
     await pgKur(a, secenek);
+}
+
+// Eklemeli migration'lar (GOC_BASLANGIC ve sonrası): veritabanını silmeden yalnızca bu dosyaları uygular.
+// Dosyalar tekrar çalıştırılabilir yazılır (IF NOT EXISTS / OR REPLACE / ON CONFLICT).
+export const GOC_BASLANGIC = 7;
+export async function goc(a = ayarlar(), { log = () => {} } = {}) {
+    const dosyalar = initDosyalari().filter((f) => parseInt(f.ad, 10) >= GOC_BASLANGIC);
+    if (a.surucu === 'pglite') {
+        if (!a.pgliteDizini) throw new Error('PGlite bellekteyken göç anlamsız: PGLITE_DIZINI verin');
+        const { PGlite } = await import('@electric-sql/pglite');
+        const { pgcrypto } = await import('@electric-sql/pglite/contrib/pgcrypto');
+        const db = await PGlite.create({ dataDir: a.pgliteDizini, extensions: { pgcrypto } });
+        try {
+            for (const f of dosyalar) { log(`  ${f.ad}`); await db.exec(f.sql); }
+        } finally {
+            await db.close();
+        }
+        return;
+    }
+    const { default: pg } = await import('pg');
+    const db = new pg.Client({ host: a.host, port: a.port, user: a.adminKullanici,
+        password: a.adminParola, database: a.database });
+    await db.connect();
+    try {
+        for (const f of dosyalar) { log(`  ${f.ad}`); await db.query(f.sql); }
+    } finally {
+        await db.end();
+    }
 }
 
 // Var olan veritabanına bağlanır. PGlite bellekteyse (veya dizin boşsa) önce kurar.

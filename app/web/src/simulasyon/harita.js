@@ -18,14 +18,11 @@ export const MUTFAK = {
     tezgah: { gx: 12, gy: 1 },
     alis: { gx: 11, gy: 3 },
 };
-// Kat 3 sahnesi: müzisyenlerin yeri (sahne yüksekliği SAHNE_Z piksel)
-export const SAHNE_Z = 8;
-// Yarım daire sahne: batı duvarından ayrık, zeminden iki kademeyle yükselen platform. Merkez (cx, cy), üst kademe
-// yarıçapı r, alt basamak halkası r + basamak. Arkası (duvar ile düz kenar arası) kulis, kadife perdeyle kapalı.
-export const SAHNE = { cx: 2, cy: 8, r: 3.2, basamak: 0.45 };
-export const MUZISYENLER = [
-    { rol: 'sarkici', gx: 3.8, gy: 7.5 }, { rol: 'gitarist', gx: 3.0, gy: 5.8 }, { rol: 'piyanist', gx: 3.4, gy: 9.2 },
-];
+// VIP Kulüp (kat 3): yalnızca VIP üyeler oturur (veritabanında ayar.vip_kat + tetikleyici); kulüpte canlı piyano
+export const VIP_KAT = 3;
+export const MUZISYENLER = [{ rol: 'piyanist', gx: 16, gy: 13 }];
+// VIP girişindeki karşılama görevlisi (kadife bariyerin yanında, kürsünün arkasında)
+export const HOST = { gx: 19, gy: 4 };
 // Kat 1 girişi: ön cephedeki kapı (x = 2..3). KAPI kaldırımdaki kapı önü, KAPI_IC içerideki ilk karo.
 export const KAPI = { gx: 2, gy: 17 };
 export const KAPI_IC = { gx: 2, gy: 15 };
@@ -67,11 +64,22 @@ const kat1Masalar = [
 ];
 export const MUTFAK_ONU = { gx: 10, gy: 3, gw: 7, gd: 4 };
 
+// Kat 2 strateji masaları: her birinin üstünde sarkıt lamba (yuva.lamba)
 const kat2Masalar = [
     { gx: 3, gy: 3, gw: 2, gd: 1 }, { gx: 8, gy: 4, gw: 1, gd: 1 }, { gx: 12, gy: 3, gw: 2, gd: 1 },
     { gx: 4, gy: 8, gw: 1, gd: 1 }, { gx: 8, gy: 8, gw: 2, gd: 1 }, { gx: 13, gy: 7, gw: 1, gd: 1 },
     { gx: 17, gy: 7, gw: 1, gd: 1 }, { gx: 3, gy: 12, gw: 2, gd: 1 }, { gx: 8, gy: 12, gw: 1, gd: 1 },
     { gx: 13, gy: 12, gw: 2, gd: 1 },
+].map((y) => ({ ...y, lamba: 'sarkit' }));
+
+// Kat 3 VIP masaları: ortada avizeli büyük ağır strateji masası, ikili masa (Twilight Struggle gibi 2 kişilikler için).
+// tercih: yuvanın tasarlandığı kapasite (veritabanındaki 8'likler geniş yuvarlak masalara, 2'lik ikili masaya)
+const kat3Masalar = [
+    { gx: 8, gy: 6, gw: 3, gd: 2, sekil: 'harita', tercih: 6, lamba: 'avize' },
+    { gx: 13, gy: 4, gw: 2, gd: 2, sekil: 'yuvarlak', tercih: 6 },
+    { gx: 13, gy: 9, gw: 3, gd: 2, sekil: 'yuvarlak', tercih: 8 },
+    { gx: 8, gy: 12, gw: 3, gd: 2, sekil: 'yuvarlak', tercih: 8 },
+    { gx: 5, gy: 13, gw: 1, gd: 1, tercih: 2 },
 ];
 
 export const KATLAR = {
@@ -136,85 +144,88 @@ export const KATLAR = {
         ],
     },
     2: {
-        ad: 'Strateji & Kütüphane Salonu',
+        ad: 'Strateji Salonu & Bistro',
         zemin: 'koyu',
         isik: 0.18,
         nesneler: [
-            // tek duvarda (kuzey) şık kitaplık
+            // kuzey duvarı: uzun oyun kütüphanesi rafı
             { tur: 'kitaplik', gx: 2, gy: 0, gw: 12, gd: 1, h: 52 },
-            // batı duvarı: retro atari kabinleri (ekran doğuya bakar) ve yeni oyunlar standı
-            { tur: 'atari', gx: 0, gy: 3, gw: 1, gd: 1, h: 48, on: 'D', renk: '#7b2d8b' },
-            { tur: 'atari', gx: 0, gy: 5, gw: 1, gd: 1, h: 48, on: 'D', renk: '#c0392b' },
-            { tur: 'atari', gx: 0, gy: 7, gw: 1, gd: 1, h: 48, on: 'D', renk: '#2b6cb0' },
-            { tur: 'atari', gx: 0, gy: 9, gw: 1, gd: 1, h: 48, on: 'D', renk: '#e07b39' },
+            // batı duvarı: bistro servis köşesi — kat 1 mutfağından yemek asansörü, ısıtıcı lambalı servis tezgâhı
+            { tur: 'yemekasansoru', gx: 0, gy: 2, gw: 1, gd: 1, h: 46, on: 'D' },
+            { tur: 'bistrotezgah', gx: 0, gy: 3, gw: 1, gd: 3, h: 20, isik: { r: 70, rgb: '255,150,60', a: 0.22 } },
             { tur: 'oyunstandi', gx: 0, gy: 13, gw: 1, gd: 1, h: 30 },
-            // doğu duvarı: tilt (pinball) makineleri (oyuncu batıya bakar)
-            { tur: 'pinball', gx: 19, gy: 3.6, gw: 1, gd: 1.8, h: 14, on: 'B', renk: '#d94f3d' },
-            { tur: 'pinball', gx: 19, gy: 8.6, gw: 1, gd: 1.8, h: 14, on: 'B', renk: '#2bb0a8' },
             { tur: 'bar', gx: 15, gy: 15, gw: 4, gd: 1, h: 22 },
             { tur: 'lamba', gx: 16, gy: 4, gw: 1, gd: 1, h: 40 },
+            // doğu duvarına asılı turnuva panosu (bugün en çok oynanan oyunlar); duvar arkada kalınca görünür
+            { tur: 'turnuva', gx: 19.86, gy: 7.2, gw: 0.14, gd: 2.6, h: 0, duvar: 'D', engelsiz: true },
+            // okuma köşesi: iki koltuk, sehpa, ayaklı lamba
+            { tur: 'okumakoltugu', gx: 18, gy: 10, gw: 1, gd: 1, h: 10 }, { tur: 'okumakoltugu', gx: 18, gy: 12, gw: 1, gd: 1, h: 10 },
+            { tur: 'sehpa', gx: 17.15, gy: 11.15, gw: 0.7, gd: 0.7, h: 9 },
             { tur: 'lamba', gx: 16, gy: 10, gw: 1, gd: 1, h: 40 },
-            { tur: 'bitki', gx: 18, gy: 13, gw: 1, gd: 1, h: 18 },
-            // okuma köşesi
-            { tur: 'okumakoltugu', gx: 18, gy: 11, gw: 1, gd: 1, h: 10 }, { tur: 'kitapyigini', gx: 17, gy: 12, gw: 1, gd: 1, h: 8 },
+            // saksılar
+            { tur: 'bitki', gx: 18, gy: 13, gw: 1, gd: 1, h: 18 }, { tur: 'bitki', gx: 14, gy: 0, gw: 1, gd: 1, h: 18 },
+            { tur: 'bitki', gx: 19, gy: 0, gw: 1, gd: 1, h: 18 }, { tur: 'bitki', gx: 0, gy: 15, gw: 1, gd: 1, h: 18 },
         ],
         masalar: kat2Masalar,
         bar: { gx: 16, gy: 14 },
+        // garsonun yemek asansöründen gelen tabağı aldığı yer (servis tezgâhının önü)
+        servis: { gx: 1, gy: 4 }, servisYon: { vx: -1, vy: 0 },
         halilar: [{ gx: 2, gy: 3, gw: 12, gd: 12, renk: 'salon' },
-            // okuma köşesinin kilimi ve atari köşesinin neon halısı
-            { gx: 16, gy: 10, gw: 3, gd: 3, renk: 'bohem' }, { gx: 0, gy: 2, gw: 2, gd: 9, renk: 'arcade' }],
+            // okuma köşesinin kilimi ve bistro köşesinin siyah-beyaz dama zemini
+            { gx: 16, gy: 10, gw: 3, gd: 3, renk: 'bohem' }, { gx: 0, gy: 2, gw: 2, gd: 7, renk: 'dama' }],
         duvar: [
             // raf üstündeki duvara asılı posterler (ust: rafın üstünde kalacak yükseklik)
             { tur: 'poster', duvar: 'K', bas: 3, son: 4.5, oyun: 'dixit', ust: true },
             { tur: 'poster', duvar: 'K', bas: 7.5, son: 9, oyun: 'pandemic', ust: true },
             { tur: 'poster', duvar: 'K', bas: 12, son: 13.5, oyun: 'catan', ust: true },
-            { tur: 'poster', duvar: 'B', bas: 5, son: 6.5, oyun: 'tren', ust: true },
+            { tur: 'karatahta', duvar: 'B', bas: 2.8, son: 5.8 },
+            { tur: 'poster', duvar: 'B', bas: 7.5, son: 9, oyun: 'tren', ust: true },
             { tur: 'poster', duvar: 'B', bas: 10, son: 11.5, oyun: 'carcassonne', ust: true },
             { tur: 'pencere', duvar: 'G', bas: 3, son: 6 }, { tur: 'pencere', duvar: 'G', bas: 9, son: 12 },
-            { tur: 'afis', duvar: 'D', bas: 2, son: 3.5 }, { tur: 'poster', duvar: 'D', bas: 14, son: 15.5, oyun: 'pandemic', ust: true },
+            // doğu duvarı: sokağa ve arka bahçeye bakan pencereler (aralarında turnuva panosu)
+            { tur: 'pencere', duvar: 'D', bas: 2.5, son: 5.5 }, { tur: 'pencere', duvar: 'D', bas: 12.5, son: 15 },
         ],
     },
     3: {
-        ad: 'VIP & FRP Özel Bölgesi',
-        zemin: 'hali',
-        isik: 0.32,
+        ad: 'VIP Kulüp',
+        zemin: 'koyuahsap',
+        isik: 0.3,
         nesneler: [
-            { tur: 'heykel', gx: 1, gy: 1, gw: 1, gd: 1, h: 40 },
-            { tur: 'sandik', gx: 19, gy: 7, gw: 1, gd: 2, h: 16 },
-            { tur: 'deri', gx: 8, gy: 0, gw: 5, gd: 1, h: 16 },
-            { tur: 'bar', gx: 15, gy: 15, gw: 4, gd: 1, h: 22 },
-            { tur: 'lamba', gx: 7, gy: 8, gw: 1, gd: 1, h: 40 },
-            { tur: 'bitki', gx: 1, gy: 15, gw: 1, gd: 1, h: 18 },
-            // yarım daire VIP sahnesi (batı duvarı ortası, salona bakar); sahne üstü nesnelerin z'si SAHNE_Z
-            { tur: 'yarimsahne', gx: 2, gy: 4.35, gw: 3.65, gd: 7.3, h: 8 },
-            { tur: 'piyano', gx: 2.2, gy: 8.8, gw: 0.9, gd: 0.8, h: 16, z: 8, engelsiz: true },
-            { tur: 'mikrofon', gx: 4.3, gy: 7.55, gw: 0.3, gd: 0.3, h: 22, z: 8, engelsiz: true },
-            { tur: 'amfi', gx: 2.1, gy: 5.3, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
-            { tur: 'amfi', gx: 2.1, gy: 10.1, gw: 0.6, gd: 0.6, h: 16, z: 8, engelsiz: true },
-            { tur: 'spot', gx: 3.6, gy: 5.4, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#ff5ea8' },
-            { tur: 'spot', gx: 3.6, gy: 10.4, gw: 0.2, gd: 0.2, h: 44, z: 8, engelsiz: true, renk: '#5ec8ff' },
-            // hobi ve koleksiyon: vitrinler ve boyalı FRP figür kaideleri
-            { tur: 'koleksiyon', gx: 1, gy: 12, gw: 1, gd: 2, h: 40 }, { tur: 'koleksiyon', gx: 7, gy: 15, gw: 3, gd: 1, h: 26 },
-            { tur: 'figurstandi', gx: 13.5, gy: 1.5, gw: 0.8, gd: 0.8, h: 14, figur: 'ejderha' },
-            { tur: 'figurstandi', gx: 13, gy: 14, gw: 0.8, gd: 0.8, h: 14, figur: 'sovalye' },
-            { tur: 'figurstandi', gx: 3, gy: 13.6, gw: 0.8, gd: 0.8, h: 14, figur: 'buyucu' },
+            // kuzey duvarı: camlı VIP oyun vitrini, koyu ahşap VIP bar (arkasında şişe rafı), yemek asansörü
+            { tur: 'vipvitrin', gx: 2, gy: 0, gw: 5, gd: 1, h: 50 },
+            { tur: 'vipraf', gx: 9, gy: 0, gw: 5, gd: 0.6, h: 54 },
+            { tur: 'vipbar', gx: 9, gy: 1, gw: 5, gd: 1, h: 22, isik: { r: 80, rgb: '255,196,110', a: 0.16 } },
+            { tur: 'yemekasansoru', gx: 14, gy: 0, gw: 1, gd: 1, h: 46, on: 'G' },
+            ...[9.6, 10.8, 12, 13.2].map((x) => ({ tur: 'bartaburesi', gx: x, gy: 2.2, gw: 0.42, gd: 0.42, h: 12, engelsiz: true })),
+            // VIP girişi: asansör önünde kadife bariyer (altın direkler, kırmızı ip) ve karşılama kürsüsü
+            { tur: 'kadifebariyer', gx: 16.05, gy: 2, gw: 0.12, gd: 2.6, h: 18, engelsiz: true },
+            { tur: 'kadifebariyer', gx: 16.05, gy: 4.6, gw: 1.3, gd: 0.12, h: 18, engelsiz: true },
+            { tur: 'hostkursu', gx: 18.85, gy: 2.7, gw: 0.6, gd: 0.6, h: 22, engelsiz: true },
+            // batı duvarı: şömine ve önünde dinlenme köşesi; altta perdeli özel loca
+            { tur: 'somine', gx: 0, gy: 5.8, gw: 0.9, gd: 2.4, h: 40, isik: { r: 90, rgb: '255,140,50', a: 0.3, titrek: true } },
+            { tur: 'chesterfield', gx: 3, gy: 5.7, gw: 0.95, gd: 2.6, h: 9, sirt: 'D' },
+            { tur: 'sehpa', gx: 1.7, gy: 6.6, gw: 0.8, gd: 0.8, h: 8 },
+            { tur: 'derikoltuk', gx: 1.8, gy: 9.1, gw: 0.9, gd: 0.9, h: 9, sirt: 'G' },
+            { tur: 'loca', gx: 0, gy: 11, gw: 3, gd: 4.6, h: 30 },
+            // güneydoğu: piyano köşesi
+            { tur: 'piyano', gx: 17, gy: 12.6, gw: 1, gd: 0.9, h: 16, klavye: 'B' },
+            { tur: 'piyanotaburesi', gx: 16.25, gy: 12.8, gw: 0.5, gd: 0.5, h: 8, engelsiz: true },
+            // saksılar (avize büyük masanın üstünde, masa çiziminde)
+            { tur: 'bitki', gx: 19, gy: 15, gw: 1, gd: 1, h: 18 }, { tur: 'bitki', gx: 7, gy: 0, gw: 1, gd: 1, h: 18 },
+            { tur: 'bitki', gx: 0, gy: 0, gw: 1, gd: 1, h: 18 }, { tur: 'bitki', gx: 4, gy: 15, gw: 1, gd: 1, h: 18 },
         ],
-        // masalar sahnenin etrafında yay çizer: kuzey, doğu (karşı), güney ve arka sıra
-        masalar: [
-            { gx: 7, gy: 2, gw: 3, gd: 2, sekil: 'harita' }, { gx: 10, gy: 7, gw: 3, gd: 2, sekil: 'yuvarlak' },
-            { gx: 7, gy: 12, gw: 3, gd: 2, sekil: 'yuvarlak' }, { gx: 16, gy: 10, gw: 3, gd: 2, sekil: 'harita' },
-        ],
-        bar: { gx: 16, gy: 14 },
-        halilar: [{ gx: 5, gy: 1, gw: 14, gd: 14, renk: 'vip' }],
+        masalar: kat3Masalar,
+        bar: { gx: 14, gy: 2 },
+        servis: { gx: 14, gy: 1 },
+        halilar: [{ gx: 6, gy: 4, gw: 7, gd: 6, renk: 'vip' }, { gx: 12, gy: 8, gw: 5, gd: 4, renk: 'vip' }],
         duvar: [
-            { tur: 'sanc', duvar: 'B', bas: 3, son: 4.2, renk: '#b0302b' }, { tur: 'sanc', duvar: 'K', bas: 4, son: 5.2, renk: '#e3b23c' },
-            { tur: 'poster', duvar: 'K', bas: 9, son: 11.5, oyun: 'harita', ust: true },
-            { tur: 'poster', duvar: 'B', bas: 12, son: 14.5, oyun: 'harita' },
-            { tur: 'sanc', duvar: 'K', bas: 14, son: 15.2, renk: '#2e6b4a' }, { tur: 'sanc', duvar: 'G', bas: 7, son: 8.2, renk: '#b0302b' },
-            { tur: 'pencere', duvar: 'D', bas: 2, son: 4 }, { tur: 'pano', duvar: 'G', bas: 11, son: 13 },
-            { tur: 'tablo', duvar: 'K', bas: 13.2, son: 14.8 },
-            { tur: 'perde', duvar: 'B', bas: 4.2, son: 11.8 },                       // sahnenin arkasında kadife perde
-            { tur: 'tablo', duvar: 'D', bas: 13.5, son: 15 },
+            { tur: 'tablo', duvar: 'K', bas: 15.2, son: 16.6 },
+            { tur: 'tablo', duvar: 'B', bas: 6.3, son: 7.7 },                               // şöminenin üstünde
+            { tur: 'tablo', duvar: 'B', bas: 2, son: 3.6 },
+            { tur: 'perde', duvar: 'B', bas: 11, son: 15.6 },                               // locanın kadife perdesi
+            { tur: 'tablo', duvar: 'D', bas: 6, son: 7.6 }, { tur: 'tablo', duvar: 'D', bas: 10, son: 11.6 },
+            { tur: 'pencere', duvar: 'D', bas: 13, son: 15 },
+            { tur: 'tablo', duvar: 'G', bas: 6, son: 7.6 }, { tur: 'tablo', duvar: 'G', bas: 12, son: 13.6 },
         ],
     },
 };
@@ -273,16 +284,7 @@ function engelIzgarasi(kat) {
             if (x >= 0 && y >= 0 && x < GENISLIK && y < DERINLIK) izgara[x][y] = true;
         }
     };
-    for (const o of t.nesneler) {
-        if (o.engelsiz) continue;
-        if (o.tur === 'yarimsahne') {
-            for (let x = 0; x < GENISLIK; x++) for (let y = 0; y < IC_DERINLIK; y++) {
-                const R = SAHNE.r + SAHNE.basamak;
-                // platform + arkasındaki kulis (duvar ile düz kenar arası)
-                if ((x + 0.5 - SAHNE.cx) ** 2 + (y + 0.5 - SAHNE.cy) ** 2 <= R ** 2 || (x < SAHNE.cx && Math.abs(y + 0.5 - SAHNE.cy) <= R)) izgara[x][y] = true;
-            }
-        } else kapat(o);
-    }
+    for (const o of t.nesneler) if (!o.engelsiz) kapat(o);
     for (const m of t.masalar) kapat(m);
     kapat(ASANSOR_GOVDE);
     // İç mekân dışı: üst katlarda tamamen kapalı; kat 1'de cephe şeridi yalnızca kapıdan geçilir,

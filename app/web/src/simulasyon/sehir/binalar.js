@@ -5,7 +5,7 @@
 //   tip       : dukkan (zeminde vitrin, üstte konut) | apartman (balkonlu; magaza ise zeminde dükkân) | ev | kiosk |
 //               banka (cam cephe)
 //   malzeme   : tugla | siva | tas | ahsap | cam
-//   cati      : duz (su deposu, çanak anten, güneş paneli, baca) | kiremit | teras (saksılar, pergola)
+//   cati      : duz | kiremit | teras — düz/teras çatının donatıları aşağıda atanan çatı setinden gelir
 //   ozel      : dondurma | eczane | berber | banka | bakkal | kahvehane | bufe (özel cephe/animasyon ayrıntıları)
 //   kapanis   : kepengin ineceği dakika (null: gece de açık, ör. nöbetçi eczane, büfe)
 // Cephe türleri tanımdan türetilir: ön → vitrin/konut, arka → servis (servis kapısı, yangın merdiveni), yanlar → yan
@@ -76,6 +76,17 @@ for (const b of BINALAR) {
         else if (F === KARSI[b.on]) b.yuz[F] = b.tip === 'kiosk' ? 'yan' : 'servis';
         else b.yuz[F] = 'yan';
     }
+}
+// Düz çatılara çatı seti (su deposu + anten, güneş paneli, çatı bahçesi, teras, baca + klima): tohumla seçilir,
+// sıradaki iki bina aynı seti almaz; teras çatılılar teras ya da bahçe olur. Pergola yalnızca PERGOLALI binalarda.
+const CATI_SETLERI = ['depo', 'gunes', 'bahce', 'teras', 'baca'];
+const PERGOLALI = new Set(['caybahcesi', 'doguapt']);
+let oncekiSet = null;
+for (const b of BINALAR.filter((x) => x.cati !== 'kiremit')) {
+    const adaylar = (b.cati === 'teras' ? ['teras', 'bahce'] : CATI_SETLERI).filter((x) => x !== oncekiSet);
+    b.pergola = PERGOLALI.has(b.id);
+    b.catiSeti = b.pergola ? 'teras' : adaylar[b.tohum % adaylar.length];
+    oncekiSet = b.catiSeti;
 }
 // Bitişik nizam: birbirine 0,15 karodan yakın, karşılıklı ve en az 0,5 karo örtüşen yüzler sağır duvar olur
 for (const a of BINALAR) for (const b of BINALAR) {

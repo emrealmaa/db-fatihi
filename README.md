@@ -15,15 +15,17 @@ npm run api:lite              # http://localhost:3001  (veri db/.pglite içinde 
 Tarayıcıda `http://localhost:3001` → örnek personel: `yonetici`, `kasiyer`, `garson` (parola `06_seed.sql` içinde).
 
 ## Gerçek PostgreSQL ile
-1. PostgreSQL 15+ kurun (Windows: `winget install PostgreSQL.PostgreSQL.17`, Mac: `brew install postgresql@17`)
-   **veya** Docker: `make up DB=postgres` (port 5433).
+1. PostgreSQL 18 kurun (Windows: `winget install PostgreSQL.PostgreSQL.18`, Mac: `brew install postgresql@18`)
+   **veya** Docker: `make up DB=postgres` (port 5433, `postgres:18` imajı).
+   > Docker'da daha önce **PostgreSQL 15** imajıyla kurulmuş bir volume varsa 18 onu açamaz: önce `make reset`,
+   > sonra `make up DB=postgres` çalıştırın (eski Docker verisi silinir; örnek veri init betikleriyle yeniden kurulur).
 2. `.env.example` → `.env` kopyalayın. Yerel kurulumda `POSTGRES_PORT=5432`, `PG_ADMIN_USER=postgres`,
    `PG_ADMIN_PASSWORD=<kurulumda verdiğiniz parola>`.
 3. Kurun ve test edin:
    ```bash
    npm install
-   npm run db:kur        # veritabanını sıfırdan kurar (init betikleri + örnek veri)
-   npm test              # 46 veritabanı + 9 API testi
+   npm run db:kur        # geliştirme veritabanını (karavana) sıfırdan kurar: init betikleri + örnek veri
+   npm test              # 62 veritabanı + 12 API testi (ayrı karavana_test veritabanında)
    npm run api           # API (5173'teki ön yüz için)
    npm run dev -w app/web   # ön yüz geliştirme sunucusu: http://localhost:5173
    ```
@@ -31,8 +33,9 @@ Tarayıcıda `http://localhost:3001` → örnek personel: `yonetici`, `kasiyer`,
 ## Komutlar
 | Komut | Ne yapar |
 |---|---|
-| `npm run db:kur` | Veritabanını silip `db/postgres/init/*.sql` ile yeniden kurar |
-| `npm run db:test` / `db:test:lite` | Veritabanı testleri (PostgreSQL / PGlite) |
+| `npm run db:kur` | **Geliştirme verisini sıfırlar:** `POSTGRES_DB`'yi (karavana) silip `db/postgres/init/*.sql` ile yeniden kurar; simülasyon verisi gider |
+| `npm run db:goc` | Geliştirme verisini silmeden eklemeli migration'ları (07 ve sonrası) uygular |
+| `npm run db:test` / `db:test:lite` | Veritabanı testleri (PostgreSQL'de ayrı `POSTGRES_TEST_DB` = karavana_test, her testte sıfırdan / PGlite bellekte); geliştirme verisine dokunmaz |
 | `npm test` / `test:lite` | Tüm testler |
 | `npm run db:performans` | 100k oturumluk veriyle index ölçümü → `docs/PERFORMANS.md` |
 | `npm run db:yetki` | Her rolle yetki/maskeleme denemesi → `docs/YETKI.md` |
