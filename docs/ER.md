@@ -10,6 +10,7 @@ erDiagram
         numeric giris_ucreti "kişi başı"
         smallint secim_suresi_dk
         boolean kayit_zorunlu
+        smallint vip_kat "yalnızca VIP üyelerin oturduğu kat (3)"
     }
     KULLANICI {
         bigint id PK
@@ -20,6 +21,8 @@ erDiagram
         date dogum_tarihi
         boolean ogrenci
         timestamptz uyelik_tarihi
+        boolean vip_mi "VIP Kulüp üyesi"
+        date vip_baslangic "yalnızca VIP ise dolu"
     }
     PERSONEL {
         int id PK
@@ -46,6 +49,7 @@ erDiagram
         smallint sure_dk
         int toplam_adet "fiziksel kopya"
         boolean aktif
+        boolean vip_ozel "yalnızca VIP üyeler oynayabilir"
     }
     MASA {
         smallint id PK
@@ -81,6 +85,7 @@ erDiagram
         smallint id PK
         varchar ad UK
         smallint sira
+        boolean mutfak "kat 1 mutfağında hazırlanır (yemek)"
     }
     URUN {
         int id PK
@@ -134,3 +139,4 @@ erDiagram
 | oturum – bekleme | 1 : N | Kuyrukta aynı anda tek aktif kayıt; tüm sistemde tek seçim hakkı |
 | oturum – odeme | 1 : 0..1 | `uq_odeme_oturum`; hesap bölünmez |
 | personel – oturum/siparis/odeme | 1 : N | İşlemi yapan personel `fn_aktif_personel()` ile yazılır |
+| kullanici (VIP) – oturum / oyun | – | Yeni ilişki tablosu yok: `kullanici.vip_mi`, `oyun.vip_ozel` ve `masa.kat = ayar.vip_kat` bayraklarıyla tetikleyici denetler (`trg_vip_oyun_kontrol`, `trg_vip_kat_kontrol`) |

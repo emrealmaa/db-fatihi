@@ -32,6 +32,13 @@ const DENEMELER = [
     ['Personel performans raporu', 'SELECT personel, siparis_sayisi FROM v_personel_performans LIMIT 1'],
     ['Personel ekleme (sp_personel_ekle)', "CALL sp_personel_ekle('A','B','05301119999','GARSON','kanit','parola12',NULL,NULL)"],
     ['Parola doğrulama (fn_personel_giris)', "SELECT personel_id, rol FROM fn_personel_giris('garson','karavana123')"],
+    // VIP Kulüp: üyelik yalnızca yönetici verir; VIP kuralları rolden bağımsız tetikleyicilerle zorlanır
+    ['VIP üyelik verme (sp_musteri_vip)', 'CALL sp_musteri_vip(4, true)'],
+    ['VIP oyun raporu', 'SELECT ad, oturum_sayisi FROM v_vip_oyun_kullanimi LIMIT 1'],
+    ['Kat bazında gelir raporu', 'SELECT kat, ciro FROM v_kat_gelir LIMIT 1'],
+    ['VIP olmayan müşteriye VIP oyun (tetikleyici)',
+        "DO $$ DECLARE v int; BEGIN SELECT id INTO v FROM oyun WHERE ad = 'Spirit Island'; CALL sp_oyun_baslat(3, v, NULL); END $$"],
+    ['VIP olmayan müşteriyi VIP kata oturtma (tetikleyici)', 'CALL sp_oturum_ac(5, 2, 4, NULL)'],
 ];
 
 class GeriAl extends Error {

@@ -2,7 +2,7 @@
 
 ## Genel
 ```
-Ön yüz (React/Vite) -> API (Node/Express) -> PostgreSQL 15+
+Ön yüz (React/Vite) -> API (Node/Express) -> PostgreSQL 18
                          giris_app / garson_app / kasiyer_app / yonetici_app
 ```
 İş mantığı veritabanındadır: prosedürler, tetikleyiciler, kısıtlar. API ince kalır.
@@ -16,8 +16,12 @@ rolüne karşılık gelen veritabanı rolüyle bağlanır ve her transaction ba�
 - Öğrenci indirimi: öğrenci başına giriş ücretinin `ayar.ogrenci_indirim_orani` kadarı (varsayılan %50). Oran ve öğrenci sayısı açılışta oturuma yazılır (`oturum.ogrenci_sayisi`, `ogrenci_orani`); `fn_hesap_detay` ayrı kalem olarak gösterir.
 - Masa açılırken müşteri telefonla aranır; kayıtlı değilse aynı adımda kaydedilir (`ayar.kayit_zorunlu`).
 - Her masa aynı anda tek oyun oynar. Ödeme nakit veya kart; hesap bölünmez.
+- **VIP Kulüp (kat 3):** VIP üye (`kullanici.vip_mi`) yalnızca VIP üyelerin oturabildiği kata (`ayar.vip_kat`) çıkar ve `oyun.vip_ozel`
+  olan 10 ağır strateji oyununu oynayabilir. Standart müşteri bunların hiçbirini yapamaz: kural veritabanı tetikleyicisinde
+  (`VIP_OYUN_YETKISIZ`, `VIP_KAT_YETKISIZ`), API ve arayüz yalnızca anlaşılır mesaja çevirir. Üyelik `sp_musteri_vip` ile yalnızca yönetici verir.
+- **Yemek:** `urun_kategori.mutfak` olan kategoriler kat 1 mutfağında hazırlanır; kat 2 ve 3'e yemek asansörüyle çıkar (simülasyon akışı: `docs/SIMULASYON.md`).
 
-## Tablolar (13)
+## Tablolar (13; VIP Kulüp yeni tablo eklemedi, mevcut tablolara varsayılanlı sütun eklendi)
 | Tablo | Amaç |
 |---|---|
 | ayar | Tek satır: giriş ücreti, seçim süresi, kayıt zorunluluğu |
@@ -49,12 +53,12 @@ Müsait adet saklanmaz, `fn_musait_adet` ile hesaplanır (tutarsızlık riski yo
 - PK/FK: tüm tablolar. UNIQUE: müşteri e-posta/telefon, personel kullanıcı adı/telefon, masa_no, oyun/ürün/kategori adı, ödeme başına tek oturum.
 - CHECK: telefon/e-posta/kullanıcı adı formatı, personel rolü, ödeme türü, adet/stok/fiyat ≥ 0, oyuncu aralığı, kapanış ≥ açılış, bekleme durumu, ayar tek satır.
 - Kısmi UNIQUE index: masada tek açık oturum, oturumda tek aktif oyun, kuyrukta tek aktif kayıt.
-- Tetikleyici: kişi ≤ masa kapasitesi; oyun başlarken oturum açık, oyun aktif, müsait kopya var, kopya sıradaki masaya ayrılmamış ve oyuncu sayısı uygun (satır kilidiyle yarış koşulu önlenir); kapanmış oturuma sipariş eklenemez.
+- Tetikleyici (6): VIP oyun ve VIP kat kuralları (`trg_vip_oyun_kontrol` oturum_oyun ve bekleme üzerinde, `trg_vip_kat_kontrol` oturum üzerinde); kişi ≤ masa kapasitesi; oyun başlarken oturum açık, oyun aktif, müsait kopya var, kopya sıradaki masaya ayrılmamış ve oyuncu sayısı uygun (satır kilidiyle yarış koşulu önlenir); kapanmış oturuma sipariş eklenemez.
 
 ## Fonksiyonlar, prosedürler, view'lar
-- Fonksiyon (11): `fn_donem_ozeti`, `fn_aktif_personel`, `fn_musait_adet`, `fn_ayrilan_adet`, `fn_hesap_detay`, `fn_hesap_hesapla`, `fn_musteri_bul`, `fn_personel_giris`, `fn_telefon_maskele`, `fn_email_maskele`, `fn_ad_maskele`
-- Prosedür (15): `sp_musteri_kaydet`, `sp_oturum_ac`, `sp_sirayi_ilerlet`, `sp_bekleme_ekle`, `sp_bekleme_iptal`, `sp_oyun_baslat`, `sp_oyun_sec`, `sp_oyun_bitir`, `sp_secim_suresi_doldur`, `sp_siparis_ver`, `sp_siparis_iptal`, `sp_oturum_kapat`, `sp_personel_ekle`, `sp_personel_parola`, `sp_stok_ekle`
-- View (13): `v_musait_oyunlar`, `v_masa_durumu`, `v_bekleme_sirasi`, `v_musteri_maskeli`, `v_menu`, `v_oturum_siparisleri`, `v_acik_hesaplar`, `v_gunluk_ciro`, `v_oyun_populerlik`, `v_personel_maskeli`, `v_personel_performans`, `v_kritik_stok`, `v_urun_satis`
+- Fonksiyon (12): `fn_donem_ozeti`, `fn_aktif_personel`, `fn_musait_adet`, `fn_ayrilan_adet`, `fn_hesap_detay`, `fn_hesap_hesapla`, `fn_musteri_bul`, `fn_personel_giris`, `fn_telefon_maskele`, `fn_email_maskele`, `fn_ad_maskele`, `fn_oturum_vip_mi`
+- Prosedür (16): `sp_musteri_kaydet`, `sp_oturum_ac`, `sp_sirayi_ilerlet`, `sp_bekleme_ekle`, `sp_bekleme_iptal`, `sp_oyun_baslat`, `sp_oyun_sec`, `sp_oyun_bitir`, `sp_secim_suresi_doldur`, `sp_siparis_ver`, `sp_siparis_iptal`, `sp_oturum_kapat`, `sp_personel_ekle`, `sp_personel_parola`, `sp_stok_ekle`, `sp_musteri_vip`
+- View (15): `v_musait_oyunlar`, `v_masa_durumu`, `v_bekleme_sirasi`, `v_musteri_maskeli`, `v_menu`, `v_oturum_siparisleri`, `v_acik_hesaplar`, `v_gunluk_ciro`, `v_oyun_populerlik`, `v_personel_maskeli`, `v_personel_performans`, `v_kritik_stok`, `v_urun_satis`, `v_vip_oyun_kullanimi`, `v_kat_gelir`
 
 ## Yetki ve maskeleme
 | Rol | Yapabildiği |
@@ -62,7 +66,7 @@ Müsait adet saklanmaz, `fn_musait_adet` ile hesaplanır (tutarsızlık riski yo
 | rol_giris | Yalnızca `fn_personel_giris` (hiçbir tablo/view okuyamaz) |
 | rol_garson | Maskeli view'lar, menü, müşteri arama/kayıt, oturum/oyun/kuyruk/sipariş prosedürleri. Ham `kullanici`/`personel` yasak |
 | rol_kasiyer | Garson + açık hesaplar, ciro, `sp_oturum_kapat` (ödeme), hesap fonksiyonları |
-| rol_yonetici | Kasiyer + tüm tablolar (maskesiz), raporlar, personel/stok yönetimi |
+| rol_yonetici | Kasiyer + tüm tablolar (maskesiz), raporlar (VIP oyun kullanımı, kat geliri dahil), personel/stok yönetimi, `sp_musteri_vip` (VIP üyelik) |
 
 Login rolleri: `giris_app`, `garson_app`, `kasiyer_app`, `yonetici_app`. Prosedürler ve hesap fonksiyonları `SECURITY DEFINER` + sabit `search_path`. Not: PostgreSQL fonksiyon çalıştırma iznini çağıran role göre kontrol eder, bu yüzden view'daki maskeleme fonksiyonları ayrıca garsona açılmıştır.
 
@@ -70,6 +74,6 @@ Login rolleri: `giris_app`, `garson_app`, `kasiyer_app`, `yonetici_app`. Prosed�
 Kısmi indexler: aktif oturum_oyun (müsait adet sayımı), açık oturum, bekleyen kuyruk, kapanmış oturum. Ek: `siparis(oturum_id)`, `siparis(personel_id)`, `oturum(kullanici_id)`, `odeme(zaman)`. `EXPLAIN ANALYZE` kanıtları: `docs/PERFORMANS.md`.
 
 ## Testler
-`db/tests/*.test.js` (node:test): kısıtlar, kuyruk akışı, hesap/ödeme, rol yetkileri. Her test temiz veritabanıyla başlar.
-- `npm run db:test` — gerçek PostgreSQL (.env)
+`db/tests/*.test.js` (node:test): kısıtlar, kuyruk akışı, hesap/ödeme, rol yetkileri, VIP kuralları. Her test temiz veritabanıyla başlar.
+- `npm run db:test` — gerçek PostgreSQL; geliştirme verisini (`karavana`) korumak için ayrı `karavana_test` (`POSTGRES_TEST_DB`) kurulur
 - `npm run db:test:lite` — kurulumsuz PGlite

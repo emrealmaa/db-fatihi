@@ -28,11 +28,11 @@ garson adına kasa işlemi yapılamaz (403). Yönetici olmayan bu başlığı ku
 ## Garson (ve üstü)
 | Yöntem | Yol | Gövde | Kaynak |
 |---|---|---|---|
-| GET | `/masalar` | – | `v_masa_durumu` |
+| GET | `/masalar` | – | `v_masa_durumu` (`vip_masa`: VIP katı, `musteri_vip`: oturan VIP üye mi) |
 | POST | `/masalar/:masaId/ac` | `{ kisiSayisi, kullaniciId? , musteri?: { ad, soyad, telefon, email?, ogrenci? } }` | `sp_musteri_kaydet` + `sp_oturum_ac` (tek transaction) |
 | GET | `/musteriler/ara?telefon=` | – | `fn_musteri_bul` (maskeli) |
 | POST | `/musteriler` | `{ ad, soyad, telefon, email?, ogrenci? }` | `sp_musteri_kaydet` |
-| GET | `/oyunlar` | – | `v_musait_oyunlar` (`alinabilir_adet`: sıraya ayrılmamış kopya, `bekleyen_masa`) |
+| GET | `/oyunlar` | – | `v_musait_oyunlar` (`alinabilir_adet`: sıraya ayrılmamış kopya, `bekleyen_masa`, `vip_ozel`) |
 | POST | `/oturumlar/:oturumId/oyun` | `{ oyunId }` | `sp_oyun_baslat` |
 | POST | `/oturum-oyunlar/:id/bitir` | – | `sp_oyun_bitir` |
 | GET | `/bekleme` | – | `v_bekleme_sirasi` (`oyun`, `oyun_sira`, `secim_bitis` geri sayım için) |
@@ -61,8 +61,11 @@ Telefon `0532 123 45 67`, `+90 532...`, `532...` biçimlerinde gönderilebilir; 
 | GET | `/raporlar/personel-performans` | `v_personel_performans` |
 | GET | `/raporlar/kritik-stok` | `v_kritik_stok` |
 | GET | `/raporlar/urun-satis` | `v_urun_satis` |
+| GET | `/raporlar/vip-oyun-kullanimi` | `v_vip_oyun_kullanimi` (oyun başına oturum, toplam/ortalama süre, oynayan VIP) |
+| GET | `/raporlar/kat-gelir` | `v_kat_gelir` (kat ve gün bazında giriş / yemek / içecek / VIP geliri) |
+| POST | `/yonetim/musteriler/:id/vip` | `sp_musteri_vip` (`{ vip: true }` ile VIP üyelik ver, `{ vip: false }` ile geri al) |
 | GET/POST/PATCH/DELETE | `/yonetim/kategoriler` | `kategori` (`ad`) |
-| GET/POST/PATCH | `/yonetim/oyunlar` | `oyun` (`ad, kategori_id, min_oyuncu, max_oyuncu, sure_dk, toplam_adet, aktif`) |
+| GET/POST/PATCH | `/yonetim/oyunlar` | `oyun` (`ad, kategori_id, min_oyuncu, max_oyuncu, sure_dk, toplam_adet, aktif, vip_ozel`) |
 | GET/POST/PATCH/DELETE | `/yonetim/urun-kategorileri` | `urun_kategori` (`ad, sira`) |
 | GET/POST/PATCH | `/yonetim/urunler` | `urun` (`ad, kategori_id, fiyat, stok, kritik_stok, aktif`) |
 | POST | `/yonetim/urunler/:id/stok` | `sp_stok_ekle` (`{ adet }`) |
@@ -73,6 +76,9 @@ Telefon `0532 123 45 67`, `+90 532...`, `532...` biçimlerinde gönderilebilir; 
 | GET/PATCH | `/yonetim/ayar` | `ayar` (`giris_ucreti, secim_suresi_dk, kayit_zorunlu`) |
 
 Yönetim gövdelerinde alan adları tablo sütunlarıyla aynıdır (snake_case). Oyun ve ürünler silinmez, `aktif: false` yapılır.
+
+## Hata mesajları
+Tetikleyici hataları anlaşılır Türkçe mesaja çevrilir (HTTP 400): `VIP_OYUN_YETKISIZ` → "Bu oyun sadece VIP üyeler içindir (…)", `VIP_KAT_YETKISIZ` → "Masa N VIP Kulüp katında; yalnızca VIP üyeler oturabilir".
 
 ## Zamanlayıcı
 Sunucu her `SECIM_KONTROL_MS` (varsayılan 15 sn) `sp_secim_suresi_doldur` çağırır; süresi dolan seçim hakkı sıradakine geçer.

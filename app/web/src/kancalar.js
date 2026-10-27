@@ -4,7 +4,9 @@ import { al } from './api.js';
 
 // GET isteği; aralik verilirse düzenli yenilenir (masa panosu, bekleme sırası gibi canlı ekranlar için)
 export function useVeri(yol, { aralik = 0 } = {}) {
-    const [veri, setVeri] = useState(null);
+    // Veri hangi adrese ait olduğuyla saklanır: adres değişince (ör. rapor sekmesi) önceki adresin verisi yeni görünüme sızmaz
+    const [kayit, setKayit] = useState({ yol: null, veri: null });
+    const veri = kayit.yol === yol ? kayit.veri : null;
     const [hata, setHata] = useState(null);
     const [yukleniyor, setYukleniyor] = useState(true);
     const aktif = useRef(true);
@@ -13,7 +15,7 @@ export function useVeri(yol, { aralik = 0 } = {}) {
         if (!yol) return;
         try {
             const v = await al(yol);
-            if (aktif.current) { setVeri(v); setHata(null); }
+            if (aktif.current) { setKayit({ yol, veri: v }); setHata(null); }
         } catch (e) {
             if (aktif.current) setHata(e.message);
         } finally {

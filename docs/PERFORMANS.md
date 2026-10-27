@@ -1,7 +1,7 @@
 # Sorgu performansı: index kanıtları
 
-> Bu dosya `npm run db:performans` ile otomatik üretilir. Son çalıştırma: 26.10.2026 21:48:39
-> Ortam: PGlite (WebAssembly, tek iş parçacığı). Süreler gerçek PostgreSQL'den farklıdır; oranlar ve planlar göstergedir.
+> Bu dosya `npm run db:performans` ile otomatik üretilir. Son çalıştırma: 27.10.2026 11:51:33
+> Ortam: PostgreSQL (localhost:5432).
 
 ## Veri hacmi
 | Tablo | Satır |
@@ -20,12 +20,12 @@ düşürülüp ölçüm sonrası geri alındı (`DROP INDEX` + `ROLLBACK`).
 ## Özet
 | Sorgu | Index | Index'li (ms) | Index'siz (ms) | Kat |
 |---|---|---:|---:|---:|
-| Bir oyunun masadaki kopyaları (fn_musait_adet) | `ix_oturum_oyun_aktif_oyun`, `uq_oturum_oyun_aktif` | 0.160 | 20.431 | 127.7× |
-| Masanın açık oturumu | `uq_oturum_masa_acik` | 0.050 | 18.747 | 374.9× |
-| Bir hesabın siparişleri | `ix_siparis_oturum` | 0.084 | 54.186 | 645.1× |
-| Son 7 günün cirosu | `ix_odeme_zaman` | 4.031 | 43.596 | 10.8× |
-| Bir oyunun sırasındaki ilk masa | `ix_bekleme_sira`, `uq_bekleme_oturum_aktif` | 0.037 | 6.617 | 178.8× |
-| Müşterinin geçmiş ziyaretleri | `ix_oturum_kullanici` | 0.121 | 15.670 | 129.5× |
+| Bir oyunun masadaki kopyaları (fn_musait_adet) | `ix_oturum_oyun_aktif_oyun`, `uq_oturum_oyun_aktif` | 0.026 | 15.445 | 594.0× |
+| Masanın açık oturumu | `uq_oturum_masa_acik` | 0.085 | 23.353 | 274.7× |
+| Bir hesabın siparişleri | `ix_siparis_oturum` | 0.040 | 64.633 | 1615.8× |
+| Son 7 günün cirosu | `ix_odeme_zaman` | 0.628 | 49.111 | 78.2× |
+| Bir oyunun sırasındaki ilk masa | `ix_bekleme_sira`, `uq_bekleme_oturum_aktif` | 0.041 | 1.431 | 34.9× |
+| Müşterinin geçmiş ziyaretleri | `ix_oturum_kullanici` | 0.057 | 13.466 | 236.2× |
 
 ## Ayrıntı
 ### Bir oyunun masadaki kopyaları (fn_musait_adet)
@@ -66,7 +66,7 @@ SELECT id FROM bekleme WHERE oyun_id = 1 AND durum = 'BEKLIYOR' ORDER BY id LIMI
 ```
 - **Neden önemli:** Her oyun iadesinde çalışır (sp_sirayi_ilerlet). Geçmiş kayıtlar binlerce olsa da aktif sıra birkaç satırdır.
 - **Index'li plan:** Index Only Scan (ix_bekleme_sira)
-- **Index'siz plan:** Index Scan (bekleme_pkey)
+- **Index'siz plan:** Seq Scan (bekleme)
 
 ### Müşterinin geçmiş ziyaretleri
 ```sql

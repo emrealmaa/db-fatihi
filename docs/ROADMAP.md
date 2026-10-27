@@ -3,15 +3,16 @@
 Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum son hafta).
 
 ## Faz 1 – Veritabanı çekirdeği (TAMAM)
-- [x] PostgreSQL 15+ (Docker, yerel kurulum veya kurulumsuz PGlite)
+- [x] PostgreSQL 18 (Docker, yerel kurulum veya kurulumsuz PGlite)
 - [x] Karavana iş modeli: kişi başı giriş ücreti + sipariş, nakit/kart ödeme, personel kaydı
-- [x] 13 tablo, kısıtlar, 3 tetikleyici, kısmi indexler
-- [x] 10 fonksiyon, 15 prosedür, 13 view
+- [x] 13 tablo, kısıtlar, 6 tetikleyici, kısmi indexler
+- [x] 12 fonksiyon, 16 prosedür, 15 view
 - [x] Roller (giriş/garson/kasiyer/yönetici), yetkiler, maskeleme
-- [x] 46 otomatik test (kısıt, kuyruk, hesap/ödeme, yetki) — `npm run db:test`
+- [x] 62 otomatik test (kısıt, kuyruk, hesap/ödeme, yetki, VIP) — `npm run db:test` (ayrı `karavana_test` veritabanında)
+- [x] VIP Kulüp: yalnızca VIP üyelerin kata ve 10 ağır oyuna erişimi, veritabanı tetikleyicisiyle (`07_vip_kulup.sql`, `08_vip_musteri.sql`)
 
 ## Faz 2 – Uygulama ve ön yüz (TAMAM, gerçek veriyle deneme bekliyor)
-- [x] Node.js + Express API, personel girişi (JWT), rol bazlı DB bağlantısı, 9 API testi
+- [x] Node.js + Express API, personel girişi (JWT), rol bazlı DB bağlantısı, 12 API testi
 - [x] React + Vite ön yüz: masa panosu, oyun kataloğu, bekleme sırası ve seçim, sipariş, kasa, raporlar, yönetim
 - [x] Seçim süresi zamanlayıcısı (API içinde)
 - [ ] Karavana'nın gerçek verisi (masalar, oyunlar, menü, giriş ücreti, personel) → `06_seed.sql`
@@ -22,8 +23,9 @@ Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum 
 - [x] Yetki/maskeleme kanıtı betiği → `docs/YETKI.md`
 - [x] ER diyagramı (`docs/ER.md`), normalizasyon ve anahtar stratejisi (`docs/NORMALIZASYON.md`)
 - [x] Sunum içeriği ve demo akışı (`docs/SUNUM.md`)
-- [ ] Gerçek PostgreSQL'de `npm run db:performans` ve `npm run db:yetki` ile raporları yenile
-- [ ] Sunum şablonunu (`docs/Proje_Sunum_Şablonu.pptx`) doldur, ekran görüntüleri ekle
+- [x] Gerçek PostgreSQL 18'de `npm run db:performans` ve `npm run db:yetki` ile raporlar yenilendi (yetki kanıtına VIP denemeleri eklendi)
+- [x] Ekran görüntüleri alındı (`docs/ekran/`)
+- [ ] Sunum şablonunu (`docs/Proje_Sunum_Şablonu.pptx`) doldur (içerik `docs/SUNUM.md`, görseller `docs/ekran/`)
 - [ ] Repo herkese açık mı kontrol et, linki sunuma ekle
 - [x] Öğrenci indirimi: öğrenci başına giriş ücretinin `ayar.ogrenci_indirim_orani` kadarı (varsayılan %50), oturuma kopyalanır
 
@@ -32,11 +34,11 @@ Geliştiriciler: Enes Öztürk, Emre Alma. Teslim: 27 Aralık 2026 23:59 (sunum 
 |---|---|---|---|
 | Varlık sayısı | ≥ 6 | 13 tablo | `01_schema.sql`, `docs/ER.md` |
 | Normalizasyon, anahtar stratejisi | – | 3NF, identity PK, doğal anahtarlara UNIQUE, bilinçli anlık görüntü sütunları | `docs/NORMALIZASYON.md` |
-| Constraint | ≥ 5, ≥ 3 tür | PK, FK, UNIQUE, CHECK (28), NOT NULL, kısmi UNIQUE index, tetikleyici kuralları | `01_schema.sql`, `02_functions.sql` |
+| Constraint | ≥ 5, ≥ 3 tür | PK, FK, UNIQUE, CHECK (36), NOT NULL, kısmi UNIQUE index, tetikleyici kuralları (6 tetikleyici) | `01_schema.sql`, `02_functions.sql` |
 | Sorgu performansı | – | 11 index (7'si kısmi); 6 sorguda index'li/index'siz ölçüm | `docs/PERFORMANS.md` |
-| Stored procedure | ≥ 2 | 15 | `04_procedures.sql` |
-| View | ≥ 5 | 13 | `03_views.sql` |
+| Stored procedure | ≥ 2 | 16 | `04_procedures.sql`, `07_vip_kulup.sql` |
+| View | ≥ 5 | 15 | `03_views.sql`, `07_vip_kulup.sql` |
 | Kullanıcı tanımlı fonksiyon | ≥ 2 | 11 | `02_functions.sql` |
 | Yetkilendirme ve maskeleme | – | 4 grup rol + 4 login rolü, SECURITY DEFINER, maskeli view'lar, bcrypt | `05_security.sql`, `docs/YETKI.md` |
 | Ön yüz | – | React uygulaması, rol bazlı ekranlar | `app/web` |
-| Test | – | 46 DB + 9 API testi | `db/tests`, `app/api/test` |
+| Test | – | 62 DB + 12 API testi | `db/tests`, `app/api/test` |

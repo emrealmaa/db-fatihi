@@ -30,6 +30,11 @@ Tarayıcıda `http://localhost:3001` → örnek personel: `yonetici`, `kasiyer`,
    npm run dev -w app/web   # ön yüz geliştirme sunucusu: http://localhost:5173
    ```
 
+## Ekran görüntüleri
+[`docs/ekran/`](docs/ekran/README.md): masa panosu, VIP oyun reddi (veritabanı tetikleyicisi), raporlar ve simülasyonun üç katı.
+
+![VIP Kulüp (kat 3)](docs/ekran/10-simulasyon-kat3-vip.jpg)
+
 ## Komutlar
 | Komut | Ne yapar |
 |---|---|
