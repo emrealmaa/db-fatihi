@@ -10,14 +10,30 @@ import { tl } from '../bicim.js';
 import { Simulasyon as Motor } from '../simulasyon/motor.js';
 import {
     ARKA_RENK, dunyaKutusu,
-    DOGAL_G, DOGAL_Y, gorunurAlan, kapakCiz, nesneBul, pikselBaglami, ruhHali, sahneCiz, ustKatmanCiz,
+    DOGAL_G, DOGAL_Y, gorunurAlan, insaMaskesi, KAT_YUKSEKLIGI, kapakCiz, katmanIsit, nesneBul, pikselBaglami, ruhHali, sahneCiz, ustKatmanCiz,
 } from '../simulasyon/cizim.js';
 import { KATLAR } from '../simulasyon/harita.js';
 import { VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
 
 const HIZLAR = [1, 2, 4, 10];
 const YAKINLIK = { min: 0.6, max: 5 };
-const GECIS_SN = 0.5;
+// Katlar üst üste dizilir: seçili katın altındakiler kararmış olarak görünür, üstündekiler çizilmez.
+// Kat geçişinde kamera açısını bozmadan kat yüksekliği kadar yükselir/alçalır; üst kat aşağıdan yukarı
+// inşa edilir (inerken yukarıdan aşağı sökülür)
+const GECIS_SN = 0.95;
+const azHareket = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const yumusak = (t) => t * t * (3 - 2 * t);
+// asansör: yavaş kalkış, hızlanma, varışta hafif esneyip oturma (1'i kısa süre aşar)
+const ESNEME = 0.9;
+const asansorEgrisi = (t) => {
+    if (t < 0.5) return 4 * t * t * t;
+    const x = 2 * t - 2;
+    return 0.5 + 0.5 * (1 + (ESNEME + 1) * x * x * x + ESNEME * x * x);
+};
+const ALT_KAT_KARARMA = 0.5;      // seçili katın bir altındaki kat bu oranda karartılır (iki alt: 0.75)
+const ALT_KAT_PAYI = 0.55;
+// Kararmış alt katlar (geçiş dışında) seyrek yenilenir: kenar paylı bölgeleri önbellekten kaydırılıp ölçeklenerek aktarılır
+const ALT_KAT_YENILEME_SN = 0.12, ALT_KAT_KENAR = 48;         // üst katlarda kadraj, alttaki katın bu kadarı (kat yüksekliği oranı) görünecek şekilde genişler
 const YON_ADI = ['Kuzey-batı', 'Kuzey-doğu', 'Güney-doğu', 'Güney-batı'];
 
 export default function Simulasyon() {
@@ -46,16 +62,20 @@ export default function Simulasyon() {
         const k = kamera.current;
         const w = alan?.clientWidth || 800, h = alan?.clientHeight || 500;
         // Katın görünür kısmı (iç mekân; kat 1'de görünüyorsa dış mekân da) ekrana sığdırılır
-        const g0 = gorunurAlan(gorunum.current.kat, k.d);
-        const aw = g0.x1 - g0.x0, ah = g0.y1 - g0.y0;
+        const sigdir = (kat) => {
+            const g0 = gorunurAlan(kat, k.d);
+            if (kat > 1) g0.y1 += KAT_YUKSEKLIGI * ALT_KAT_PAYI;
+            const aw = g0.x1 - g0.x0, ah = g0.y1 - g0.y0;
+            const s = Math.min(w / aw, h / ah) * k.yakinlik;
+            return { s, ox: (w - aw * s) / 2 - g0.x0 * s + k.panX, oy: (h - ah * s) / 2 - g0.y0 * s + k.panY };
+        };
         const g = gorunum.current.gecis;
-        const tg = g ? Math.min(1, g.t / GECIS_SN) : 0;
-        // kat geçişi: kamera hafifçe geri çekilir (asansör kuyusunda yükselme/inme hissi)
-        const s = Math.min(w / aw, h / ah) * k.yakinlik * (1 - 0.14 * Math.sin(Math.PI * tg));
-        let ox = (w - aw * s) / 2 - g0.x0 * s + k.panX;
-        let oy = (h - ah * s) / 2 - g0.y0 * s + k.panY;
-        if (g) {                                       // kat geçişi: eski kat yukarı/aşağı kayar, yenisi karşı yönden gelir
-            oy += (tg < 0.5 ? tg * 2 : -(1 - tg) * 2) * 160 * g.yon;
+        let { s, ox, oy } = sigdir(gorunum.current.kat);
+        if (g) {
+            // kat geçişi: katlar aynı doğal koordinatları paylaştığı için kafe ekranda yerinde kalır;
+            // yalnızca iki katın çerçevesi arasında yumuşakça geçilir
+            const a = sigdir(g.kaynak), u = yumusak(Math.min(1, g.t / g.sure));
+            s = a.s + (s - a.s) * u; ox = a.ox + (ox - a.ox) * u; oy = a.oy + (oy - a.oy) * u;
         }
         // kat 1: ekranın ortası dünya kutusunun dışına kaydırılamaz
         if (gorunum.current.kat === 1 && !g) {
@@ -70,7 +90,9 @@ export default function Simulasyon() {
 
     const katDegistir = useCallback((yeni) => {
         if (yeni === gorunum.current.kat || gorunum.current.gecis) return;
-        gorunum.current.gecis = { t: 0, hedef: yeni, yon: yeni > gorunum.current.kat ? 1 : -1, degisti: false };
+        gorunum.current.gecis = { t: 0, kaynak: gorunum.current.kat, sure: azHareket() ? 0.2 : GECIS_SN };
+        gorunum.current.kat = yeni;
+        setKat(yeni);
         setSecili(null);
         setAsansor(false);
     }, []);
@@ -112,20 +134,30 @@ export default function Simulasyon() {
         motorRef.current = motor;
         motor.baslat().catch((e) => setHata(e.message));
 
-        const ara = document.createElement('canvas');
-        ara.width = 16; ara.height = 16;
-        const ac = pikselBaglami(ara);
+        // her kat kendi ara tuvaline çizilir (kat 1 opak; üst katlar saydam arka planla üstüne bindirilir)
+        const aralar = [1, 2, 3].map(() => {
+            const t = document.createElement('canvas');
+            t.width = 16; t.height = 16;
+            return { t, c: pikselBaglami(t), bolge: null, zaman: -1, anahtar: '' };
+        });
 
-        let son = performance.now(), ozetZamani = 0, kare;
+        let son = performance.now(), ozetZamani = 0, kare, isitici = null;
+        // diğer katların zemin/duvar katmanları boşta, kare başına bir parça hazırlanır (yön veya gün evresi değişince yeniden)
+        const bosta = window.requestIdleCallback || ((f) => setTimeout(f, 50));
+        const isit = (d, evre) => {
+            if (isitici === `${d}-${evre}`) return;
+            isitici = `${d}-${evre}`;
+            const adim = () => { if (isitici === `${d}-${evre}` && katmanIsit(d, evre)) bosta(adim); };
+            bosta(adim);
+        };
         const dongu = (simdi) => {
             const dt = Math.min(0.25, (simdi - son) / 1000);
             son = simdi;
             motor.tick(dt);
             const g = gorunum.current;
             if (g.gecis) {
-                g.gecis.t += dt;
-                if (!g.gecis.degisti && g.gecis.t >= GECIS_SN / 2) { g.kat = g.gecis.hedef; g.gecis.degisti = true; setKat(g.kat); }
-                if (g.gecis.t >= GECIS_SN) g.gecis = null;
+                g.gecis.t += Math.min(dt, 1 / 30);    // takılan karede maske atlamasın
+                if (g.gecis.t >= g.gecis.sure) g.gecis = null;
             }
             const tuval = tuvalRef.current;
             if (tuval && motor.hazir) {
@@ -134,48 +166,81 @@ export default function Simulasyon() {
                 if (tuval.width !== Math.round(w * dpr) || tuval.height !== Math.round(h * dpr)) {
                     tuval.width = Math.round(w * dpr); tuval.height = Math.round(h * dpr);
                 }
-                const sahne = motor.sahne(g.kat, g.secili, kamera.current.d);
+                const d = kamera.current.d;
+                const sahne = motor.sahne(g.kat, g.secili, d);
+                isit(d, sahne.evre || 'gun');
                 // yalnızca ekranda görünen bölge çizilir (doğal koordinatta; tam sayı kaydırma piksel keskinliğini korur)
                 const bx0 = Math.floor(-ox / s) - 2, by0 = Math.floor(-oy / s) - 2;
                 const bw = Math.ceil(w / s) + 4, bh = Math.ceil(h / s) + 4;
-                if (ara.width !== bw || ara.height !== bh) { ara.width = bw; ara.height = bh; ac.imageSmoothingEnabled = false; }
-                ac.setTransform(1, 0, 0, 1, -bx0, -by0);
-                sahne.olcek = s; sahne.fare = g.fare; sahne.yakinlik = kamera.current.yakinlik;
-                sahneCiz(ac, sahne, { x0: bx0, y0: by0, x1: bx0 + bw, y1: by0 + bh });
+                const hazirla = (sh, kay) => {
+                    sh.olcek = s; sh.yakinlik = kamera.current.yakinlik;
+                    sh.fare = g.fare && { x: g.fare.x, y: g.fare.y - kay };
+                    return sh;
+                };
+                // v: kameranın bulunduğu kat (geçişte kesirli, asansör eğrisiyle); vi: inşa ilerlemesi (yumuşak).
+                // k. kat ekranda (v - k) kat yüksekliği kadar aşağı kayar ve görünen oranı vi'ye göre 0..1'dir.
+                const gc = g.gecis;
+                const t01 = gc ? Math.min(1, gc.t / gc.sure) : 1;
+                const u = yumusak(t01);
+                const v = gc ? gc.kaynak + (g.kat - gc.kaynak) * asansorEgrisi(t01) : g.kat;
+                const vi = gc ? gc.kaynak + (g.kat - gc.kaynak) * u : g.kat;
+                const enUst = gc ? Math.max(gc.kaynak, g.kat) : g.kat;
+                const kayma = (v - 1) * KAT_YUKSEKLIGI, kesir = kayma - Math.floor(kayma);
                 const c = tuval.getContext('2d');
                 c.setTransform(dpr, 0, 0, dpr, 0, 0);
                 c.imageSmoothingEnabled = false;
                 // tuvalin dışı arka planın kenar rengiyle doldurulur (vinyet bu renge karardığı için dikiş görünmez)
-                c.fillStyle = ARKA_RENK[sahne.evre || 'gun']; c.fillRect(0, 0, w, h);
-                if (sahne.kat > 1) { c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(0, 0, w, h); }
-                if (KATLAR[sahne.kat].isik) { c.fillStyle = `rgba(12,6,24,${KATLAR[sahne.kat].isik})`; c.fillRect(0, 0, w, h); }
-                c.drawImage(ara, ox + bx0 * s, oy + by0 * s, bw * s, bh * s);
-                if (sahne.kat === 1) {                 // odak: kenarlara doğru çok hafif kararma
-                    const v = c.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.42, w / 2, h / 2, Math.max(w, h) * 0.78);
-                    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.2)');
-                    c.fillStyle = v; c.fillRect(0, 0, w, h);
-                }
-                ustKatmanCiz(c, s, (p) => ({ x: ox + p.x * s, y: oy + p.y * s }), sahne);
-                if (g.gecis) {                         // kat geçişi: kararma
-                    const t = Math.min(1, g.gecis.t / GECIS_SN);
-                    c.fillStyle = `rgba(20,12,6,${Math.sin(Math.PI * t) * 0.9})`;
-                    c.fillRect(0, 0, w, h);
-                    // asansör kuyusu: katlar arasındaki döşeme kirişleri hareket yönünün tersine akar
-                    const a = Math.sin(Math.PI * t);
-                    for (let i = 0; i < 4; i++) {
-                        const yy = ((i / 4 + t * 2 * g.gecis.yon) % 1 + 1) % 1 * h;
-                        c.fillStyle = `rgba(70,52,40,${0.85 * a})`; c.fillRect(0, yy, w, 22);
-                        c.fillStyle = `rgba(140,110,80,${0.6 * a})`; c.fillRect(0, yy, w, 2);
-                        c.fillStyle = `rgba(0,0,0,${0.5 * a})`; c.fillRect(0, yy + 22, w, 6);
+                const zemin = ARKA_RENK[sahne.evre || 'gun'];
+                c.fillStyle = zemin; c.fillRect(0, 0, w, h);
+                for (let k = 1; k <= enUst; k++) {
+                    const gorunen = k === 1 ? 1 : Math.max(0, Math.min(1, vi - k + 1));
+                    if (gorunen <= 0) continue;
+                    // tam sayı kayma ara tuvalin bölgesine, kesirli kısım (bütün katlarda aynı) ekrana aktarıma uygulanır
+                    const kay = Math.floor((v - k) * KAT_YUKSEKLIGI);
+                    const kararma = Math.min(0.75, ALT_KAT_KARARMA * Math.max(0, v - k));
+                    const a = aralar[k - 1];
+                    const seyrek = !gc && k !== g.kat;
+                    const ihtiyac = { x0: bx0, y0: by0 - kay, x1: bx0 + bw, y1: by0 - kay + bh };
+                    const anahtar = `${d}|${kay}|${sahne.evre}`;
+                    const kapsar = a.bolge && a.bolge.x0 <= ihtiyac.x0 && a.bolge.y0 <= ihtiyac.y0 && a.bolge.x1 >= ihtiyac.x1 && a.bolge.y1 >= ihtiyac.y1;
+                    if (!seyrek || !kapsar || a.anahtar !== anahtar || simdi - a.zaman > ALT_KAT_YENILEME_SN * 1000) {
+                        const pay = seyrek ? ALT_KAT_KENAR : 0;
+                        const bolge = { x0: ihtiyac.x0 - pay, y0: ihtiyac.y0 - pay, x1: ihtiyac.x1 + pay, y1: ihtiyac.y1 + pay };
+                        const tw = bolge.x1 - bolge.x0, th = bolge.y1 - bolge.y0;
+                        if (a.t.width !== tw || a.t.height !== th) { a.t.width = tw; a.t.height = th; a.c.imageSmoothingEnabled = false; }
+                        a.c.setTransform(1, 0, 0, 1, -bolge.x0, -bolge.y0);
+                        const sh = hazirla(k === g.kat ? sahne : motor.sahne(k, null, d), kay);
+                        if (k > 1) sh.saydam = true;
+                        sahneCiz(a.c, sh, bolge);
+                        if (k > 1) insaMaskesi(a.c, bolge, gorunurAlan(k, d), gorunen);
+                        // seçili katın altındakiler kararır: yalnızca bulunulan kat belirgin
+                        if (k > 1 && kararma > 0) {
+                            a.c.save(); a.c.globalCompositeOperation = 'source-atop'; a.c.globalAlpha = kararma;
+                            a.c.fillStyle = zemin; a.c.fillRect(bolge.x0, bolge.y0, tw, th); a.c.restore();
+                        }
+                        Object.assign(a, { bolge, zaman: simdi, anahtar });
+                    }
+                    const B = a.bolge;
+                    c.drawImage(a.t, ox + B.x0 * s, oy + (B.y0 + kay + kesir) * s, (B.x1 - B.x0) * s, (B.y1 - B.y0) * s);
+                    if (k === 1) {
+                        // odak: kenarlara doğru çok hafif kararma; ardından alt kat kararması
+                        const vg = c.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.42, w / 2, h / 2, Math.max(w, h) * 0.78);
+                        vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,.2)');
+                        c.fillStyle = vg; c.fillRect(0, 0, w, h);
+                        if (kararma > 0) { c.globalAlpha = kararma; c.fillStyle = zemin; c.fillRect(0, 0, w, h); c.globalAlpha = 1; }
                     }
                 }
+                // etiketler (masa no, baloncuklar) yeni katta geçişin sonuna doğru belirir
+                c.globalAlpha = gc ? Math.max(0, (u - 0.7) / 0.3) : 1;
+                if (c.globalAlpha > 0) ustKatmanCiz(c, s, (q) => ({ x: ox + q.x * s, y: oy + q.y * s }), sahne);
+                c.globalAlpha = 1;
             }
             ozetZamani -= dt;
             if (ozetZamani <= 0 && motor.hazir) { ozetZamani = 0.25; setOzet(motor.ozet()); }
             kare = requestAnimationFrame(dongu);
         };
         kare = requestAnimationFrame(dongu);
-        return () => cancelAnimationFrame(kare);
+        return () => { cancelAnimationFrame(kare); isitici = null; };
     }, [donusum]);
 
     // Klavye: Q/E döndür, +/- yakınlaş, Space basılıyken sürükle, 0 sıfırla
