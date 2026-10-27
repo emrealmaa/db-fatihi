@@ -1,26 +1,37 @@
-// Piksel-art izometrik çizim. Sahne ara bir tuvale (DOGAL_G x DOGAL_Y) çizilir; kamera (yakınlaştırma,
-// kaydırma) bu tuvali ekrana aktarırken uygulanır. Döndürme dünya koordinatlarında yapılır (harita.js):
+// Piksel-art izometrik çizim. Sahne, doğal koordinatlarda (DOGAL_G x DOGAL_Y) tanımlıdır; her karede yalnızca ekranda
+// görünen bölge ara bir tuvale çizilir, kamera (yakınlaştırma, kaydırma) bu tuvali ekrana aktarırken uygulanır. Döndürme dünya koordinatlarında yapılır (harita.js):
 // oda 90° döner, kameraya göre arkada kalan iki duvar çizilir ve derinlik sıralaması döndürülmüş
 // koordinatlarla yeniden hesaplanır. Tüm şekiller fillRect ile satır/sütun çizildiğinden kenarlar keskin kalır.
 import {
-    arkaDuvarlar, DERINLIK, dikdortgenDondur, disGorunur, dondur, duvarNoktasi, GENISLIK, IC_DERINLIK,
-    ASANSOR_GOVDE, KALDIRIM_Y, KAPI_ARALIK, KATLAR, SAHNE, boyut, KOMSU_BINALAR, binaArkada, arkadaMi, BLOK, YOL_SINIR,
+    arkaDuvarlar, dikdortgenDondur, disGorunur, dondur, duvarNoktasi, GENISLIK, IC_DERINLIK,
+    ASANSOR_GOVDE, KALDIRIM_Y, KAPI_ARALIK, KATLAR, SAHNE, arkadaMi,
 } from './harita.js';
+import { BINALAR, kepenkOrani } from './sehir/binalar.js';
+import { binaAltigeni, binaCiz } from './sehir/binaCizim.js';
+import { gunIsigi } from './sehir/isik.js';
+import { aracCiz, ARAC_BOY, esyaCiz, guvercinCiz, kediCiz, sehirZemini } from './sehir/sokakCizim.js';
+import { DUNYA, SINIR, SOKAK_ESYALARI } from './sehir/yerlesim.js';
 
 const KX = 24, KY = 12;                  // yarım karo genişliği / yüksekliği
 const DUVAR = 84;                        // duvar yüksekliği
-const PAD = 24 + 14 * KX;                // yanlarda blok yolu ve komşu binalar için pay
+const PAD = 40;
 const PLAKA = 14;                        // zemin plakası kalınlığı
 const DUVAR_KAL = 0.35;                  // duvar kalınlığı (karo)
-const OY = DUVAR + 24 + 180;             // üstte yüksek komşu binalar, çatılar ve arka yol için pay
-export const DOGAL_G = (GENISLIK + DERINLIK) * KX + PAD * 2;
-export const DOGAL_Y = OY + (GENISLIK + DERINLIK + 16) * KY + 36 + PLAKA;
+const UST_PAY = 330, ALT_PAY = 60;       // üstte yüksek binalar ve çatılar, altta plaka için pay
+// Şehir (dünya + siluet şeridi) her kamera yönünde aynı doğal tuvale sığar
+const IZ = [0, 1, 2, 3].map((d) => {
+    const ks = [[SINIR.x0, SINIR.y0], [SINIR.x1, SINIR.y0], [SINIR.x0, SINIR.y1], [SINIR.x1, SINIR.y1]].map(([x, y]) => dondur(d, x, y));
+    const f = ks.map((p) => p.x - p.y), t = ks.map((p) => p.x + p.y);
+    return { fmin: Math.min(...f), fmax: Math.max(...f), tmin: Math.min(...t), tmax: Math.max(...t) };
+});
+export const DOGAL_G = Math.max(...IZ.map((z) => z.fmax - z.fmin)) * KX + PAD * 2;
+export const DOGAL_Y = Math.max(...IZ.map((z) => z.tmax - z.tmin)) * KY + UST_PAY + ALT_PAY;
 
 // Döndürülmüş uzayda izdüşüm; d: kamera açısı (0..3)
 export function izdusum(d) {
-    const { RH } = boyut(d);
-    const ox = RH * KX + PAD;
-    const R = (rx, ry) => ({ x: ox + (rx - ry) * KX, y: OY + (rx + ry) * KY });
+    const z = IZ[d];
+    const ox = -z.fmin * KX + PAD, oy = -z.tmin * KY + UST_PAY;
+    const R = (rx, ry) => ({ x: ox + (rx - ry) * KX, y: oy + (rx + ry) * KY });
     const W = (x, y) => { const p = dondur(d, x, y); return R(p.x, p.y); };
     return { R, W };
 }
@@ -73,7 +84,7 @@ const dogruY = (a, b, x) => a.y + ((b.y - a.y) * (x - a.x)) / (b.x - a.x);
 // renk.desen(c, x, ustY, h, solYuzMu, sutun) verilirse yan yüzlere desen çizilir (raf, sandık...)
 function kutuR(c, P, r, h, renk, z = 0) {
     const T = P.R(r.gx, r.gy), Rr = P.R(r.gx + r.gw, r.gy), B = P.R(r.gx + r.gw, r.gy + r.gd), L = P.R(r.gx, r.gy + r.gd);
-    const x0 = Math.round(L.x), x1 = Math.round(Rr.x);
+    const x0 = Math.round(L.x), x1 = Math.round(Rr.x), bx = Math.round(B.x);
     for (let x = x0; x < x1; x++) {
         const px = x + 0.5;
         const ust = Math.round(px < T.x ? dogruY(L, T, px) : dogruY(T, Rr, px));
@@ -84,7 +95,7 @@ function kutuR(c, P, r, h, renk, z = 0) {
             const sol = px < B.x;
             c.fillStyle = sol ? renk.sol : renk.sag;
             c.fillRect(x, alt - h - z, 1, h);
-            if (renk.desen) renk.desen(c, x, alt - h - z, h, sol, x - x0);
+            if (renk.desen) renk.desen(c, x, alt - h - z, h, sol, x - x0, sol ? x - x0 : x - bx, sol ? bx - x0 : x1 - bx);
         }
         if (renk.kenar) { c.fillStyle = renk.kenar; c.fillRect(x, ust - h - z, 1, 1); }
     }
@@ -153,79 +164,43 @@ const kitaplikDeseni = (c, x, ustY, h, sol, sutun) => {
     c.fillStyle = '#2e1a0e'; c.fillRect(x, ustY + h - 4, 1, 4);
 };
 
-// ------------------------------------------------------------------ arka plan: binanın çevresindeki karanlık cadde haritası
-// Gökyüzü/silüet yok: kafe, karanlık bir şehir bloğunun ortasında duran bir diorama gibi görünür. Izgara, binanın
-// izometrik ızgarasıyla hizalı (döndürülmüş uzay); kenarlara doğru ARKA_RENK'e kararır ki sayfa kenarlarıyla birleşsin.
+// Dünyanın dışı düz koyu renk (sayfa kenarıyla aynı)
 export const ARKA_RENK = { gun: '#1c2029', aksam: '#15131f', gece: '#0a0b13' };
-const ARKA_DOKU = {
-    gun: { yol: '#2c313b', kaldirim: ['#363b46', '#3a404b'], cizgi: '#6b6648' },
-    aksam: { yol: '#211f2b', kaldirim: ['#2a2834', '#2e2c39'], cizgi: '#5a4f3a' },
-    gece: { yol: '#14151d', kaldirim: ['#1b1c26', '#1e1f2a'], cizgi: '#4a4330' },
-};
-const arkaPlanOnbellek = new Map();
-export function arkaPlan(evre) {
-    if (arkaPlanOnbellek.has(evre)) return arkaPlanOnbellek.get(evre);
-    const t = document.createElement('canvas');
-    t.width = DOGAL_G; t.height = DOGAL_Y;
-    const c = pikselBaglami(t);
-    const dk = ARKA_DOKU[evre];
-    c.fillStyle = ARKA_RENK[evre]; c.fillRect(0, 0, DOGAL_G, DOGAL_Y);
-    const P = izdusum(0);
-    const yolMu = (v) => ((v % 9) + 9) % 9 === 4;          // her 9 karede bir cadde
-    const lambalar = [];
-    for (let gx = -44; gx < GENISLIK + DERINLIK + 44; gx++) for (let gy = -44; gy < GENISLIK + DERINLIK + 44; gy++) {
-        const { x, y } = P.R(gx, gy);
-        if (x < -KX * 2 || x > DOGAL_G + KX * 2 || y < -KY * 2 || y > DOGAL_Y + KY) continue;
-        const yol = yolMu(gx) || yolMu(gy);
-        elmasR(c, P, gx, gy, yol ? dk.yol : dk.kaldirim[(gx + gy) & 1]);
-        if (yolMu(gx) && !yolMu(gy) && gy % 2 === 0) kutuR(c, P, { gx: gx + 0.46, gy: gy + 0.2, gw: 0.08, gd: 0.5 }, 0, { ust: dk.cizgi });
-        if (yolMu(gy) && !yolMu(gx) && gx % 2 === 0) kutuR(c, P, { gx: gx + 0.2, gy: gy + 0.46, gw: 0.5, gd: 0.08 }, 0, { ust: dk.cizgi });
-        if (yolMu(gx + 1) && yolMu(gy + 1)) lambalar.push(P.R(gx + 0.5, gy + 0.5));
-    }
-    // kavşak köşelerinde sokak lambası ışık havuzları (akşam/gece)
-    if (evre !== 'gun') {
-        c.save(); c.globalCompositeOperation = 'lighter';
-        for (const p of lambalar) {
-            const g = c.createRadialGradient(p.x, p.y, 2, p.x, p.y, 46);
-            g.addColorStop(0, `rgba(255,196,110,${evre === 'gece' ? 0.2 : 0.12})`); g.addColorStop(1, 'rgba(255,196,110,0)');
-            c.fillStyle = g; c.fillRect(p.x - 46, p.y - 46, 92, 92);
-            c.fillStyle = '#ffe2a0'; c.fillRect(p.x - 1, p.y - 2, 2, 2);
-        }
-        c.restore();
-    }
-    // kenarlara doğru kararma (vinyet)
-    const dis = Math.min(DOGAL_G, DOGAL_Y) / 2;          // kenarların tamamı tam koyuya ulaşsın
-    const v = c.createRadialGradient(DOGAL_G / 2, DOGAL_Y / 2, dis * 0.45, DOGAL_G / 2, DOGAL_Y / 2, dis);
-    const [r0, g0, b0] = onAltilik(ARKA_RENK[evre]);
-    v.addColorStop(0, `rgba(${r0},${g0},${b0},0)`); v.addColorStop(1, `rgba(${r0},${g0},${b0},1)`);
-    c.fillStyle = v; c.fillRect(0, 0, DOGAL_G, DOGAL_Y);
-    arkaPlanOnbellek.set(evre, t);
-    return t;
-}
 
 // ------------------------------------------------------------------ zemin ve duvarlar (önbellekli)
 const katmanOnbellek = new Map();
 
 // parca: 'zemin' (plaka, döşeme, halılar, dış mekân zemini) veya 'duvar' (arka duvarlar ve dekorları)
+// Katman, içeriğinin ekran kutusuna kırpılmış ayrı bir tuvaldir ({ tuval, x0, y0 }); en son kullanılanlar tutulur.
+// Kat 1 zemini bütün şehri içerdiği için büyüktür: yalnızca son kamera yönü saklanır.
 function zeminVeDuvarlar(kat, d, evre, parca = 'zemin') {
-    const anahtar = `${kat}-${d}-${evre}-${parca}`;
-    if (katmanOnbellek.has(anahtar)) return katmanOnbellek.get(anahtar);
-    const tuval = document.createElement('canvas');
-    tuval.width = DOGAL_G; tuval.height = DOGAL_Y;
-    const c = pikselBaglami(tuval);
+    const anahtar = `${kat}-${d}-${parca}-${parca === 'duvar' ? evre : ''}`;
+    const var0 = katmanOnbellek.get(anahtar);
+    if (var0) { katmanOnbellek.delete(anahtar); katmanOnbellek.set(anahtar, var0); return var0; }
     const P = izdusum(d);
+    const sehir = kat === 1 && parca === 'zemin';
+    const alan = sehir ? dikdortgenDondur(d, SINIR.x0, SINIR.y0, SINIR.x1 - SINIR.x0, SINIR.y1 - SINIR.y0)
+        : dikdortgenDondur(d, -0.5, -0.5, GENISLIK + 1, IC_DERINLIK + 1);
+    const ks = [P.R(alan.gx, alan.gy), P.R(alan.gx + alan.gw, alan.gy), P.R(alan.gx + alan.gw, alan.gy + alan.gd), P.R(alan.gx, alan.gy + alan.gd)];
+    const x0 = Math.floor(Math.min(...ks.map((p) => p.x))) - 4, x1 = Math.ceil(Math.max(...ks.map((p) => p.x))) + 4;
+    const y0 = Math.floor(Math.min(...ks.map((p) => p.y))) - (parca === 'duvar' ? DUVAR + 10 : 4), y1 = Math.ceil(Math.max(...ks.map((p) => p.y))) + PLAKA + 4;
+    const tuval = document.createElement('canvas');
+    tuval.width = x1 - x0; tuval.height = y1 - y0;
+    const c = pikselBaglami(tuval);
+    c.translate(-x0, -y0);
     const t = KATLAR[kat];
-    if (parca === 'duvar') {
-        duvarlariCiz(c, P, kat, d, evre);
-        katmanOnbellek.set(anahtar, tuval);
-        return tuval;
-    }
+    const sonuc = { tuval, x0, y0 };
+    const sakla = () => {
+        katmanOnbellek.set(anahtar, sonuc);
+        const buyuk = [...katmanOnbellek.keys()].filter((k) => k.startsWith('1-') && k.includes('-zemin-'));
+        while (buyuk.length > 1) katmanOnbellek.delete(buyuk.shift());
+        while (katmanOnbellek.size > 10) katmanOnbellek.delete(katmanOnbellek.keys().next().value);
+        return sonuc;
+    };
+    if (parca === 'duvar') { duvarlariCiz(c, P, kat, d, evre); return sakla(); }
 
-    // Zemin plakası: katın altında kalın, katmanlı döşeme kesiti. Kat 1'de dış mekân görünürken plaka bütün
-    // şehir bloğunu (çevre yol, karşı kaldırım, karşı dükkânlar) taşıyan bir dioramaya dönüşür.
-    const dis = kat === 1 && disGorunur(d);
-    const plaka = dis ? dikdortgenDondur(d, YOL_SINIR.x0, YOL_SINIR.y0, YOL_SINIR.x1 - YOL_SINIR.x0, 26.6 - YOL_SINIR.y0)
-        : dikdortgenDondur(d, 0, 0, GENISLIK, IC_DERINLIK);
+    // Zemin plakası: katın altında kalın, katmanlı döşeme kesiti. Kat 1'de plaka bütün şehri taşıyan bir dioramadır.
+    const plaka = sehir ? alan : dikdortgenDondur(d, 0, 0, GENISLIK, IC_DERINLIK);
     kutuR(c, P, plaka, PLAKA, {
         ust: '#3c4433', sol: '#5b4332', sag: '#47342a',
         desen: (cc, x, y, h, sol) => {
@@ -246,7 +221,7 @@ function zeminVeDuvarlar(kat, d, evre, parca = 'zemin') {
             if ((gx + j) % 4 === 0) kutu(c, P, d, gx + 0.2, gy + j / 3 + 0.1, 0.5, 0.06, 0, { ust: ton(z[0], 1.08) });   // parlama
         }
     }
-    if (dis) disZemin(c, P, d);
+    if (sehir) sehirZemini(c, P, d);
     for (const h of t.halilar || []) {
         const renk = HALI[h.renk];
         for (let gx = h.gx; gx < h.gx + h.gw; gx++) for (let gy = h.gy; gy < h.gy + h.gd; gy++) {
@@ -267,62 +242,7 @@ function zeminVeDuvarlar(kat, d, evre, parca = 'zemin') {
             }
         }
     }
-    katmanOnbellek.set(anahtar, tuval);
-    return tuval;
-}
-
-// Dış mekân zemini (yalnızca kat 1, ön cephe kameraya dönükken): ada (kafe + yan binalar) çevresinde kaldırım,
-// iki şeritli döngü yol, yuvarlak köşeler (çeyrek daireler ince şeritlerle), bordürler, şerit çizgileri, yaya geçitleri,
-// karşı kaldırım ve karşı dükkânların önündeki meydan taşları.
-const YOL_RENK = ['#4a4a50', '#45454b'], KALDIRIM = ['#c4bfb5', '#b9b4aa'], KARSI = ['#a89f92', '#b3aa9c'], CIM = '#3c4a33';
-function disZemin(c, P, d) {
-    const { x0, y0, x1, y1 } = BLOK;
-    const karo = (gx, gy, renk) => { const r = dikdortgenDondur(d, gx, gy, 1, 1); elmasR(c, P, r.gx, r.gy, renk); };
-    const yolMu = (gx, gy) => gx < x0 - 1 || gx >= x1 + 1 || gy < y0 - 1 || gy >= y1 + 1;
-    for (let gx = YOL_SINIR.x0; gx < YOL_SINIR.x1; gx++) for (let gy = YOL_SINIR.y0; gy < 27; gy++) {
-        if (gx >= 0 && gx < GENISLIK && gy >= 0 && gy < IC_DERINLIK) continue;             // kafenin içi
-        const tek = (gx + gy) & 1;
-        if (gy >= YOL_SINIR.y1) karo(gx, gy, gy === YOL_SINIR.y1 ? KARSI[tek] : ((gx * 3 + gy) % 4 ? '#8f877b' : '#9a9184'));
-        else if (yolMu(gx, gy)) karo(gx, gy, YOL_RENK[tek]);
-        else if (gy === IC_DERINLIK && gx >= 0 && gx < GENISLIK) karo(gx, gy, tek ? '#9c8f7e' : '#a89a88');   // cephe şeridi
-        else karo(gx, gy, KALDIRIM[tek]);
-    }
-    // çeyrek daire: (cx, cy) merkezli, sx/sy yönündeki çeyrekte r yarıçaplı dolu alan
-    const ceyrek = (cx, cy, sx, sy, r, renk) => {
-        const ad = 0.1;
-        for (let u = 0; u < r; u += ad) {
-            const yari = Math.sqrt(Math.max(0, r * r - (u + ad / 2) ** 2));
-            const x = sx > 0 ? cx + u : cx - u - ad, y = sy > 0 ? cy : cy - yari;
-            kutu(c, P, d, x, y, ad, yari, 0, { ust: renk });
-        }
-    };
-    const yay = (cx, cy, sx, sy, r, f) => { for (let a = 0; a <= 1.0001; a += 1 / 14) f(cx + sx * r * Math.cos(a * Math.PI / 2), cy + sy * r * Math.sin(a * Math.PI / 2), a); };
-    for (const [cx, cy, sx, sy] of [[x0, y0, -1, -1], [x1, y0, 1, -1], [x0, y1, -1, 1], [x1, y1, 1, 1]]) {
-        ceyrek(cx, cy, sx, sy, 3.05, CIM);                                                        // köşe dışı: çimen
-        ceyrek(cx, cy, sx, sy, 3, YOL_RENK[0]);                                                   // yol
-        ceyrek(cx, cy, sx, sy, 1, KALDIRIM[0]);                                                   // adanın yuvarlak köşesi
-        yay(cx, cy, sx, sy, 1, (x, y) => kutu(c, P, d, x - 0.06, y - 0.06, 0.12, 0.12, 2, renkler('#8f8a80')));   // bordür
-        yay(cx, cy, sx, sy, 2, (x, y, a) => { if (Math.round(a * 14) % 3 === 0) kutu(c, P, d, x - 0.05, y - 0.05, 0.1, 0.1, 0, { ust: '#e3d26b' }); });
-    }
-    // düz bordürler ve orta şerit çizgileri
-    for (let gx = x0; gx < x1; gx++) {
-        kutu(c, P, d, gx, y1 + 0.9, 1, 0.1, 2, renkler('#8f8a80'));                               // ön bordür
-        kutu(c, P, d, gx, y0 - 1, 1, 0.1, 2, renkler('#8f8a80'));                                 // arka bordür
-        if (gx % 3 === 1) { kutu(c, P, d, gx + 0.1, y1 + 1.95, 0.7, 0.1, 0, { ust: '#e3d26b' }); kutu(c, P, d, gx + 0.1, y0 - 2.05, 0.7, 0.1, 0, { ust: '#e3d26b' }); }
-    }
-    for (let gx = YOL_SINIR.x0; gx < YOL_SINIR.x1; gx++) kutu(c, P, d, gx, YOL_SINIR.y1, 1, 0.1, 2, renkler('#8f8a80'));   // karşı bordür
-    for (let gy = y0; gy < y1; gy++) {
-        kutu(c, P, d, x0 - 1, gy, 0.1, 1, 2, renkler('#8f8a80')); kutu(c, P, d, x1 + 0.9, gy, 0.1, 1, 2, renkler('#8f8a80'));
-        if (gy % 3 === 1) { kutu(c, P, d, x0 - 2.05, gy + 0.1, 0.1, 0.7, 0, { ust: '#e3d26b' }); kutu(c, P, d, x1 + 1.95, gy + 0.1, 0.1, 0.7, 0, { ust: '#e3d26b' }); }
-    }
-    // yaya geçitleri: kafe kapısının önünde, iki yan yolda ve arka yolda
-    const zebra = '#e9e6df';
-    for (let i = 0; i < 6; i++) {
-        kutu(c, P, d, 1.6 + i * 0.36, y1 + 1.08, 0.2, 1.84, 0, { ust: zebra });
-        kutu(c, P, d, x0 - 2.92, 14.6 + i * 0.36, 1.84, 0.2, 0, { ust: zebra });
-        kutu(c, P, d, x1 + 1.08, 14.6 + i * 0.36, 1.84, 0.2, 0, { ust: zebra });
-        kutu(c, P, d, 9 + i * 0.36, y0 - 2.92, 0.2, 1.84, 0, { ust: zebra });
-    }
+    return sakla();
 }
 
 function duvarlariCiz(c, P, kat, d, evre = 'gun') {
@@ -512,12 +432,11 @@ function nesneCiz(c, P, d, o, sahne = {}) {
             c.fillRect(q.x, q.y - o.h, 7, 2);
             const yanik = sahne.lambalar;
             c.fillStyle = yanik ? '#fff1b8' : '#8a8f96'; c.fillRect(q.x + 5, q.y - o.h + 1, 4, 3);
-            if (yanik) {
-                c.save(); c.globalAlpha = 0.18;
-                c.fillStyle = '#ffd27a';
-                for (let i = 0; i < o.h - 6; i++) c.fillRect(q.x + 7 - i * 0.45, q.y - o.h + 4 + i, 2 + i * 0.9, 1);
-                c.restore();
-            }
+            if (yanik && sahne.isiklar) sahne.isiklar.push((g) => {
+                parilti(c, q.x + 6, q.y - o.h * 0.45, 12, o.h * 0.55, '255,210,122', 0.2 * g);       // ışık konisi
+                parilti(c, q.x + 3, q.y, 40, 20, '255,196,110', 0.34 * g);                           // yer havuzu
+                parilti(c, q.x + 7, q.y - o.h + 2, 7, 7, '255,241,184', 0.9 * g);                     // ampul
+            });
             break;
         }
         case 'agac': {
@@ -1236,7 +1155,8 @@ export function karakterPaleti(tohum, tur = 'musteri', ogrenci = false, ek = {})
 function spriteUret(p, { poz, arka, kare, tepsi, elKalkik }) {
     const t = document.createElement('canvas');
     t.width = SPRITE_G; t.height = SPRITE_Y;
-    const c = t.getContext('2d');
+    // dış hat için getImageData yapılır: CPU tuvali GPU'dan geri okuma beklemesini önler (sonuç atlasa kopyalanır)
+    const c = t.getContext('2d', { willReadFrequently: true });
     const r = (x, y, w, h, renk) => {
         c.fillStyle = renk;
         c.fillRect(SX + sk(x), SY + sk(y), sk(x + w) - sk(x), sk(y + h) - sk(y));
@@ -1343,8 +1263,35 @@ function spriteUret(p, { poz, arka, kare, tepsi, elKalkik }) {
 function sprite(p, o) {
     const a = `${p.anahtar}|${o.poz}|${o.arka ? 1 : 0}|${o.kare % 4}|${o.tepsi ? 1 : 0}|${o.elKalkik ? 1 : 0}`;
     let s = spriteOnbellek.get(a);
-    if (!s) { s = spriteUret(p, o); spriteOnbellek.set(a, s); }
+    if (!s) {
+        s = atlasYeri();
+        atlasC.drawImage(spriteUret(p, o), s.x, s.y);
+        spriteOnbellek.set(a, s);
+    }
     return s;
+}
+
+// Karakter atlası: kareler 512 px'lik sayfalarda toplanır (binlerce küçük tuval yerine; GPU belleğini azaltır).
+// Yeni kare yalnızca son sayfaya eklenir, böylece her eklemede yalnızca o küçük sayfa yeniden yüklenir.
+// Sayfa sınırı aşılınca hepsi temizlenip kareler yeniden üretilir.
+const ATLAS = 512, ATLAS_SAYFA = 40;
+const sayfalar = [];
+let atlasC = null, atlasX = 0, atlasY = 0;
+function yeniSayfa() {
+    const t = document.createElement('canvas');
+    t.width = ATLAS; t.height = ATLAS;
+    sayfalar.push(t); atlasC = t.getContext('2d'); atlasX = 0; atlasY = 0;
+}
+function atlasYeri() {
+    if (!atlasC) yeniSayfa();
+    if (atlasX + SPRITE_G > ATLAS) { atlasX = 0; atlasY += SPRITE_Y; }
+    if (atlasY + SPRITE_Y > ATLAS) {
+        if (sayfalar.length >= ATLAS_SAYFA) { sayfalar.length = 0; spriteOnbellek.clear(); }
+        yeniSayfa();
+    }
+    const yer = { x: atlasX, y: atlasY, t: sayfalar[sayfalar.length - 1] };
+    atlasX += SPRITE_G;
+    return yer;
 }
 
 // Dünya yön vektörünü kamera açısına göre ekran yönüne çevir: arkası mı dönük, ayna mı
@@ -1368,65 +1315,100 @@ function karakterCiz(c, P, d, b) {
     const x = Math.round(p.x) - SX - sk(8), y = Math.round(p.y) - SY - sk(29) - otur - (b.z || 0);
     if (yon.ayna) {
         c.save(); c.translate(Math.round(p.x) * 2, 0); c.scale(-1, 1);
-        c.drawImage(s, x, y); c.restore();
-    } else c.drawImage(s, x, y);
+        c.drawImage(s.t, s.x, s.y, SPRITE_G, SPRITE_Y, x, y, SPRITE_G, SPRITE_Y); c.restore();
+    } else c.drawImage(s.t, s.x, s.y, SPRITE_G, SPRITE_Y, x, y, SPRITE_G, SPRITE_Y);
 }
 
 // ------------------------------------------------------------------ sahne
-export function sahneCiz(c, sahne) {
+// Görünen bölgedeki sahne. bolge: doğal koordinatta ekranda görünen dikdörtgen (dışı çizilmez).
+// Sıra: zemin katmanı → kafenin arka duvarlarının gerisindeki sokak öğeleri → duvar katmanı → öndeki her şey
+// (iç mekân + sokak, derinliğe göre) → gün ışığı tonu (kafe içi hariç) → gece ışıkları.
+export function sahneCiz(c, sahne, bolge) {
     const { kat, d } = sahne;
     const P = izdusum(d);
     const evre = sahne.evre || 'gun';
-    c.drawImage(arkaPlan(evre), 0, 0);
-    if (kat > 1) { c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(0, 0, DOGAL_G, DOGAL_Y); }   // üst katlar: cadde aşağıda kalır
+    const b0 = bolge || { x0: 0, y0: 0, x1: DOGAL_G, y1: DOGAL_Y };
+    const BW = b0.x1 - b0.x0, BH = b0.y1 - b0.y0;
+    c.fillStyle = ARKA_RENK[evre]; c.fillRect(b0.x0, b0.y0, BW, BH);
     const dis = kat === 1 && disGorunur(d);
-    c.drawImage(zeminVeDuvarlar(kat, d, evre, 'zemin'), 0, 0);
+    const sehir = kat === 1;
+    const isik = sehir ? gunIsigi(sahne.dakika ?? 720) : null;
+    sahne.isiklar = []; sahne.emisler = [];
+    sahne.isikGucu = isik ? isik.guc : 0;
+    sahne.lambalar = sahne.isikGucu > 0.15;
+    const zl = zeminVeDuvarlar(kat, d, evre, 'zemin');
+    c.drawImage(zl.tuval, zl.x0, zl.y0);
     const derinlik = (gx, gy, gw = 1, gd = 1) => {
         const r = dikdortgenDondur(d, gx, gy, gw, gd);
         return r.gx + r.gy + (r.gw + r.gd) / 2;
     };
-    const arabaKutusu = (a) => [a.x - 0.85, a.y - 0.85, 1.7, 1.7];
-    if (dis) {
-        // kafenin arka duvarlarının gerisindekiler duvar katmanından önce, kendi aralarında derinliğe göre çizilir
-        const arka = [];
-        for (const b of KOMSU_BINALAR) if (binaArkada(d, b)) arka.push({ k: derinlik(b.gx, b.gy, b.gw, b.gd) - 0.5, f: () => binaCiz(c, P, d, b, evre, true) });
-        for (const o of KATLAR[kat].dis || []) if (arkadaMi(d, o.gx, o.gy, o.gw, o.gd)) arka.push({ k: derinlik(o.gx, o.gy, o.gw, o.gd) - 0.5, f: () => nesneCiz(c, P, d, o, sahne) });
-        for (const a of sahne.arabalar || []) if (arkadaMi(d, ...arabaKutusu(a))) { const q = dondur(d, a.x, a.y); arka.push({ k: q.x + q.y, f: () => arabaCiz(c, P, d, a, evre) }); }
-        arka.sort((a, b) => a.k - b.k).forEach((x) => x.f());
-    }
-    c.drawImage(zeminVeDuvarlar(kat, d, evre, 'duvar'), 0, 0);
-    const ciz = [];
-    for (const o of KATLAR[kat].nesneler) ciz.push({ k: derinlik(o.gx, o.gy, o.gw, o.gd) - 0.5 + (o.z ? 0.3 : 0), f: () => nesneCiz(c, P, d, o, sahne) });
-    if (dis) {
-        // akşam/gece pencerelerden ve kapıdan kaldırıma süzülen sıcak ışık
-        if (evre !== 'gun') {
-            // kafe camlarından ve kapıdan dışarı süzülen amber ışık huzmeleri (yerde uzayan yelpaze)
-            c.save(); c.globalCompositeOperation = 'lighter';
-            const guc = evre === 'gece' ? 0.3 : 0.17;
-            for (const [x0, x1] of [[1.5, 4.5], [5.5, 9.5], [10.5, 14.5]]) {
-                for (let i = 0; i < 9; i++) {
-                    const u = i / 8, yy = IC_DERINLIK + u * 2.6, gen = (x1 - x0) * (1 + u * 0.5);
-                    const orta = (x0 + x1) / 2;
-                    kutu(c, P, d, orta - gen / 2, yy, gen, 0.32, 0, { ust: `rgba(255,184,96,${guc * (1 - u) * 0.55})` });
+    const kutuDon = (gx, gy, gw, gd) => { const r = dikdortgenDondur(d, gx, gy, gw, gd); return { rx0: r.gx, ry0: r.gy, rx1: r.gx + r.gw, ry1: r.gy + r.gd }; };
+    const gorunur = (x, y) => x > b0.x0 - 160 && x < b0.x1 + 160 && y > b0.y0 - 80 && y < b0.y1 + 260;
+    const dusuk = (sahne.olcek || 1) < 0.5;                                                     // uzak yakınlaştırmada sadeleştir
+    const disari = [];
+    const ekleDis = (gx, gy, gw, gd, f, ek = 0) => {
+        const q = P.W(gx + gw / 2, gy + gd / 2);
+        if (!gorunur(q.x, q.y)) return;
+        disari.push({ k: derinlik(gx, gy, gw, gd) - 0.5 + ek, kutu: kutuDon(gx, gy, gw, gd), arka: arkadaMi(d, gx, gy, gw, gd), f });
+    };
+    sahne.binaDurum = {};
+    if (sehir) {
+        const kafe = kafeAltigeni(P, d);
+        for (const b of BINALAR) {
+            const alt = binaAltigeni(b, d);
+            const xs = alt.map((p) => p.x), ys = alt.map((p) => p.y);
+            if (Math.max(...xs) < b0.x0 - 20 || Math.min(...xs) > b0.x1 + 20 || Math.max(...ys) < b0.y0 - 20 || Math.min(...ys) > b0.y1 + 20) continue;
+            const arka = arkadaMi(d, b.x, b.y, b.w, b.d);
+            const ustunde = sahne.fare && icindeMi(alt, sahne.fare);
+            // Kafeyi ekranda örten öndeki binalar zemin katına kadar kesilir (fare üstündeyse tam görünür)
+            const kesik = !arka && !ustunde && cokgenKesisir(alt, kafe);
+            const durum = { kepenk: kepenkOrani(b, sahne.dakika ?? 720), kesik };
+            sahne.binaDurum[b.id] = durum;
+            disari.push({ k: derinlik(b.x, b.y, b.w, b.d) - 0.5, kutu: kutuDon(b.x, b.y, b.w, b.d), arka, f: () => binaCiz(c, P, d, b, durum, sahne) });
+        }
+        const kucuk = new Set(['cop', 'cicek', 'saksi', 'kasalar', 'tabure', 'meyvekasasi', 'gazetestandi', 'bisikletpark']);
+        for (const o of [...SOKAK_ESYALARI, ...(KATLAR[1].dis || [])]) {
+            if (dusuk && kucuk.has(o.tur)) continue;
+            const ciz = (cc, sh) => { if (!esyaCiz(cc, P, d, o, sh)) nesneCiz(cc, P, d, o, sh); };
+            ekleDis(o.gx, o.gy, o.gw, o.gd, DURAGAN.has(o.tur) ? () => esyaSpriteCiz(c, P, d, o, sahne, ciz) : () => ciz(c, sahne));
+        }
+        if (dis) {
+            for (const o of cepheNesneleri()) ekleDis(o.gx, o.gy, o.gw, o.gd, () => esyaSpriteCiz(c, P, d, o, sahne, (cc, sh) => nesneCiz(cc, P, d, o, sh)), o.tur === 'tente' ? 0.6 : o.tur === 'karavanatabela' ? 3 : 0);
+            // akşam/gece kafe camlarından kaldırıma süzülen amber ışık
+            sahne.isiklar.push((g) => {
+                for (const [x0, x1] of [[1.5, 4.5], [5.5, 9.5], [10.5, 14.5]]) for (let i = 0; i < 9; i++) {
+                    const u = i / 8, yy = IC_DERINLIK + u * 2.6, gen = (x1 - x0) * (1 + u * 0.5), orta = (x0 + x1) / 2;
+                    kutu(c, P, d, orta - gen / 2, yy, gen, 0.32, 0, { ust: `rgba(255,184,96,${0.3 * g * (1 - u) * 0.55})` });
                 }
+            });
+        }
+        const s = sahne.sehir;
+        if (s) {
+            for (const a of s.araclar) {
+                const L = ARAC_BOY[a.tip] / 2, W = 0.4;
+                const [gw, gd] = a.eksen === 'x' ? [2 * L, 2 * W] : [2 * W, 2 * L];
+                ekleDis(a.x - gw / 2, a.y - gd / 2, gw, gd, () => aracCiz(c, P, d, a, sahne));
             }
-            c.restore();
-        }
-        for (const o of [...(KATLAR[kat].dis || []), ...cepheNesneleri()]) {
-            if (arkadaMi(d, o.gx, o.gy, o.gw, o.gd)) continue;
-            ciz.push({ k: derinlik(o.gx, o.gy, o.gw, o.gd) - 0.5 + (o.tur === 'tente' ? 0.6 : o.tur === 'karavanatabela' ? 3 : 0), f: () => nesneCiz(c, P, d, o, sahne) });
-        }
-        for (const b of KOMSU_BINALAR) if (!binaArkada(d, b)) ciz.push({ k: derinlik(b.gx, b.gy, b.gw, b.gd) - 0.5, f: () => binaCiz(c, P, d, b, evre, false) });
-        for (const a of sahne.arabalar || []) {
-            if (arkadaMi(d, ...arabaKutusu(a))) continue;
-            const q = dondur(d, a.x, a.y);
-            ciz.push({ k: q.x + q.y, f: () => arabaCiz(c, P, d, a, evre) });
-        }
-        if (sahne.kopek) {
-            const q = dondur(d, sahne.kopek.x, sahne.kopek.y);
-            ciz.push({ k: q.x + q.y, f: () => kopekCiz(c, P, d, sahne.kopek) });
+            for (const y of s.yayalar) ekleDis(y.gx + 0.3, y.gy + 0.3, 0.4, 0.4, () => karakterCiz(c, P, d, dusuk ? { ...y, kare: 0 } : y), 0.1);
+            if (!dusuk) {
+                for (const k of s.kediler) ekleDis(k.x - 0.2, k.y - 0.2, 0.4, 0.4, () => kediCiz(c, P, d, k), 0.1);
+                for (const g of s.guvercinler) ekleDis(g.x - 0.1, g.y - 0.1, 0.2, 0.2, () => guvercinCiz(c, P, d, g), 0.1);
+            }
+            ekleDis(s.kopek.x - 0.3, s.kopek.y - 0.3, 0.6, 0.6, () => kopekCiz(c, P, d, s.kopek), 0.1);
         }
     }
+    // motor bireyleri: odanın dışındakiler (kuyruk, gelen ve giden müşteriler) sokak öğesi olarak sıralanır
+    const icerde = [];
+    for (const b of sahne.bireyler) {
+        const disarda = kat === 1 && (b.gy + 0.5 >= IC_DERINLIK || b.gx + 0.5 < 0 || b.gx + 0.5 > GENISLIK || b.gy + 0.5 < 0);
+        if (disarda) ekleDis(b.gx + 0.3, b.gy + 0.3, 0.4, 0.4, () => karakterCiz(c, P, d, b), 0.1);
+        else icerde.push(b);
+    }
+    disari.filter((x) => x.arka).sort(siralama).forEach((x) => x.f());
+    const dl = zeminVeDuvarlar(kat, d, evre, 'duvar');
+    c.drawImage(dl.tuval, dl.x0, dl.y0);
+    const ciz = disari.filter((x) => !x.arka);
+    for (const o of KATLAR[kat].nesneler) ciz.push({ k: derinlik(o.gx, o.gy, o.gw, o.gd) - 0.5 + (o.z ? 0.3 : 0), f: () => nesneCiz(c, P, d, o, sahne) });
     const m = ASANSOR_GOVDE;
     ciz.push({ k: derinlik(m.gx, m.gy, m.gw, m.gd) - 0.5, f: () => asansorCiz(c, P, d, kat, sahne.asansorAcik) });
     for (const ms of sahne.masalar) {
@@ -1434,19 +1416,36 @@ export function sahneCiz(c, sahne) {
         ciz.push({ k: derinlik(y.gx, y.gy, y.gw, y.gd) - 0.35, f: () => masaCiz(c, P, d, ms, kat, ms.masaId === sahne.seciliMasaId) });
         for (const st of ms.sandalyeler) ciz.push(...sandalyeOgeleri(c, P, d, st, y, kat));
     }
-    for (const b of sahne.bireyler) {
-        if (b.gy >= IC_DERINLIK - 0.5 && !dis) continue;     // dış mekân gizliyken dışarıdakiler görünmez
+    for (const b of icerde) {
         const r = dondur(d, b.gx + 0.5, b.gy + 0.5);
         ciz.push({ k: r.x + r.y + 0.1, f: () => karakterCiz(c, P, d, b) });
     }
-    ciz.sort((a, b) => a.k - b.k);
+    ciz.sort(siralama);
     for (const x of ciz) x.f();
 
+    // Gün saati tonu: kafenin içi hariç bütün sahneye; ardından gece ışıkları (pencereler, vitrinler, lambalar, farlar)
+    if (isik && isik.alfa > 0.004) {
+        const k = kafeAltigeni(P, d);
+        c.save();
+        c.beginPath(); c.rect(b0.x0, b0.y0, BW, BH);
+        c.moveTo(k[0].x, k[0].y); for (const p of k.slice(1)) c.lineTo(p.x, p.y); c.closePath();
+        c.clip('evenodd');
+        c.fillStyle = `rgba(${isik.r},${isik.g},${isik.b},${isik.alfa})`;
+        c.fillRect(b0.x0, b0.y0, BW, BH);
+        c.restore();
+    }
+    if (sahne.isikGucu > 0.02) {
+        for (const f of sahne.emisler) f();
+        c.save(); c.globalCompositeOperation = 'lighter';
+        for (const f of sahne.isiklar) f(sahne.isikGucu);
+        c.restore();
+    }
+
     // Loş katlar: karartma + lamba ışık havuzları
-    const isik = KATLAR[kat].isik;
-    if (isik) {
-        c.fillStyle = `rgba(12,6,24,${isik})`;
-        c.fillRect(0, 0, DOGAL_G, DOGAL_Y);
+    const los = KATLAR[kat].isik;
+    if (los) {
+        c.fillStyle = `rgba(12,6,24,${los})`;
+        c.fillRect(b0.x0, b0.y0, BW, BH);
         c.save();
         c.globalCompositeOperation = 'lighter';
         for (const o of KATLAR[kat].nesneler.filter((x) => x.tur === 'lamba')) {
@@ -1460,47 +1459,44 @@ export function sahneCiz(c, sahne) {
     }
 }
 
-// Araba (3D): gölge, dört tekerlek, şasi, tampon, camlı kabin ve tavan; farlar ve stoplar akşam/gece ışık saçar.
-// Gövde yerel eksende tanımlanır (u: arkadan öne −0,85…0,85, v: yan −0,3…0,3) ve teğetin baskın eksenine yerleştirilir.
-function arabaCiz(c, P, d, a, evre) {
-    const yatay = Math.abs(a.tx) >= Math.abs(a.ty);
-    const yon = Math.sign(yatay ? a.tx : a.ty) || 1;
-    const B = (u0, u1, v0, v1, hh, renk, zz = 0) => {
-        const p = a.x + (yatay ? yon * u0 : v0), q = a.x + (yatay ? yon * u1 : v1);
-        const r = a.y + (yatay ? v0 : yon * u0), s = a.y + (yatay ? v1 : yon * u1);
-        kutu(c, P, d, Math.min(p, q), Math.min(r, s), Math.abs(q - p), Math.abs(s - r), hh, renk, zz);
-    };
-    const N = (u, v) => P.W(a.x + (yatay ? yon * u : v), a.y + (yatay ? v : yon * u));
-    golge(c, P, d, a.x - (yatay ? 0.85 : 0.3), a.y - (yatay ? 0.3 : 0.85), yatay ? 1.7 : 0.6, yatay ? 0.6 : 1.7, 1.4);
-    const teker = renkler('#1a1a1a');
-    for (const u of [-0.63, 0.35]) for (const v of [-0.32, 0.24]) B(u, u + 0.28, v, v + 0.08, 5, teker);
-    B(-0.85, 0.85, -0.3, 0.3, 6, renkler(a.renk), 2);                                                     // şasi
-    B(0.79, 0.87, -0.26, 0.26, 3, renkler('#c4ccd4'), 2);                                                 // ön tampon
-    B(-0.87, -0.81, -0.26, 0.26, 3, renkler('#8f98a3'), 2);                                               // arka tampon
-    B(-0.5, 0.35, -0.24, 0.24, 6, { ust: ton(a.renk, 0.95), sol: '#7fb6cc', sag: '#5f97ad', desen: (cc, x, y, hh, sol, st) => {
-        if (st % 9 === 0) { cc.fillStyle = ton(a.renk, 0.7); cc.fillRect(x, y, 1, hh); }                 // kapı dikmeleri
-        if (st % 9 === 4) { cc.fillStyle = 'rgba(255,255,255,.35)'; cc.fillRect(x, y + 1, 1, 2); }
-    } }, 8);
-    B(-0.46, 0.31, -0.2, 0.2, 1, renkler(ton(a.renk, 1.05)), 14);                                        // tavan
-    const on = N(0.86, 0), arka = N(-0.86, 0);
-    const gece = evre !== 'gun';
-    c.fillStyle = gece ? '#ff4d3d' : '#b83a2e'; c.fillRect(arka.x - 2, arka.y - 7, 3, 2);
-    c.fillStyle = gece ? '#fff6c9' : '#f4efe6'; c.fillRect(on.x - 2, on.y - 7, 3, 2);
-    if (gece) {
-        c.save(); c.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < 28; i++) {                                                                // far konisi
-            const q = N(0.9 + i * 0.09, 0);
-            c.fillStyle = `rgba(255,241,184,${0.12 * (1 - i / 28)})`;
-            c.fillRect(q.x - 1 - i * 0.4, q.y - 4 + i * 0.1, 3 + i * 0.8, 3);
-        }
-        let g = c.createRadialGradient(on.x, on.y - 6, 1, on.x, on.y - 6, 10);
-        g.addColorStop(0, 'rgba(255,246,201,.6)'); g.addColorStop(1, 'rgba(255,246,201,0)');
-        c.fillStyle = g; c.fillRect(on.x - 10, on.y - 16, 20, 20);
-        g = c.createRadialGradient(arka.x, arka.y - 6, 1, arka.x, arka.y - 6, 8);
-        g.addColorStop(0, 'rgba(255,77,61,.5)'); g.addColorStop(1, 'rgba(255,77,61,0)');
-        c.fillStyle = g; c.fillRect(arka.x - 8, arka.y - 14, 16, 16);
-        c.restore();
+// Derinlik sıralaması: iki öğenin de taban kutusu varsa ve bir eksende biri tamamen diğerinin gerisindeyse o önce
+// çizilir (büyük binalar ile kaldırımdaki yayalar doğru sıralansın); yoksa derinlik anahtarına bakılır.
+function siralama(a, b) {
+    if (a.kutu && b.kutu) {
+        const A = a.kutu, B = b.kutu, e = 0.01;
+        const aGeride = A.rx1 <= B.rx0 + e || A.ry1 <= B.ry0 + e, bGeride = B.rx1 <= A.rx0 + e || B.ry1 <= A.ry0 + e;
+        if (aGeride && !bGeride) return -1;
+        if (bGeride && !aGeride) return 1;
     }
+    return a.k - b.k;
+}
+
+// Kafenin ekrandaki altıgeni (zemin + arka duvar yüksekliği)
+function kafeAltigeni(P, d) {
+    const r = dikdortgenDondur(d, 0, 0, GENISLIK, IC_DERINLIK);
+    const T = P.R(r.gx, r.gy), Rr = P.R(r.gx + r.gw, r.gy), B = P.R(r.gx + r.gw, r.gy + r.gd), L = P.R(r.gx, r.gy + r.gd);
+    const H = DUVAR + 6;
+    return [L, B, Rr, { x: Rr.x, y: Rr.y - H }, { x: T.x, y: T.y - H }, { x: L.x, y: L.y - H }];
+}
+// İki dışbükey çokgen kesişiyor mu (ayırıcı eksen testi)
+function cokgenKesisir(A, B) {
+    for (const C of [A, B]) for (let i = 0; i < C.length; i++) {
+        const p = C[i], q = C[(i + 1) % C.length], nx = q.y - p.y, ny = p.x - q.x;
+        let a0 = Infinity, a1 = -Infinity, b0 = Infinity, b1 = -Infinity;
+        for (const v of A) { const t = v.x * nx + v.y * ny; a0 = Math.min(a0, t); a1 = Math.max(a1, t); }
+        for (const v of B) { const t = v.x * nx + v.y * ny; b0 = Math.min(b0, t); b1 = Math.max(b1, t); }
+        if (a1 < b0 || b1 < a0) return false;
+    }
+    return true;
+}
+function icindeMi(C, n) {
+    let isaret = 0;
+    for (let i = 0; i < C.length; i++) {
+        const p = C[i], q = C[(i + 1) % C.length];
+        const x = (q.x - p.x) * (n.y - p.y) - (q.y - p.y) * (n.x - p.x);
+        if (x !== 0) { if (isaret && Math.sign(x) !== isaret) return false; isaret = Math.sign(x); }
+    }
+    return true;
 }
 
 // Sevimli köpek: gövde, baş, kulak, kuyruk (sallanır); otururken kısalır
@@ -1519,124 +1515,6 @@ function kopekCiz(c, P, d, k) {
     R(3, -12 + yuk, 5, 5, '#b5793f'); R(7, -10 + yuk, 2, 2, '#3b2a1e'); R(4, -13 + yuk, 2, 3, '#7a4b2a');
     R(5, -11 + yuk, 1, 1, '#111');
     R(-7, -10 + yuk + (Math.floor(performance.now() / 150) % 2), 2, 3, '#b5793f');   // kuyruk
-}
-
-// Komşu bina. Tam boy: katlarına göre pencere sıraları (gece rastgele yanık), zemin katta ışıklı vitrin, tente, çatı
-// üstünde su deposu ve klima. Alçak kesit (kameranın önünde kalınca): çatısız dükkân; içi, tezgâhı ve rafları görünür.
-function binaCiz(c, P, d, b, evre, uzun) {
-    const gece = evre !== 'gun';
-    golge(c, P, d, b.gx, b.gy, b.gw, b.gd, 1.6);
-    const tohum = (n) => { const s = Math.sin(n * 12.9898 + b.gx * 78.233) * 43758.5453; return s - Math.floor(s); };
-    const karsi = b.on === 'K';                       // karşı kaldırımdaki dükkân (önde: çatısız kesit)
-    const yuk = uzun ? b.h : karsi ? 30 : 34;
-    const pencere = (cc, x, y, hh, sol, st) => {
-        // tuğla doku, katlar arası korniş; zemin kat (alt 34 px) vitrin; üstte 34 px'lik katlar
-        tuglaDeseni(cc, x, y, hh, sol, st);
-        const zy = y + hh - 34;
-        for (let k = 0; zy - k * 34 > y; k++) { cc.fillStyle = sol ? '#e8d6b3' : '#c9b49a'; cc.fillRect(x, zy - k * 34, 1, 2); cc.fillStyle = 'rgba(0,0,0,.25)'; cc.fillRect(x, zy - k * 34 + 2, 1, 1); }
-        if (st % 40 > 3 && st % 40 < 36) {
-            cc.fillStyle = gece ? '#ffcf7a' : '#9fc7dc'; cc.fillRect(x, zy + 8, 1, 22);
-            if (st % 40 === 20) { cc.fillStyle = '#3b2a1e'; cc.fillRect(x, zy + 8, 1, 22); }
-            cc.fillStyle = 'rgba(0,0,0,.25)'; cc.fillRect(x, zy + 8, 1, 1);
-        }
-        for (let k = 1; zy - k * 34 + 6 > y + 4; k++) {
-            if (st % 12 < 2 || st % 12 > 8) continue;
-            const yanik = gece ? tohum(Math.floor(st / 12) * 31 + k * 7 + (sol ? 0 : 500)) < (evre === 'gece' ? 0.55 : 0.35) : false;
-            const py = zy - k * 34 + 8;
-            cc.fillStyle = yanik ? '#ffd27a' : gece ? '#1d2142' : '#8fb0c4'; cc.fillRect(x, py, 1, 16);
-            cc.fillStyle = sol ? '#e8d6b3' : '#c9b49a'; cc.fillRect(x, py + 16, 1, 2);                     // denizlik
-            if (yanik && st % 12 === 5) { cc.fillStyle = '#c9772a'; cc.fillRect(x, py, 1, 16); }          // perde
-        }
-        if (st % 40 === 0) { cc.fillStyle = 'rgba(0,0,0,.14)'; cc.fillRect(x, y, 1, hh); }
-    };
-    if (!karsi) {
-        kutu(c, P, d, b.gx, b.gy, b.gw, b.gd, yuk, renkler(b.renk, pencere));
-        kutu(c, P, d, b.gx - 0.08, b.gy - 0.08, b.gw + 0.16, b.gd + 0.16, 4, renkler(ton(b.renk, 0.7)), yuk);       // çatı kornişi
-        // caddeye bakan cephede ışıklı tabela panosu (tentenin üstünde)
-        kutu(c, P, d, b.gx + 0.6, b.gy + b.gd, b.gw - 1.2, 0.12, 12, renkler('#2a1d16', (cc, x, y, hh, sol, st) => {
-            if (st % 5 === 0) { cc.fillStyle = gece ? '#fff1b8' : '#c9a14a'; cc.fillRect(x, y + 1, 1, 1); cc.fillRect(x, y + hh - 2, 1, 1); }
-        }), 37);
-        catiCiz(c, P, d, b, yuk, uzun && b.cati === 'kiremit' ? 'kiremit' : 'duz', uzun);
-    } else {
-        // çatısız kesit: zemin, dört alçak duvar, tezgâh ve raflar
-        kutu(c, P, d, b.gx, b.gy, b.gw, b.gd, 0, { ust: gece ? '#d9b27a' : '#c9a47a' });
-        const t = 0.18;
-        const duvarlar = [
-            [b.gx, b.gy, b.gw, t], [b.gx, b.gy, t, b.gd], [b.gx + b.gw - t, b.gy, t, b.gd], [b.gx, b.gy + b.gd - t, b.gw, t],
-        ].map(([x, y, w, hh]) => { const r = dikdortgenDondur(d, x, y, w, hh); return { x, y, w, hh, k: r.gx + r.gy + (r.gw + r.gd) / 2 }; })
-            .sort((a, z) => a.k - z.k);
-        const duvar = (w) => kutu(c, P, d, w.x, w.y, w.w, w.hh, yuk, renkler(b.renk, (cc, x, y, hh, sol, st) => {
-            if (st % 14 > 2 && st % 14 < 12) { cc.fillStyle = gece ? '#ffcf7a' : '#9fc7dc'; cc.fillRect(x, y + 6, 1, 14); }
-        }));
-        duvarlar.slice(0, 2).forEach(duvar);
-        kutu(c, P, d, b.gx + 0.8, b.gy + b.gd / 2 - 0.3, b.gw - 1.6, 0.6, 10, renkler('#7a4b2a'));                // tezgâh
-        for (let i = 0; i < Math.floor(b.gw - 1); i++) {
-            kutu(c, P, d, b.gx + 0.5 + i, b.gy + b.gd - 0.7, 0.8, 0.4, 18, renkler('#5a3520', (cc, x, y, hh, sol, st) => {
-                for (let r = 3; r < hh - 2; r += 5) { cc.fillStyle = OYUN_RENK[(st + r + i * 3) % OYUN_RENK.length]; cc.fillRect(x, y + r, 1, 3); }
-            }));
-        }
-        duvarlar.slice(2).forEach(duvar);
-    }
-    // caddeye bakan yüz: çizgili tente ve dükkân ışığı
-    const caddeY = b.on === 'G' ? b.gy + b.gd : b.gy - 0.7;
-    kutu(c, P, d, b.gx + 0.4, caddeY, b.gw - 0.8, 0.7, 5, renkler(b.tente, (cc, x, y, hh, sol, st) => {
-        if (Math.floor(st / 4) % 2) { cc.fillStyle = sol ? '#f4efe6' : '#d9d2c5'; cc.fillRect(x, y, 1, hh); }
-    }), karsi ? yuk - 4 : 30);
-    if (gece) {
-        const q = P.W(b.gx + b.gw / 2, b.on === 'G' ? b.gy + b.gd + 1.2 : b.gy - 1.2);
-        c.save(); c.globalCompositeOperation = 'lighter';
-        const g = c.createRadialGradient(q.x, q.y, 2, q.x, q.y, 80);
-        g.addColorStop(0, `rgba(255,190,110,${evre === 'gece' ? 0.22 : 0.12})`); g.addColorStop(1, 'rgba(255,190,110,0)');
-        c.fillStyle = g; c.fillRect(q.x - 80, q.y - 45, 160, 90);
-        c.restore();
-    }
-}
-
-// Çatılar. 'kiremit': kat kat daralan kırma çatı (kiremit sıraları, mahya), çatı penceresi ve duman tüten baca.
-// 'duz': korkuluklu düz çatı, çakıl, ayaklı su deposu, klimalar, havalandırma boruları, ışıklık ve (fırında) baca.
-function catiCiz(c, P, d, b, yuk, tur, uzun) {
-    const K = (gx, gy, gw, gd, hh, renk, zz = 0) => kutu(c, P, d, gx, gy, gw, gd, hh, renk, yuk + 4 + zz);
-    const duman = (gx, gy, z) => {
-        const q = P.W(gx, gy), t = performance.now() / 900;
-        for (let i = 0; i < 4; i++) {
-            const f = (t + i / 4) % 1;
-            c.fillStyle = `rgba(210,210,215,${0.45 * (1 - f)})`;
-            c.fillRect(q.x - 2 + Math.sin(f * 6 + i) * 3, q.y - z - 4 - f * 26, 4 + f * 4, 3 + f * 3);
-        }
-    };
-    if (tur === 'kiremit') {
-        const kir = (cc, x, y, hh, sol, st) => { cc.fillStyle = sol ? '#7a2e20' : '#64251a'; cc.fillRect(x, y + hh - 1, 1, 1); if (st % 4 === 0) cc.fillRect(x, y, 1, hh); };
-        const adim = 0.42, n = Math.floor(Math.min(b.gw, b.gd) / 2 / adim);
-        for (let i = 0; i < n; i++) {
-            K(b.gx + i * adim, b.gy + i * adim, b.gw - 2 * i * adim, b.gd - 2 * i * adim, 5, { ...renkler(i % 2 ? '#a8432f' : '#b24a34', kir), ust: i === n - 1 ? '#8f3826' : (i % 2 ? '#a8432f' : '#b24a34') }, i * 5);
-        }
-        K(b.gx + n * adim - 0.1, b.gy + n * adim, b.gw - 2 * n * adim + 0.2, Math.max(0.2, b.gd - 2 * n * adim), 2, renkler('#5a2318'), n * 5);   // mahya
-        // çatı penceresi (cadde yönündeki eğimde)
-        K(b.gx + b.gw / 2 - 0.5, b.gy + b.gd - 1.3, 1, 0.6, 12, renkler('#e8d6b3', (cc, x, y, hh, sol, st) => {
-            if (st % 8 > 1 && st % 8 < 7) { cc.fillStyle = '#ffd27a'; cc.fillRect(x, y + 3, 1, hh - 5); }
-        }), 4);
-        K(b.gx + b.gw / 2 - 0.58, b.gy + b.gd - 1.36, 1.16, 0.72, 3, renkler('#8f3826'), 16);
-        K(b.gx + 1.2, b.gy + 3, 0.6, 0.6, 26, renkler('#8a4f34', tuglaDeseni), 0);                         // baca
-        duman(b.gx + 1.5, b.gy + 3.3, yuk + 34);
-        return;
-    }
-    // korkuluk
-    const t = 0.15;
-    K(b.gx, b.gy, b.gw, b.gd, 0, { ust: '#5a5f66' }, -4);
-    for (const [x, y, w, hh] of [[b.gx, b.gy, b.gw, t], [b.gx, b.gy, t, b.gd], [b.gx + b.gw - t, b.gy, t, b.gd], [b.gx, b.gy + b.gd - t, b.gw, t]]) K(x, y, w, hh, 6, renkler(ton(b.renk, 0.85)), -4);
-    for (let i = 0; i < 18; i++) { const q = P.W(b.gx + 0.4 + ((i * 7) % 10) / 10 * (b.gw - 0.8), b.gy + 0.4 + ((i * 3) % 10) / 10 * (b.gd - 0.8)); c.fillStyle = '#6b7078'; c.fillRect(q.x, q.y - yuk, 1, 1); }   // çakıl
-    if (uzun) {
-        // ayaklı su deposu
-        for (const [u, v] of [[0, 0], [1, 0], [0, 1], [1, 1]]) K(b.gx + 1 + u * 1.1, b.gy + 2 + v * 1.1, 0.1, 0.1, 12, renkler('#3b4048'));
-        K(b.gx + 0.95, b.gy + 1.95, 1.3, 1.3, 16, renkler('#6b737d', (cc, x, y, hh, sol, st) => { if (st % 6 === 0) { cc.fillStyle = 'rgba(0,0,0,.2)'; cc.fillRect(x, y, 1, hh); } }), 12);
-        K(b.gx + 1.15, b.gy + 2.15, 0.9, 0.9, 4, renkler('#5b6470'), 28);
-        K(b.gx + b.gw - 2.2, b.gy + 7, 1.6, 2.2, 2, { ust: 'rgba(170,215,235,.7)', sol: '#8fb0c4', sag: '#7a9cb0' });   // ışıklık
-    }
-    for (const [u, v] of [[b.gw - 2.4, b.gd - 3], [1.2, b.gd - 4.6]]) {                                 // klimalar
-        K(b.gx + u, b.gy + v, 1.1, 0.8, 7, renkler('#9aa3ad', (cc, x, y, hh, sol, st) => { if (st % 3 === 0) { cc.fillStyle = '#6b737d'; cc.fillRect(x, y + 1, 1, hh - 2); } }));
-    }
-    for (const v of [5, 6.2]) K(b.gx + b.gw - 1, b.gy + v, 0.22, 0.22, 10, renkler('#8f98a3'));         // havalandırma
-    if (b.baca) { K(b.gx + 2.6, b.gy + b.gd - 2, 0.7, 0.7, 22, renkler('#8a4f34', tuglaDeseni)); duman(b.gx + 2.95, b.gy + b.gd - 1.65, yuk + 30); }
 }
 
 // Ön cephe: tuğla denizlik + cam vitrinler + tuğla ayaklar + alınlık; kapı üstünde cam vasistas, tente ve tabela.
@@ -1660,11 +1538,17 @@ function cepheNesneleri() {
 // Kameranın sığdıracağı alan (doğal koordinat): iç mekân + duvar yüksekliği; kat 1'de görünürse dış mekân da
 export function gorunurAlan(kat, d) {
     const P = izdusum(d);
-    const dis = kat === 1 && disGorunur(d);
-    const r = dis ? dikdortgenDondur(d, YOL_SINIR.x0 + 1, YOL_SINIR.y0 + 1, YOL_SINIR.x1 - YOL_SINIR.x0 - 2, 26 - YOL_SINIR.y0)
-        : dikdortgenDondur(d, 0, 0, GENISLIK, IC_DERINLIK);
+    const r = kat === 1 ? dikdortgenDondur(d, -2, -1, GENISLIK + 4, 24) : dikdortgenDondur(d, 0, 0, GENISLIK, IC_DERINLIK);
     const T = P.R(r.gx, r.gy), B = P.R(r.gx + r.gw, r.gy + r.gd), L = P.R(r.gx, r.gy + r.gd), R = P.R(r.gx + r.gw, r.gy);
     return { x0: L.x - 8, x1: R.x + 8, y0: T.y - DUVAR - 12, y1: B.y + 16 + PLAKA };
+}
+
+// Dünyanın ekran kutusu (kat 1'de kaydırma bu kutunun dışına taşmaz)
+export function dunyaKutusu(d) {
+    const P = izdusum(d);
+    const r = dikdortgenDondur(d, DUNYA.x0, DUNYA.y0, DUNYA.x1 - DUNYA.x0, DUNYA.y1 - DUNYA.y0);
+    const ks = [P.R(r.gx, r.gy), P.R(r.gx + r.gw, r.gy), P.R(r.gx + r.gw, r.gy + r.gd), P.R(r.gx, r.gy + r.gd)];
+    return { x0: Math.min(...ks.map((p) => p.x)), x1: Math.max(...ks.map((p) => p.x)), y0: Math.min(...ks.map((p) => p.y)) - 120, y1: Math.max(...ks.map((p) => p.y)) };
 }
 
 // Ruh hali: sabır 0–100 → ikon ve renk
@@ -1675,17 +1559,38 @@ export function ruhHali(sabir) {
     return { ikon: '😡', renk: '#d94f3d' };
 }
 
+const yaziOnbellek = new Map();
+function yaziTuvali(t, renk, zemin, kenar, boyut, olc) {
+    const anahtar = `${t}|${renk}|${zemin}|${kenar}|${boyut}|${olc}`;
+    const var0 = yaziOnbellek.get(anahtar);
+    if (var0) return var0;
+    const g = document.createElement('canvas');
+    let gc = g.getContext('2d');
+    const font = `bold ${boyut}px ui-monospace, Consolas, monospace`;
+    gc.font = font;
+    const w = Math.ceil(gc.measureText(t).width) + 10, h = boyut + 8;
+    g.width = Math.ceil((w + 4) * olc); g.height = Math.ceil((h + 4) * olc);
+    gc = g.getContext('2d');
+    gc.scale(olc, olc); gc.font = font;
+    gc.fillStyle = kenar; gc.fillRect(0, 2, w + 4, h); gc.fillRect(2, 0, w, h + 4);
+    gc.fillStyle = zemin; gc.fillRect(2, 2, w, h);
+    gc.fillStyle = renk; gc.fillText(t, 7, boyut + 4);
+    const v = { g, w, h };
+    yaziOnbellek.set(anahtar, v);
+    if (yaziOnbellek.size > 800) yaziOnbellek.delete(yaziOnbellek.keys().next().value);
+    return v;
+}
+
 // Ekran katmanı: masa etiketleri, oyun ikonları, baloncuklar. donus(p): doğal → ekran koordinatı
 export function ustKatmanCiz(c, olcek, donus, sahne) {
     const P = izdusum(sahne.d);
+    // Etiketler önceden çizilmiş küçük tuvallerden kopyalanır (her karede metin ölçüp yazmak pahalı)
+    const olc = c.getTransform().a || 1;
     const yazi = (t, x, y, { renk = '#2a1d16', zemin = '#fff8e7', kenar = '#5a3a22', boyut = 12 } = {}) => {
-        c.font = `bold ${boyut}px ui-monospace, Consolas, monospace`;
-        const w = Math.ceil(c.measureText(t).width) + 10, h = boyut + 8;
-        const bx = Math.round(x - w / 2), by = Math.round(y - h);
-        c.fillStyle = kenar; c.fillRect(bx - 2, by, w + 4, h); c.fillRect(bx, by - 2, w, h + 4);
-        c.fillStyle = zemin; c.fillRect(bx, by, w, h);
-        c.fillStyle = renk; c.fillText(t, bx + 5, by + boyut + 2);
-        return { bx, by, w, h };
+        const v = yaziTuvali(t, renk, zemin, kenar, boyut, olc);
+        const bx = Math.round(x - v.w / 2), by = Math.round(y - v.h);
+        c.drawImage(v.g, bx - 2, by - 2, v.w + 4, v.h + 4);
+        return { bx, by, w: v.w, h: v.h };
     };
     const etiketBoyut = Math.max(9, Math.min(13, Math.round(5 * olcek)));
     for (const m of sahne.masalar) {
@@ -1716,14 +1621,18 @@ export function ustKatmanCiz(c, olcek, donus, sahne) {
     if (dis) {
         const p = donus(P.W((KAPI_ARALIK.bas + KAPI_ARALIK.son) / 2, IC_DERINLIK + 0.44));
         yazi('KARAVANA · Kutu Oyunu Kafe', p.x, p.y - 76 * olcek, { zemin: '#2f4a3a', renk: '#ffe7a8', kenar: '#c9a14a', boyut: Math.max(10, Math.round(5 * olcek)) });
-        for (const b of KOMSU_BINALAR) {
-            const uzun = binaArkada(sahne.d, b);
-            const q = donus(P.W(b.gx + b.gw / 2, b.on === 'G' ? b.gy + b.gd + 0.06 : b.gy - 0.4));
-            const yz = Math.max(10, Math.round(5 * olcek));
-            const yy = q.y - (b.on === 'G' ? 43 : 38) * olcek;
-            yazi(b.ad, q.x + 2, yy + 2, { zemin: 'rgba(0,0,0,.55)', renk: 'rgba(0,0,0,0)', kenar: 'rgba(0,0,0,0)', boyut: yz });   // gölge
-            yazi(b.ad, q.x, yy, { zemin: '#1c130d', renk: '#fff3d6', kenar: b.tente === '#f4efe6' ? '#ffd166' : b.tente, boyut: yz });
-            void uzun;
+    }
+    if (sahne.kat === 1) {
+        const yz = Math.max(9, Math.min(13, Math.round(4.6 * olcek)));
+        for (const b of BINALAR) {
+            if (!b.ad || b.tip === 'siluet') continue;
+            const durum = sahne.binaDurum?.[b.id];
+            if (!durum) continue;                                                                   // ekranda değil
+            const H = durum.kesik ? 34 : 34 + (b.kat - 1) * 30;
+            const q = donus(P.W(b.x + b.w / 2, b.y + b.d / 2));
+            const yy = q.y - (H + 26) * olcek;
+            yazi(b.ad, q.x + 2, yy + 2, { zemin: 'rgba(0,0,0,.5)', renk: 'rgba(0,0,0,0)', kenar: 'rgba(0,0,0,0)', boyut: yz });   // gölge
+            yazi(b.ad, q.x, yy, { zemin: '#1c130d', renk: '#fff3d6', kenar: b.tente && b.tente !== '#f4efe6' ? b.tente : (b.tabela || '#c9a14a'), boyut: yz });
         }
     }
     for (const b of sahne.bireyler) {
@@ -1821,3 +1730,49 @@ export function kapakCiz(tuval, ad, renkNo) {
     c.fillText(ad.length > 12 ? `${ad.slice(0, 11)}…` : ad, 6, 17);
     c.strokeStyle = '#2a1d16'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, W - 3, H - 3);
 }
+
+// Parıltı: renge göre bir kez üretilen yumuşak radyal ışık görüntüsü; (x, y) merkezli rx × ry elipse ölçeklenir.
+// Her karede gradyan oluşturmak yerine drawImage (gece ışık geçişini ucuzlatır).
+const parlamaOnbellek = new Map();
+export function parilti(c, x, y, rx, ry, rgb, alfa) {
+    if (alfa <= 0.003) return;
+    let t = parlamaOnbellek.get(rgb);
+    if (!t) {
+        t = document.createElement('canvas'); t.width = t.height = 64;
+        const g = t.getContext('2d'), r = g.createRadialGradient(32, 32, 1, 32, 32, 32);
+        r.addColorStop(0, `rgba(${rgb},1)`); r.addColorStop(0.45, `rgba(${rgb},.45)`); r.addColorStop(1, `rgba(${rgb},0)`);
+        g.fillStyle = r; g.fillRect(0, 0, 64, 64);
+        parlamaOnbellek.set(rgb, t);
+    }
+    const a = c.globalAlpha;
+    c.globalAlpha = Math.min(1, alfa);
+    c.drawImage(t, x - rx, y - ry, rx * 2, ry * 2);
+    c.globalAlpha = a;
+}
+
+// Durağan sokak eşyaları ve cephe parçaları bir kez küçük tuvallere çizilir (her karede kutu kutu çizmek yerine)
+const esyaOnbellek = new Map();
+const DURAGAN = new Set(['agac', 'parkbanki', 'cop', 'cicek', 'saksi', 'menutahta', 'konteyner', 'kasalar', 'meyvekasasi', 'gazetestandi',
+    'dondurmadolabi', 'dondurmatezgahi', 'semsiyelimasa', 'tabure', 'tavlamasasi', 'simitci', 'durak', 'bisikletpark',
+    'cephe', 'direk', 'camcephe', 'cepheust', 'tente', 'karavanatabela']);
+function esyaSpriteCiz(c, P, d, o, sahne, ciz) {
+    const evreli = o.tur === 'agac' || o.tur === 'camcephe' || o.tur === 'karavanatabela';
+    const anahtar = `${o.tur}|${o.gx}|${o.gy}|${d}|${evreli ? sahne.evre : ''}`;
+    let e = esyaOnbellek.get(anahtar);
+    if (!e) {
+        const r = dikdortgenDondur(d, o.gx - 0.6, o.gy - 0.6, o.gw + 1.2, o.gd + 1.2);
+        const ks = [P.R(r.gx, r.gy), P.R(r.gx + r.gw, r.gy), P.R(r.gx + r.gw, r.gy + r.gd), P.R(r.gx, r.gy + r.gd)];
+        const x0 = Math.floor(Math.min(...ks.map((p) => p.x))) - 14, x1 = Math.ceil(Math.max(...ks.map((p) => p.x))) + 14;
+        const y0 = Math.floor(Math.min(...ks.map((p) => p.y))) - (o.h || 20) - (o.z || 0) - 50, y1 = Math.ceil(Math.max(...ks.map((p) => p.y))) + 8;
+        const t = document.createElement('canvas'); t.width = x1 - x0; t.height = y1 - y0;
+        const tc = pikselBaglami(t); tc.translate(-x0, -y0);
+        ciz(tc, { evre: sahne.evre });
+        e = { t, x0, y0 };
+        esyaOnbellek.set(anahtar, e);
+        if (esyaOnbellek.size > 1200) esyaOnbellek.delete(esyaOnbellek.keys().next().value);
+    }
+    c.drawImage(e.t, e.x0, e.y0);
+}
+
+// Şehir modüllerinin (sehir/*.js) kullandığı çizim araçları
+export { elmasR, golge, gorunenYuzler, hexA, karakterCiz, kopekCiz, kutu, kutuR, nesneCiz, renkler, tuglaDeseni };

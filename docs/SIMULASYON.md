@@ -90,59 +90,68 @@ Sabır sıfırlanınca grup **"Çok bekledik, gidiyoruz!"** diyerek terk eder:
 - Popülerlik 3 puan düşer ve memnuniyet 0 olarak ortalamaya girer; HUD'da "Terk eden grup" sayacı artar.
 
 ## Dış mekân ve kapı önü kuyruğu
-Kapı ön cephededir (güney duvarı). Kamera ön cepheye dönükken kat 1'in önünde **kaldırım, sokak, bordür, şerit çizgileri**,
-alçak cephe duvarı, kapı direkleri, çizgili **tente**, "KARAVANA" tabelası, tebeşir menü tahtası, saksılar, bank ve sokak lambası
-görünür (cephe kesit olarak alçak çizilir ki içerisi görünsün). Müşteriler sokağın sağından yürüyerek gelir:
+Kapı ön cephededir (güney duvarı); kafenin tuğla-cam ön cephesi ve tabelası kamera ön cepheye dönükken çizilir. Önde
+kuyruk sırası (park bankları) ve yürüme sırası olan kaldırım, ardından ana cadde vardır. Müşteriler sokağın sağından yürüyerek gelir:
 1. Kuyruk boşsa ve boş masa varsa doğrudan masaya, yoksa içerideki bekleme alanına (12 kişi) geçer.
 2. İçerisi doluysa kaldırımda **tek sıra** kuyruğa girer (15 kişilik, kapıya en yakın yer önce). Kuyruk sırayla ilerler:
    yalnızca baştaki grup içeri girebilir; masa boşalınca masaya, bekleme alanında yer açılınca içeri yürür.
 3. Kuyruk da doluysa "Çok kalabalık…" deyip gider.
 
-### Canlı cadde ve gün evreleri
-Düz renkli arka plan ve şehir silüeti yoktur: kafe, binanın izometrik ızgarasıyla hizalı **karanlık bir cadde haritasının** (kaldırım
-blokları, şerit çizgili caddeler, kavşaklarda yanan sokak lambaları) ortasında bir diorama gibi durur; harita kenarlara doğru
-kararıp sayfa kenarlarıyla birleşir. Üst katlarda cadde daha koyu görünür (aşağıda kalır).
+### Şehir: 3x3 sokak bloğu (yalnızca görsel)
+Sokak ambiyansı tamamen görsel katmandır: veritabanına yazmaz, sipariş/kasa/müşteri hesaplarını etkilemez, yeni tablo yoktur.
+Simülasyondan yalnızca **okur**: saat, popülerlik, dışarıdaki kuyruk ve kafeden çıkan müşteriler. Bütün rastgelelik tohumludur
+(`sehir/rastgele.js`); sayfa yenilense de şehir aynı kurulur.
 
-| Oyun saati | Evre | Görünüm |
-|---|---|---|
-| 10–17 | Gündüz | Daha açık (arduvaz) cadde, açık mavi pencereler, ağaçlar yeşil |
-| 17–19 | Gün batımı | Mor tonlu cadde, kavşak lambaları yanmaya başlar, pencereler turuncu |
-| 19–22 | Gece | En koyu cadde, kavşak lambaları parlak, kafe camlarından kaldırıma yelpaze gibi süzülen amber ışık huzmeleri |
+| | Batı (x −26…−10) | Orta (−8…28) | Doğu (30…46) |
+|---|---|---|---|
+| **Kuzey** (y −17…−3) | Lale Apt. (kuaför), taş ev | Arka sokağa servis yüzü veren apartmanlar, Eski Han | Park & meydan: çeşmeli havuz, oyun alanı, çay bahçesi, WC, banklar, ağaçlar, güvercinler |
+| **Orta** (−1…19) | Dükkân sırası: Şehir Bankası (ATM), Bakkal, Berber, Nöbetçi Eczane; Gül Apt., cumbalı ev | **KARAVANA**, Sahaf Kitabevi, Simit Fırını | Maraş Dondurmacısı, Kasap, Lokumcu, Züccaciye, Çay Ocağı · Kahvehane, apartman |
+| **Güney** (22…37) | Lokanta (apartman), Ayakkabıcı | Çiçekçi, Kırtasiye, Pizza Dükkânı, Oyuncakçı, Papatya Apt., cumbalı ev | Otobüs durağı, Büfe (tost & ayran), Çamaşırhane, apartman |
 
-**Kafenin ön cephesi:** tuğla denizlik duvarı, ahşap kayıtlı büyük cam vitrinler (içerisi camdan görünür; gündüz yansıma,
-akşam/gece sıcak ışık), tuğla ayaklar ve kornişli alınlık; kapının üstünde cam vasistas, çizgili tente ve altın çerçeveli,
-ampullü **"KARAVANA · Kutu Oyunu Kafe"** tabelası (akşam/gece ışık saçar). Cephe karo karo parçalanır ki içerideki ve
-dışarıdaki karakterlerle derinlik sıralaması doğru kalsın.
+- **Yollar** (`sehir/yerlesim.js`): **ana cadde** çift şerit, ağaçlı ve çiçekli orta refüj, yaya geçitleri, iki trafik ışıklı kavşak;
+  **ara sokak** tek şerit parke taşı ve park cebinde duran araçlar; **arka sokak** dar, tek yön, çöp konteynerleri ve servis
+  kapıları; doğu caddesi çift şerit. Kaldırımlar, bordürler (kavşak köşeleri yuvarlak), rögar kapakları, sokak lambaları,
+  çöp kutuları, banklar, bisiklet park yeri. Harita kenarında sade bina siluetleri "şehir devam ediyor" hissi verir.
+- **Binalar tanımdan üretilir** (`sehir/binalar.js` → `sehir/binaCizim.js`). Her binanın dört yüzü ayrı tasarlanır:
+  ön yüz **vitrin** (cam, kapı, çizgili tente, tabela, kapanışta inen kepenk) veya **konut** (pencere sıraları, perdeler, kapı);
+  arka yüz **servis** (servis kapısı, kepenkli depo kapısı, yangın merdiveni, yağmur borusu); yan yüzler **yan** (küçük pencereler,
+  yağmur borusu, elektrik panosu, afiş/grafiti, klima). Bitişik binaların birbirine bakan yüzleri otomatik **sağır duvar** olur.
+  Malzeme: tuğla, sıva, taş, ahşap (cumbalı ev), cam (banka). Apartmanlarda balkon, çamaşır ipi, saksı, klima dış ünitesi.
+  Çatılar: **düz** (korkuluk, ayaklı su deposu, çanak antenler, güneş paneli + termosifon, baca, havalandırma), **kiremit**
+  (kat kat kırma çatı, mahya, çatı penceresi, tüten baca), **teras** (saksılar, pergola, masa).
+  Özel ayrıntılar: dönen berber direği, nöbetçi eczanenin kırmızı "E"si, dondurmacının dev külahı, bankanın ATM'si.
+  Dükkân adları her açıdan okunan, binanın üstünde duran ekran-sabit panolarla yazılır.
+- **Görünürlük**: kameranın önünde kalıp kafeyi ekranda örten binalar **zemin katına kadar kesilir** (içi, rafları görünür);
+  her döndürmede yeniden hesaplanır, fare binanın üstüne gelince bina tam görünür. Kafenin arka duvarlarının gerisinde kalan
+  binalar, araçlar, eşyalar ve kişiler duvar katmanından önce çizilir.
 
-**Blok çevresi yol** (`harita.js: BLOK, yolNoktasi`): kafe ve iki yanındaki binalar bir adada durur; adayı iki şeritli,
-yuvarlak köşeli bir döngü yol çevreler (önde eski cadde, iki yanda yan yollar, arkada arka sokak). Köşelerde çeyrek daire
-yol, adanın yuvarlatılmış kaldırımı, kavisli bordür ve kesik şerit çizgisi; kafe kapısının önünde, iki yan yolda ve arka
-yolda yaya geçitleri; yan ve arka kaldırımlarda lambalar ve çöp kutuları. Bütün blok (yol, karşı kaldırım, karşı dükkânlar)
-tek bir diorama plakası üzerindedir. Arabalar bu döngüde döner: iç şerit ileri, dış şerit ters yönde, her şeritte beşer
-araba; öndeki araca yaklaşan yavaşlar. Gövde, yolun teğetine göre yatay ya da dikey yerleşir. Kafenin arka duvarlarının
-gerisinde kalan bina, araba ve sokak eşyaları duvar katmanından önce çizilir (zemin ve duvar katmanları ayrı önbelleklidir).
+### Sokağa hayat (`sehir/ortam.js`)
+- **Araçlar** (en fazla 26): otomobil, sarı taksi, dolmuş, otobüs, motor kurye. Şeritte kalır, öndeki araca mesafe bırakır,
+  kırmızı (ve uzaktayken sarı) ışıkta dur çizgisinde durur, yaya geçidinde yaya varsa bekler; otobüs duraktan yolcu alır
+  (durakta bekleyenler biner). Akşam farlar ve stop lambaları yanar.
+- **Yayalar** (en fazla 60, kafe müşterilerinden ayrı havuz): kaldırımlarda yürür, ışıklı kavşakta yaya ışığını bekler,
+  kafe kapısının önündeki geçitten karşıya geçer, vitrine bakar. Kafe önündeki yaya yoğunluğu **popülerlik** ve **dışarıda
+  sırada** değerleriyle artar; kafeden çıkan müşteriler (terk edenler dahil) sokakta yürüyerek uzaklaşır.
+- **Mahalle sakinleri**: tavla oynayan amcalar, çay taşıyan çırak, dondurmayı kepçeyle havaya kaldıran Maraş ustası ve
+  sırası, ATM sırası, durakta bekleyenler, simitçi ve mısırcı (dumanı tüten araba), parkta bankta oturanlar ve çay
+  bahçesindekiler, oyun alanında koşan çocuklar.
+- **Hayvanlar**: konteynerlerin üstünde ve kaldırımda yatan/oturan/yürüyen kediler (kuyruk sallar, göz kırpar), parkta
+  gagalayan ve yaklaşan yayadan ürküp havalanan güvercinler, kaldırımda dolaşan köpek.
 
-**Komşu binalar** (`harita.js: KOMSU_BINALAR`): iki yanda Sahaf Kitabevi ve Simit Fırını, karşı kaldırımda Çiçekçi,
-Kırtasiye, Pizza Dükkânı ve Oyuncakçı. Kameraya göre kafenin arkasında kalan bina çok katlı tam bina olarak çizilir
-(tuğla doku, kat kornişleri, katlara göre pencere sıraları, gece rastgele yanık pencereler ve perdeler, zemin katta ışıklı
-vitrin, ışıklı tabela panosu). Çatılar kapalıdır: Sahaf'ta kat kat daralan **kiremit kırma çatı** (mahya, ışıklı çatı penceresi,
-duman tüten tuğla baca); Fırın'da **korkuluklu düz çatı** (çakıl, ayaklı su deposu, ışıklık, klimalar, havalandırma boruları,
-fırın bacası). Kameranın önünde kalan yan bina manzarayı kapatmasın diye tek katlı, düz çatılı dükkân olarak çizilir;
-karşı kaldırımdaki dükkânlar çatısız alçak kesittir (içi, tezgâhı ve renkli rafları görünür). Dükkân adları gölgeli,
-renkli çerçeveli koyu panolarla yazılır. Her
-dükkânın caddeye bakan tarafında çizgili tente, adı yazan tabela ve akşam/gece kaldırıma düşen vitrin ışığı vardır.
+### Gün saati ve ışık (`sehir/isik.js`)
+Oyun saatinden sürekli bir ton üretilir (sabah hafif sıcak → öğlen nötr → akşamüstü turuncu → gün batımı mor → gece lacivert);
+anahtar kareler arasında doğrusal geçiş olduğu için ani renk sıçraması olmaz. Ton kafenin içi hariç bütün sahneye uygulanır.
+Gece ışıkları (yanık pencereler, vitrinler, tabelalar, sokak lambaları, trafik ışıkları, farlar) aynı oranla yumuşakça yanar.
+Dükkânlar kapanış saatinden önceki yarım saatte kepenk indirir (nöbetçi eczane, büfe, kahvehane, çay bahçesi açık kalır);
+gece yaya ve araç yoğunluğu azalır.
 
-**Sokak mobilyaları:** kuyruk sırasında üç park bankı (dökme demir ayak, ahşap latalar, kolçak), kaldırım kenarında sokak
-lambaları, çöp kutuları ve çiçeklikler, cephe dibinde saksılar ve menü tahtası, karşı kaldırımda bank, ağaçlar ve lambalar.
-Kuyrukta bank karosuna denk gelen bekleyenler banka oturup caddeye bakar.
-
-Kafenin önü: cephe şeridi, iki sıra kaldırım (kuyruk sırası + yürüme yolu), iki şeritli yol ve karşı kaldırım (ağaçlar, sokak lambaları).
-`motor.js: ortamAdim` simülasyon hızından bağımsız, gerçek zamanla çalışır:
-- **Arabalar** (3D: dört tekerlek, şasi, tampon, camlı kabin, tavan, gölge) iki şeritte zıt yönlerde geçer; akşam ve gece
-  **farları yanar**, önlerine ışık konisi düşer, far ve stop lambaları parlar.
-- **Yayalar** her iki kaldırımda yürüyüp geçer (müşteri değildir, kafeye girmez).
-- **Sevimli bir köpek** kaldırımlarda dolaşır, ara sıra oturup etrafı koklar, kuyruğunu sallar.
-- **Sokak lambaları** 18:00'den sonra yanar ve altlarına ışık havuzu düşer.
+### Performans
+- Her karede yalnızca ekranda görünen bölge çizilir (doğal koordinatta, tam sayı kaydırmayla).
+- Zemin (şehrin tamamı) ve duvar katmanları kamera yönü başına bir kez çizilip önbelleğe alınır; binalar, durağan sokak
+  eşyaları ve kafe cephesi parçaları ayrı sprite'larda tutulur (bina ışıkları ayrı bir ışık sprite'ında), her karede yalnızca kopyalanır.
+- Karakter kareleri 512 px'lik atlas sayfalarındadır; etiketler ve ışık parıltıları hazır görüntülerden çizilir.
+- Uzak yakınlaştırmada küçük eşyalar, kediler, güvercinler ve yaya animasyonu sadeleşir; araç ve yaya sayısı sınırlıdır.
+- Ölçüm (kat 1, aynı makine): değişiklik öncesi ~10 FPS (1x) / ~8 FPS (10x). Sonrası gündüz ~60 FPS, kalabalık gece ~14 FPS.
 
 ## Diyaloglar
 `simulasyon/diyalog.js` havuzu: genel masa sohbetleri ("Sıra kimde?", "Zar atıyorum!", "Kural kitabına baksana",
@@ -195,7 +204,8 @@ garson adına işlem yaptığı için siparişler gerçekten o garsona yazılır
 | Kaydır | Sağ veya orta tuşla sürükle, `Space` + sol tuşla sürükle | – |
 | Sıfırla | – | `0`, **Sıfırla** |
 
-Sahne ara bir tuvale çizilir; kamera bu tuvali ekrana aktarırken `ekran = ofset + doğal × (sığdırma × yakınlık)`
+Açılışta ve **Sıfırla**'da kamera kafeye ve önündeki caddeye odaklanır; kat 1'de kaydırma şehir sınırının dışına taşmaz.
+Sahnenin yalnızca ekranda görünen bölgesi ara bir tuvale çizilir; kamera bu tuvali ekrana aktarırken `ekran = ofset + doğal × (sığdırma × yakınlık)`
 dönüşümünü uygular (tıklama bunun tersiyle doğal koordinata çevrilir). **Döndürme dünya koordinatlarında** yapılır
 (`harita.js: dondur`): oda 90° döner, kameraya göre arkada kalan iki duvar ve onların dekorları çizilir (kesit görünüm),
 her nesnenin ve karakterin derinliği döndürülmüş koordinatların toplamıyla (rx + ry) yeniden sıralanır. Karakterlerin
@@ -247,6 +257,12 @@ dışarıdan kapatılan hesabın müşterileri kalkar.
 | `simulasyon/harita.js` | Kat yerleşimleri (20×16 karo), masa yuvaları, duvar dekorları, döndürme dönüşümleri, A* yol bulma |
 | `simulasyon/cizim.js` | Piksel-art izometrik çizim: döndürülebilir izdüşüm, önbellekli zemin/duvar, desenli kutular, sprite üretimi ve önbelleği, ışık, seçim (tıklama) — harici görsel yok |
 | `simulasyon/motor.js` | Durum makineleri, sabır zamanlayıcıları, kapı önü kuyruğu, görev kuyruğu, veritabanı eşitlemesi, API çağrıları |
+| `simulasyon/sehir/yerlesim.js` | Şehir yerleşimi: yollar, bloklar, kavşaklar, yaya geçitleri ve güzergâhları, sokak eşyaları, park |
+| `simulasyon/sehir/binalar.js` | Bina tanımları (dört cephe türü, malzeme, çatı, özel ayrıntı, kapanış saati), kenar siluetleri, sağır duvar tespiti |
+| `simulasyon/sehir/binaCizim.js` | Tanımdan dört cephe + çatı üretimi, sprite önbelleği, ışık sprite'ı, kepenk, kesik (cutaway) görünüm |
+| `simulasyon/sehir/sokakCizim.js` | Şehir zemini, sokak eşyaları, araçlar, kedi ve güvercin çizimi |
+| `simulasyon/sehir/ortam.js` | Araçlar, trafik ışıkları, yayalar, mahalle sakinleri, hayvanlar (görsel, salt okur) |
+| `simulasyon/sehir/isik.js` | Gün saati tonu ve gece ışığı gücü; saatlik yaya/araç yoğunluğu |
 | `simulasyon/diyalog.js` | Genel, oyuna özel (Okey, Tavla, Vampir Köylü, Monopoly...), siparişe özel, sabırsızlık, izleyici, şef ve müzik cümleleri |
 | `sayfalar/Simulasyon.jsx` | Kamera (yakınlaştırma, döndürme, kaydırma), kat geçişi, HUD, paneller, merdiven penceresi, masa detayı, oyun kütüphanesi |
 

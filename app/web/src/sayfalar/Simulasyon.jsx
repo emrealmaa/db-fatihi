@@ -9,7 +9,7 @@ import { al } from '../api.js';
 import { tl } from '../bicim.js';
 import { Simulasyon as Motor } from '../simulasyon/motor.js';
 import {
-    ARKA_RENK,
+    ARKA_RENK, dunyaKutusu,
     DOGAL_G, DOGAL_Y, gorunurAlan, kapakCiz, nesneBul, pikselBaglami, ruhHali, sahneCiz, ustKatmanCiz,
 } from '../simulasyon/cizim.js';
 import { KATLAR } from '../simulasyon/harita.js';
@@ -51,10 +51,18 @@ export default function Simulasyon() {
         const tg = g ? Math.min(1, g.t / GECIS_SN) : 0;
         // kat geçişi: kamera hafifçe geri çekilir (asansör kuyusunda yükselme/inme hissi)
         const s = Math.min(w / aw, h / ah) * k.yakinlik * (1 - 0.14 * Math.sin(Math.PI * tg));
-        const ox = (w - aw * s) / 2 - g0.x0 * s + k.panX;
+        let ox = (w - aw * s) / 2 - g0.x0 * s + k.panX;
         let oy = (h - ah * s) / 2 - g0.y0 * s + k.panY;
         if (g) {                                       // kat geçişi: eski kat yukarı/aşağı kayar, yenisi karşı yönden gelir
             oy += (tg < 0.5 ? tg * 2 : -(1 - tg) * 2) * 160 * g.yon;
+        }
+        // kat 1: ekranın ortası dünya kutusunun dışına kaydırılamaz
+        if (gorunum.current.kat === 1 && !g) {
+            const dk = dunyaKutusu(k.d);
+            const mx = (w / 2 - ox) / s, my = (h / 2 - oy) / s;
+            const cx = Math.max(dk.x0, Math.min(dk.x1, mx)), cy = Math.max(dk.y0, Math.min(dk.y1, my));
+            if (cx !== mx) { k.panX -= (cx - mx) * s; ox -= (cx - mx) * s; }
+            if (cy !== my) { k.panY -= (cy - my) * s; oy -= (cy - my) * s; }
         }
         return { s, ox, oy, w, h };
     }, []);
@@ -96,7 +104,7 @@ export default function Simulasyon() {
         motor.baslat().catch((e) => setHata(e.message));
 
         const ara = document.createElement('canvas');
-        ara.width = DOGAL_G; ara.height = DOGAL_Y;
+        ara.width = 16; ara.height = 16;
         const ac = pikselBaglami(ara);
 
         let son = performance.now(), ozetZamani = 0, kare;
@@ -118,7 +126,13 @@ export default function Simulasyon() {
                     tuval.width = Math.round(w * dpr); tuval.height = Math.round(h * dpr);
                 }
                 const sahne = motor.sahne(g.kat, g.secili, kamera.current.d);
-                sahneCiz(ac, sahne);
+                // yalnızca ekranda görünen bölge çizilir (doğal koordinatta; tam sayı kaydırma piksel keskinliğini korur)
+                const bx0 = Math.floor(-ox / s) - 2, by0 = Math.floor(-oy / s) - 2;
+                const bw = Math.ceil(w / s) + 4, bh = Math.ceil(h / s) + 4;
+                if (ara.width !== bw || ara.height !== bh) { ara.width = bw; ara.height = bh; ac.imageSmoothingEnabled = false; }
+                ac.setTransform(1, 0, 0, 1, -bx0, -by0);
+                sahne.olcek = s; sahne.fare = g.fare;
+                sahneCiz(ac, sahne, { x0: bx0, y0: by0, x1: bx0 + bw, y1: by0 + bh });
                 const c = tuval.getContext('2d');
                 c.setTransform(dpr, 0, 0, dpr, 0, 0);
                 c.imageSmoothingEnabled = false;
@@ -126,7 +140,7 @@ export default function Simulasyon() {
                 c.fillStyle = ARKA_RENK[sahne.evre || 'gun']; c.fillRect(0, 0, w, h);
                 if (sahne.kat > 1) { c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(0, 0, w, h); }
                 if (KATLAR[sahne.kat].isik) { c.fillStyle = `rgba(12,6,24,${KATLAR[sahne.kat].isik})`; c.fillRect(0, 0, w, h); }
-                c.drawImage(ara, ox, oy, DOGAL_G * s, DOGAL_Y * s);
+                c.drawImage(ara, ox + bx0 * s, oy + by0 * s, bw * s, bh * s);
                 ustKatmanCiz(c, s, (p) => ({ x: ox + p.x * s, y: oy + p.y * s }), sahne);
                 if (g.gecis) {                         // kat geçişi: kararma
                     const t = Math.min(1, g.gecis.t / GECIS_SN);
@@ -189,6 +203,9 @@ export default function Simulasyon() {
         }
     }
     function fareOynat(e) {
+        // fare doğal koordinatta (öndeki kesik binanın üstüne gelince bina tam görünür)
+        const kutu = e.currentTarget.getBoundingClientRect(), dn = donusum();
+        gorunum.current.fare = { x: (e.clientX - kutu.left - dn.ox) / dn.s, y: (e.clientY - kutu.top - dn.oy) / dn.s };
         const s = surukle.current;
         if (!s) return;
         kamera.current.panX = s.panX + e.clientX - s.x;
