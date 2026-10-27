@@ -1,14 +1,17 @@
-// Yönetici raporları: oyun popülerliği, ürün satışları, personel performansı, kritik stok
+// Yönetici raporları: oyun popülerliği, ürün satışları, personel performansı, kritik stok,
+// VIP oyun kullanımı (v_vip_oyun_kullanimi) ve kat bazında günlük gelir (v_kat_gelir)
 import { useState } from 'react';
 import { useVeri } from '../kancalar.js';
-import { ROL_ADI, tl } from '../bicim.js';
-import { Durum, Etiket, SayfaBaslik } from '../bilesenler/ortak.jsx';
+import { KAT_ADI, ROL_ADI, tl } from '../bicim.js';
+import { Durum, Etiket, SayfaBaslik, VipRozet } from '../bilesenler/ortak.jsx';
 
 const SEKMELER = [
     ['oyun-populerlik', 'Oyun popülerliği'],
     ['urun-satis', 'Ürün satışları'],
     ['personel-performans', 'Personel'],
     ['kritik-stok', 'Kritik stok'],
+    ['vip-oyun-kullanimi', 'VIP oyunlar'],
+    ['kat-gelir', 'Kat geliri'],
 ];
 
 export default function Raporlar({ parametreler }) {
@@ -30,6 +33,8 @@ export default function Raporlar({ parametreler }) {
                 {sekme === 'urun-satis' && <UrunRaporu satirlar={veri} />}
                 {sekme === 'personel-performans' && <PersonelRaporu satirlar={veri} />}
                 {sekme === 'kritik-stok' && <StokRaporu satirlar={veri} />}
+                {sekme === 'vip-oyun-kullanimi' && <VipOyunRaporu satirlar={veri} />}
+                {sekme === 'kat-gelir' && <KatGelirRaporu satirlar={veri} />}
             </Durum>
         </>
     );
@@ -110,6 +115,53 @@ function StokRaporu({ satirlar }) {
                     </tr>
                 ))}
             </tbody>
+        </table>
+    );
+}
+
+function VipOyunRaporu({ satirlar }) {
+    const enBuyuk = Math.max(...satirlar.map((s) => s.oturum_sayisi));
+    return (
+        <table className="tablo">
+            <thead><tr><th>VIP oyun</th><th className="sag">Oturum</th><th className="cubuk-sutun" /><th className="sag">Toplam süre</th>
+                <th className="sag">Ortalama</th><th className="sag">Oynayan VIP</th><th>Durum</th></tr></thead>
+            <tbody>
+                {satirlar.map((s) => (
+                    <tr key={s.oyun_id}>
+                        <td>{s.ad}<VipRozet /></td><td className="sag">{s.oturum_sayisi}</td>
+                        <td className="cubuk-sutun"><Cubuk deger={s.oturum_sayisi} enBuyuk={enBuyuk} /></td>
+                        <td className="sag">{s.toplam_dk} dk</td><td className="sag">{s.ortalama_dk} dk</td>
+                        <td className="sag">{s.oynayan_vip}</td>
+                        <td>{s.su_an_masada ? <Etiket tur="basari">Masada</Etiket> : <Etiket>Vitrinde</Etiket>}</td>
+                    </tr>
+                ))}
+            </tbody>
+        </table>
+    );
+}
+
+// Kat bazında günlük gelir: kat 2 bistro yemek geliri ve kat 3 VIP geliri ayrı sütunlarda
+function KatGelirRaporu({ satirlar }) {
+    const gunler = [...new Set(satirlar.map((s) => s.gun))];
+    const toplam = (alan) => satirlar.reduce((t, s) => t + Number(s[alan] || 0), 0);
+    return (
+        <table className="tablo">
+            <thead><tr><th>Gün</th><th>Kat</th><th className="sag">Hesap</th><th className="sag">Kişi</th><th className="sag">Giriş</th>
+                <th className="sag">Yemek</th><th className="sag">İçecek</th><th className="sag">VIP ciro</th><th className="sag">Ciro</th></tr></thead>
+            <tbody>
+                {gunler.flatMap((g) => satirlar.filter((s) => s.gun === g).map((s, i) => (
+                    <tr key={`${g}-${s.kat}`}>
+                        <td>{i === 0 ? new Date(g).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long' }) : ''}</td>
+                        <td>{KAT_ADI[s.kat] || `Kat ${s.kat}`}</td>
+                        <td className="sag">{s.hesap_sayisi}{s.vip_hesap > 0 && <span className="soluk"> ({s.vip_hesap} VIP)</span>}</td>
+                        <td className="sag">{s.kisi}</td><td className="sag">{tl(s.giris_geliri)}</td>
+                        <td className="sag">{tl(s.yemek_geliri)}</td><td className="sag">{tl(s.icecek_geliri)}</td>
+                        <td className="sag">{s.vip_ciro > 0 ? tl(s.vip_ciro) : '–'}</td><td className="sag"><strong>{tl(s.ciro)}</strong></td>
+                    </tr>
+                )))}
+            </tbody>
+            <tfoot><tr><th colSpan={4}>Toplam</th><th className="sag">{tl(toplam('giris_geliri'))}</th><th className="sag">{tl(toplam('yemek_geliri'))}</th>
+                <th className="sag">{tl(toplam('icecek_geliri'))}</th><th className="sag">{tl(toplam('vip_ciro'))}</th><th className="sag">{tl(toplam('ciro'))}</th></tr></tfoot>
         </table>
     );
 }

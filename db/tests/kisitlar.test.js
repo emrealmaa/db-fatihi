@@ -106,8 +106,8 @@ test('personel rolü ve kullanıcı adı CHECK ile denetlenir', async () => {
         { kod: CHECK_IHLALI });
 });
 
-test('örnek veri: 50 oyun; popüler devler 8 kopya ve en yüksek talepte; zorluk/talep sınırları', async () => {
-    const [say] = await vt.admin('SELECT count(*)::int AS n, sum(toplam_adet)::int AS kopya FROM oyun');
+test('örnek veri: 50 standart oyun; popüler devler 8 kopya ve en yüksek talepte; zorluk/talep sınırları', async () => {
+    const [say] = await vt.admin('SELECT count(*)::int AS n, sum(toplam_adet)::int AS kopya FROM oyun WHERE NOT vip_ozel');
     assert.equal(say.n, 50);
     const devler = await vt.admin(`SELECT ad, toplam_adet, talep FROM oyun WHERE ad IN
         ('Catan','Ticket to Ride','Carcassonne','Dixit','Uno','Codenames','Monopoly','Splendor')`);

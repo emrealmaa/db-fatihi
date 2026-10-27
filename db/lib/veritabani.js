@@ -153,6 +153,34 @@ export async function kur(a = ayarlar(), secenek = {}) {
     await pgKur(a, secenek);
 }
 
+// Eklemeli migration'lar (GOC_BASLANGIC ve sonrası): veritabanını silmeden yalnızca bu dosyaları uygular.
+// Dosyalar tekrar çalıştırılabilir yazılır (IF NOT EXISTS / OR REPLACE / ON CONFLICT).
+export const GOC_BASLANGIC = 7;
+export async function goc(a = ayarlar(), { log = () => {} } = {}) {
+    const dosyalar = initDosyalari().filter((f) => parseInt(f.ad, 10) >= GOC_BASLANGIC);
+    if (a.surucu === 'pglite') {
+        if (!a.pgliteDizini) throw new Error('PGlite bellekteyken göç anlamsız: PGLITE_DIZINI verin');
+        const { PGlite } = await import('@electric-sql/pglite');
+        const { pgcrypto } = await import('@electric-sql/pglite/contrib/pgcrypto');
+        const db = await PGlite.create({ dataDir: a.pgliteDizini, extensions: { pgcrypto } });
+        try {
+            for (const f of dosyalar) { log(`  ${f.ad}`); await db.exec(f.sql); }
+        } finally {
+            await db.close();
+        }
+        return;
+    }
+    const { default: pg } = await import('pg');
+    const db = new pg.Client({ host: a.host, port: a.port, user: a.adminKullanici,
+        password: a.adminParola, database: a.database });
+    await db.connect();
+    try {
+        for (const f of dosyalar) { log(`  ${f.ad}`); await db.query(f.sql); }
+    } finally {
+        await db.end();
+    }
+}
+
 // Var olan veritabanına bağlanır. PGlite bellekteyse (veya dizin boşsa) önce kurar.
 export async function baglan(a = ayarlar(), secenek = {}) {
     return a.surucu === 'pglite' ? pgliteAc(a, secenek) : pgBaglan(a);

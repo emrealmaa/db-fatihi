@@ -23,4 +23,4 @@ export function kalanSure(bitis, simdi = Date.now()) {
 }
 
 export const ROL_ADI = { GARSON: 'Garson', KASIYER: 'Kasiyer', YONETICI: 'Yönetici' };
-export const KAT_ADI = { 1: 'Kat 1 · Giriş & Espresso Bar', 2: 'Kat 2 · Strateji Salonu', 3: 'Kat 3 · VIP & FRP' };
+export const KAT_ADI = { 1: 'Kat 1 · Giriş & Espresso Bar', 2: 'Kat 2 · Strateji Salonu & Bistro', 3: 'Kat 3 · VIP Kulüp' };

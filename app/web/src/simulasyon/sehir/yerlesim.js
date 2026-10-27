@@ -195,7 +195,7 @@ for (let i = 0; i < 26; i++) {
     const x = PARK.x0 + 0.4 + rnd() * (PARK.x1 - PARK.x0 - 1.2), y = PARK.y0 + 0.4 + rnd() * (PARK.y1 - PARK.y0 - 1.2);
     const t = zeminTuru(Math.floor(x + 0.3), Math.floor(y + 0.3)).tur;
     const dolu = SOKAK_ESYALARI.some((o) => x + 0.6 > o.gx - 0.3 && x < o.gx + o.gw + 0.3 && y + 0.6 > o.gy - 0.3 && y < o.gy + o.gd + 0.3);
-    if (t === 'cim' && !dolu && !(x > 31 && x < 36 && y < -12)) E({ tur: 'agac', gx: x, gy: y, gw: 0.6, gd: 0.6, h: 10, cesit: rnd() < 0.3 ? 'cam' : 'yaprak' });
+    if (t === 'cim' && !dolu && !(x > 31 && x < 36 && y < -12)) E({ tur: 'agac', gx: x, gy: y, gw: 0.6, gd: 0.6, h: 10, cesit: ((r) => (r < 0.25 ? 'cam' : r < 0.5 ? 'buyuk' : 'yaprak'))(rnd()) });
 }
 for (const [x, y] of [[31.4, -4.8], [44.2, -4.8]]) E(L(x, y));
 E({ tur: 'bisikletpark', gx: 41.5, gy: -4.6, gw: 1.6, gd: 0.4, h: 10 });

@@ -430,3 +430,13 @@ fieldset.bilgi-kutu { display: flex; flex-direction: column; gap: .75rem; }
     background: repeating-linear-gradient(90deg, #2a2520 0 2px, transparent 2px 4px, #2a2520 4px 5px, transparent 5px 8px, #2a2520 8px 11px, transparent 11px 12px); }
 .fis-dugme { display: block; width: 100%; }
 .sim-kat-secenek.bulunulan { opacity: .65; cursor: default; background: #efe6d4; }
+
+/* VIP Kulüp: altın rozet, VIP masa kartı, oyun listesi süzgeci */
+.etiket-vip { display: inline-flex; align-items: center; gap: .25rem; background: #2a1d16; color: #f2c75c; box-shadow: inset 0 0 0 1px #b8892f; margin-left: .4rem; vertical-align: middle; }
+.vip-not { display: block; font-size: .8rem; color: var(--uyari); margin-top: .1rem; }
+.masa-kart.masa-vip { box-shadow: inset 0 3px 0 #c9a14a, var(--golge); }
+.masa-kart .etiket-vip { margin-left: 0; align-self: flex-start; }
+.segmentli { display: inline-flex; border: 1px solid var(--cizgi); border-radius: 999px; overflow: hidden; }
+.segmentli button { font: inherit; border: 0; background: none; padding: .35rem .8rem; cursor: pointer; color: var(--soluk); }
+.segmentli button.secili { background: var(--yuzey-2); color: var(--metin); font-weight: 600; }
+.sim-tablo .etiket-vip { font-size: .7rem; padding: 0 .35rem; }

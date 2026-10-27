@@ -44,6 +44,12 @@ const KISIT_MESAJLARI = {
     ck_oturum_ogrenci: 'Öğrenci sayısı kişi sayısından fazla olamaz',
 };
 
+// Tetikleyicilerin "KOD: ayrıntı" biçimindeki iş kuralı hataları
+const KURAL_MESAJLARI = {
+    VIP_OYUN_YETKISIZ: (ayrinti) => `Bu oyun sadece VIP üyeler içindir (${ayrinti.replace(/ yalnızca VIP.*$/, '')})`,
+    VIP_KAT_YETKISIZ: (ayrinti) => ayrinti.replace(';', ':'),
+};
+
 // SQLSTATE -> HTTP durum kodu
 function durumKodu(kod) {
     if (!kod) return 500;
@@ -64,6 +70,8 @@ export function hataYaniti(e) {
     }
     if (e.code === '23503') return { durum, hata: 'İlişkili kayıt bulunamadı veya kayıt kullanımda' };
     if (e.code?.startsWith('22')) return { durum, hata: 'Geçersiz değer' };
+    const kural = /^([A-Z_]+): (.*)$/.exec(e.message || '');
+    if (kural && KURAL_MESAJLARI[kural[1]]) return { durum, hata: KURAL_MESAJLARI[kural[1]](kural[2]) };
     const kisit = e.constraint || e.message.match(/"(\w+)"/)?.[1];
     return { durum, hata: KISIT_MESAJLARI[kisit] || e.message };
 }

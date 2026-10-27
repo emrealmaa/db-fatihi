@@ -9,6 +9,7 @@
   ],
   "scripts": {
     "db:kur": "node db/scripts/kur.js",
+    "db:goc": "node db/scripts/goc.js",
     "db:test": "node --test --test-concurrency=1 \"db/tests/*.test.js\"",
     "db:test:lite": "cross-env DB_SURUCU=pglite node --test \"db/tests/*.test.js\"",
     "api": "npm run dev -w app/api",

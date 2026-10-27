@@ -63,8 +63,8 @@ test('garson kasa ve yönetim uçlarına erişemez (403)', async () => {
 
 test('masalar ve oyunlar listelenir, sayılar JSON sayısıdır', async () => {
     const { govde: masalar } = await istek('GET', '/masalar', null, 'garson');
-    assert.equal(masalar.length, 24);
-    assert.deepEqual([1, 2, 3].map((k) => masalar.filter((m) => m.kat === k).length), [10, 10, 4]);
+    assert.equal(masalar.length, 25);
+    assert.deepEqual([1, 2, 3].map((k) => masalar.filter((m) => m.kat === k).length), [10, 10, 5]);
     assert.deepEqual([...new Set(masalar.map((m) => m.kat))].sort(), [1, 2, 3]);
     assert.equal(typeof masalar[0].oturum_id, 'number');
     const { govde: oyunlar } = await istek('GET', '/oyunlar', null, 'garson');
@@ -171,7 +171,8 @@ test('öğrenci indirimi ve dönem özeti (gün sonu fişi)', async () => {
     assert.equal(ac.durum, 201);
     const hesap = await istek('GET', `/oturumlar/${ac.govde.oturumId}/hesap`, null, 'kasiyer');
     assert.equal(hesap.govde.ogrenci_indirimi, hesap.govde.giris_ucreti);       // 2 öğrenci × %50
-    const fazla = await istek('POST', `/masalar/${masa9.masa_id + 1}/ac`, { kisiSayisi: 2, ogrenciSayisi: 3, kullaniciId: 3 }, 'garson');
+    const masa11 = (await istek('GET', '/masalar', null, 'garson')).govde.find((m) => m.masa_no === 11);
+    const fazla = await istek('POST', `/masalar/${masa11.masa_id}/ac`, { kisiSayisi: 2, ogrenciSayisi: 3, kullaniciId: 3 }, 'garson');
     assert.match(fazla.govde.hata, /Öğrenci sayısı/);
     await istek('POST', `/oturumlar/${ac.govde.oturumId}/kapat`, { odemeTuru: 'NAKIT' }, 'kasiyer');
     const o = (await istek('GET', `/raporlar/donem?bas=${encodeURIComponent(bas)}`, null, 'kasiyer')).govde;
@@ -194,4 +195,28 @@ test('yönetici personel adına işlem yapar; işlem o personelin rolü ve kimli
 
     // Garson başkası adına işlem yapamaz
     assert.equal((await istek('GET', '/masalar', null, 'garson', 4)).durum, 403);
+});
+
+test('VIP Kulüp: kural hataları anlaşılır mesaja çevrilir; üyelik yöneticiyle verilir; raporlar', async () => {
+    const masalar = (await istek('GET', '/masalar', null, 'garson')).govde;
+    const vipMasa = masalar.find((m) => m.vip_masa && m.durum === 'BOS');
+    const kat = await istek('POST', `/masalar/${vipMasa.masa_id}/ac`, { kisiSayisi: 2, kullaniciId: 4 }, 'garson');
+    assert.equal(kat.durum, 400);
+    assert.match(kat.govde.hata, /yalnızca VIP üyeler oturabilir/);
+
+    const vipOyun = (await istek('GET', '/oyunlar', null, 'garson')).govde.find((o) => o.ad === 'Spirit Island');
+    assert.equal(vipOyun.vip_ozel, true);
+    const standart = masalar.find((m) => !m.vip_masa && m.durum === 'BOS' && m.kapasite >= 2);
+    const ac = await istek('POST', `/masalar/${standart.masa_id}/ac`, { kisiSayisi: 2, kullaniciId: 4 }, 'garson');
+    const oyun = await istek('POST', `/oturumlar/${ac.govde.oturumId}/oyun`, { oyunId: vipOyun.oyun_id }, 'garson');
+    assert.equal(oyun.durum, 400);
+    assert.equal(oyun.govde.hata, 'Bu oyun sadece VIP üyeler içindir (Spirit Island)');
+
+    assert.equal((await istek('POST', '/yonetim/musteriler/4/vip', { vip: true }, 'garson')).durum, 403);
+    assert.equal((await istek('POST', '/yonetim/musteriler/4/vip', { vip: true }, 'yonetici')).durum, 204);
+    assert.equal((await istek('POST', `/oturumlar/${ac.govde.oturumId}/oyun`, { oyunId: vipOyun.oyun_id }, 'garson')).durum, 201);
+
+    const kullanim = await istek('GET', '/raporlar/vip-oyun-kullanimi', null, 'yonetici');
+    assert.equal(kullanim.govde.length, 10);
+    assert.equal((await istek('GET', '/raporlar/kat-gelir', null, 'yonetici')).durum, 200);
 });

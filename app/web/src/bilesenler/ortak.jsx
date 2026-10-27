@@ -35,6 +35,20 @@ export function Etiket({ tur = 'notr', children }) {
     return <span className={`etiket etiket-${tur}`}>{children}</span>;
 }
 
+// VIP Kulüp rozeti (altın, kilitli): VIP oyunlar ve VIP masalar
+export function VipRozet({ baslik = 'Sadece VIP üyeler oynayabilir' }) {
+    return (
+        <span className="etiket etiket-vip" title={baslik}>
+            <svg viewBox="0 0 12 12" width="10" height="10" aria-hidden="true"><path d="M3 5V3.6a3 3 0 0 1 6 0V5h.6c.5 0 .9.4.9.9v4.2c0 .5-.4.9-.9.9H2.4a.9.9 0 0 1-.9-.9V5.9c0-.5.4-.9.9-.9H3Zm1.4 0h3.2V3.6a1.6 1.6 0 0 0-3.2 0V5Z" fill="currentColor" /></svg>
+            VIP
+        </span>
+    );
+}
+
+// Oyun listelerinde Tümü / Standart / VIP süzgeci
+export const VIP_SUZGEC = [['', 'Tümü'], ['standart', 'Standart'], ['vip', 'VIP']];
+export const vipSuzgecUyar = (suzgec, o) => !suzgec || (suzgec === 'vip') === !!o.vip_ozel;
+
 export function SayfaBaslik({ baslik, aciklama, children }) {
     return (
         <div className="sayfa-baslik">

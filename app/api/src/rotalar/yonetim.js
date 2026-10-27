@@ -53,6 +53,8 @@ export function yonetimRotalari() {
         'personel-performans': 'SELECT * FROM v_personel_performans ORDER BY personel',
         'kritik-stok': 'SELECT * FROM v_kritik_stok ORDER BY stok, ad',
         'urun-satis': 'SELECT * FROM v_urun_satis ORDER BY gelir DESC, ad',
+        'vip-oyun-kullanimi': 'SELECT * FROM v_vip_oyun_kullanimi ORDER BY oturum_sayisi DESC, ad',
+        'kat-gelir': 'SELECT * FROM v_kat_gelir ORDER BY gun DESC, kat',
     };
     for (const [ad, sql] of Object.entries(raporlar)) {
         r.get(`/raporlar/${ad}`, async (req, res) => res.json(await req.vt((q) => q(sql))));
@@ -63,7 +65,7 @@ export function yonetimRotalari() {
         tablo: 'kategori', sutunlar: ['ad'], siralama: 'ad', silinebilir: true });
     tabloRotalari(r, '/yonetim/oyunlar', {
         tablo: 'oyun', siralama: 'ad',
-        sutunlar: ['ad', 'kategori_id', 'min_oyuncu', 'max_oyuncu', 'sure_dk', 'toplam_adet', 'zorluk', 'talep', 'aktif'] });
+        sutunlar: ['ad', 'kategori_id', 'min_oyuncu', 'max_oyuncu', 'sure_dk', 'toplam_adet', 'zorluk', 'talep', 'aktif', 'vip_ozel'] });
     tabloRotalari(r, '/yonetim/urun-kategorileri', {
         tablo: 'urun_kategori', sutunlar: ['ad', 'sira'], siralama: 'sira, ad', silinebilir: true });
     tabloRotalari(r, '/yonetim/urunler', {
@@ -74,6 +76,13 @@ export function yonetimRotalari() {
 
     r.post('/yonetim/urunler/:id/stok', async (req, res) => {
         await req.vt((q) => q('CALL sp_stok_ekle($1, $2)', [tamsayi(req.params.id, 'Ürün'), tamsayi(req.body.adet, 'Adet')]));
+        res.status(204).end();
+    });
+
+    // ---------------------------------------------------------------- VIP Kulüp üyeliği
+    // Üyelik yalnızca yönetici prosedürüyle verilir/geri alınır: { vip: true|false }
+    r.post('/yonetim/musteriler/:id/vip', async (req, res) => {
+        await req.vt((q) => q('CALL sp_musteri_vip($1, $2)', [tamsayi(req.params.id, 'Müşteri'), req.body.vip !== false]));
         res.status(204).end();
     });
 

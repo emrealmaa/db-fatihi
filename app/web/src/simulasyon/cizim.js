@@ -4,7 +4,7 @@
 // koordinatlarla yeniden hesaplanır. Tüm şekiller fillRect ile satır/sütun çizildiğinden kenarlar keskin kalır.
 import {
     arkaDuvarlar, dikdortgenDondur, disGorunur, dondur, duvarNoktasi, GENISLIK, IC_DERINLIK,
-    ASANSOR_GOVDE, KALDIRIM_Y, KAPI_ARALIK, KATLAR, SAHNE, arkadaMi,
+    ASANSOR_GOVDE, KALDIRIM_Y, KAPI_ARALIK, KATLAR, arkadaMi,
 } from './harita.js';
 import { BINA_ONU, BINALAR, kepenkOrani } from './sehir/binalar.js';
 import { binaAltigeni, binaCiz } from './sehir/binaCizim.js';
@@ -49,19 +49,23 @@ const ZEMIN = {
     ahsap: ['#c18a55', '#b47e4b', '#cc955f'],
     koyu: ['#5b4636', '#523f31', '#64503f'],
     hali: ['#3a1f4f', '#341b47', '#40235a'],
+    koyuahsap: ['#4a2f1f', '#42291b', '#533423'],
 };
 const BOHEM = ['#a33b20', '#7b2d26', '#2b6cb0', '#c9772a'];
 const HALI = {
     mutfak: ['#e9eef2', '#a9bccb'],
     arcade: ['#2a1f3d', '#33264a'],
     bekleme: ['#d9a65b', '#cf9a4f'], paspas: ['#6b8f5a', '#5f8250'],
-    salon: ['#3f5a4a', '#385142'], vip: ['#3d2552', '#36204a'],
+    salon: ['#3f5a4a', '#385142'], vip: ['#6e1e2b', '#641b27'],
+    dama: ['#1f1f1f', '#f1ece2'],
 };
 const DUVAR_RENK = {
     1: { ust: '#f1dfbf', serit: '#e6cfa6', alt: '#9b6a3f' },
     2: { ust: '#6d7f66', serit: '#62735c', alt: '#4a3626' },
-    3: { ust: '#5d3b6e', serit: '#53335f', alt: '#2f1b29' },
+    3: { ust: '#6e1f2c', serit: '#5e1a26', alt: '#3a2216' },
 };
+// Duvarın alt kısmındaki ahşap lambri yüksekliği (piksel); kat 3'te üstünde altın şerit
+const LAMBRI = { 1: 22, 2: 30, 3: 30 };
 export const OYUN_RENK = ['#d94f3d', '#3d7fd9', '#e3b23c', '#4caf6a', '#9b59b6', '#e07b39', '#2bb0a8', '#c2185b', '#7cb342', '#5c6bc0'];
 
 const onAltilik = (hex) => { const n = parseInt(hex.slice(1), 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
@@ -129,9 +133,7 @@ function golge(c, P, d, gx, gy, gw, gd, guc = 1) {
     kutu(c, P, d, gx + 0.03, gy + 0.03, gw + 0.08, gd + 0.08, 0, { ust: `rgba(0,0,0,${0.16 * guc})` });
 }
 // Gölge çizilmeyenler: duvara/tavana asılı, ince direkli veya kendi ışığı olan nesneler
-const GOLGESIZ = new Set(['spot', 'lamba', 'sokaklambasi', 'mikrofon', 'yarimsahne', 'sahne', 'cephe', 'direk', 'tente', 'agac', 'menutahta']);
-// Ekran yönleri (atari kabininin ön yüzü)
-const YUZ_YON = { G: [0, 1], D: [1, 0], K: [0, -1], B: [-1, 0] };
+const GOLGESIZ = new Set(['lamba', 'sokaklambasi', 'cephe', 'direk', 'tente', 'agac', 'menutahta', 'turnuva', 'kadifebariyer', 'bartaburesi']);
 
 // Raf deseni: yan yüzlerde rafa dizilmiş kutu oyunları
 const rafDeseni = (c, x, ustY, h, sol, sutun) => {
@@ -155,6 +157,37 @@ const tuglaDeseni = (c, x, ustY, h, sol, sutun) => {
     }
     if ((sutun * 7) % 13 === 0) { c.fillStyle = 'rgba(0,0,0,.08)'; c.fillRect(x, ustY, 1, h); }
 };
+
+// Şişe rafı deseni: üç rafta şişe ve kavanozlar
+const siseDeseni = (cc, x, y, h, sol, sutun) => {
+    for (let k = 0; k < 3; k++) {
+        if (sutun % 4 === 3) continue;
+        const renk = ['#3f8f4f', '#a33b20', '#e3b23c', '#2b6cb0', '#f4efe6', '#7a4b2a'][(Math.floor(sutun / 4) + k * 2) % 6];
+        const boy = 6 + ((Math.floor(sutun / 4) + k) % 3);
+        cc.fillStyle = sol ? renk : ton(renk, 0.8);
+        cc.fillRect(x, y + 4 + k * 13 + (9 - boy), 1, boy);
+        if (sutun % 4 === 1) { cc.fillStyle = '#2a1d16'; cc.fillRect(x, y + 4 + k * 13 + (9 - boy) - 2, 1, 2); }
+    }
+};
+
+// Kapitone (chesterfield) deri: düğme çukurları
+const capitone = (cc, x, y, h, sol, st) => {
+    if (st % 4 === 2) { cc.fillStyle = 'rgba(0,0,0,.28)'; for (let r = 2; r < h - 1; r += 4) cc.fillRect(x, y + r, 1, 1); }
+};
+
+// Kanepe / koltuk: oturak, o.sirt yönünde (dünya K/B/G/D) yüksek sırt, iki ucunda kol
+function kanepe(K, o, ana) {
+    const sirt = renkler(ton(ana, 0.85), capitone), kol = renkler(ton(ana, 0.9), capitone);
+    K(o.gx + 0.05, o.gy + 0.05, o.gw - 0.1, o.gd - 0.1, o.h, renkler(ana, capitone));
+    const boyuna = o.sirt === 'D' || o.sirt === 'B';                // sırt y ekseni boyunca
+    if (boyuna) {
+        for (const v of [0.05, o.gd - 0.27]) K(o.gx + 0.05, o.gy + v, o.gw - 0.1, 0.22, 6, kol, o.h);
+        K(o.sirt === 'D' ? o.gx + o.gw - 0.32 : o.gx + 0.05, o.gy + 0.05, 0.27, o.gd - 0.1, 13, sirt, o.h);
+    } else {
+        for (const u of [0.05, o.gw - 0.27]) K(o.gx + u, o.gy + 0.05, 0.22, o.gd - 0.1, 6, kol, o.h);
+        K(o.gx + 0.05, o.sirt === 'G' ? o.gy + o.gd - 0.32 : o.gy + 0.05, o.gw - 0.1, 0.27, 13, sirt, o.h);
+    }
+}
 
 // Kitaplık deseni: girintili koyu arka panel, dikmeler, raf tahtaları ve kutular (derinlik hissi)
 const kitaplikDeseni = (c, x, ustY, h, sol, sutun) => {
@@ -254,14 +287,19 @@ function zeminVeDuvarlar(kat, d, evre, parca = 'zemin') {
             let renk0 = renk ? renk[(gx + gy) % 2] : null;
             if (h.renk === 'vip' && kenar) renk0 = '#b8892f';
             const icKenar = !kenar && (gx === h.gx + 1 || gy === h.gy + 1 || gx === h.gx + h.gw - 2 || gy === h.gy + h.gd - 2);
-            if (h.renk === 'vip' && icKenar) renk0 = '#4a2a63';
+            if (h.renk === 'vip' && icKenar) renk0 = '#4a0f1a';
             if (h.renk === 'arcade' && kenar) renk0 = '#5ec8ff';
             if (h.renk === 'bohem') renk0 = kenar ? '#e3b23c' : BOHEM[(gx * 3 + gy * 5) % 4];
             elmasR(c, P, r.gx, r.gy, renk0);
+            if (h.renk === 'dama') {
+                // bistro: karo başına 2x2 siyah-beyaz dama
+                for (const [a, b] of [[0, 0], [0.5, 0], [0, 0.5], [0.5, 0.5]]) kutu(c, P, d, gx + a, gy + b, 0.5, 0.5, 0, { ust: renk[(gx * 2 + gy * 2 + a * 2 + b * 2) % 2] });
+            }
+            if (h.renk === 'vip' && kenar) kutu(c, P, d, gx + 0.15, gy + 0.15, 0.7, 0.7, 0, { ust: '#c9a14a' });
             if (h.renk === 'vip' && !kenar && !icKenar) {
-                // derin mor halı: baklava motifleri ve altın noktalar
-                if ((gx + gy) % 2 === 0) kutu(c, P, d, gx + 0.3, gy + 0.3, 0.4, 0.4, 0, { ust: '#57367a' });
-                else kutu(c, P, d, gx + 0.42, gy + 0.42, 0.16, 0.16, 0, { ust: '#2c1840' });
+                // altın kenarlı bordo halı: baklava motifleri ve altın noktalar
+                if ((gx + gy) % 2 === 0) kutu(c, P, d, gx + 0.3, gy + 0.3, 0.4, 0.4, 0, { ust: '#7d2533' });
+                else kutu(c, P, d, gx + 0.42, gy + 0.42, 0.16, 0.16, 0, { ust: '#3d0c14' });
                 if (gx % 3 === 0 && gy % 3 === 0) kutu(c, P, d, gx + 0.44, gy + 0.44, 0.12, 0.12, 0, { ust: '#c9a14a' });
             }
         }
@@ -285,10 +323,23 @@ function duvarlariCiz(c, P, kat, d, evre = 'gun') {
         const sol = x < kose.x;
         const k = sol ? 1 : 0.86;
         const taban = Math.round(sol ? dogruY(sol0, kose, x) : dogruY(kose, sag0, x));
+        const L = LAMBRI[kat];
         c.fillStyle = ton(renk.ust, k); c.fillRect(x, taban - DUVAR, 1, DUVAR);
-        if (Math.floor(x / 8) % 2) { c.fillStyle = ton(renk.serit, k); c.fillRect(x, taban - DUVAR + 6, 1, DUVAR - 30); }
-        c.fillStyle = ton(renk.alt, k); c.fillRect(x, taban - 22, 1, 22);
-        c.fillStyle = ton(renk.alt, k * 1.3); c.fillRect(x, taban - 23, 1, 1);
+        if (kat === 3) {
+            // bordo duvar kâğıdı: baklava (damask) deseni
+            c.fillStyle = ton(renk.serit, k);
+            for (let r = 8; r < DUVAR - L - 4; r++) if ((x + r) % 12 === 0 || (x - r + 600) % 12 === 0) c.fillRect(x, taban - DUVAR + r, 1, 1);
+            if ((x + 3) % 12 < 2) { c.fillStyle = ton('#8a3a3a', k); c.fillRect(x, taban - DUVAR + 14 + ((x >> 2) % 3) * 18, 1, 2); }
+        } else if (Math.floor(x / 8) % 2) { c.fillStyle = ton(renk.serit, k); c.fillRect(x, taban - DUVAR + 6, 1, DUVAR - 8 - L); }
+        c.fillStyle = ton(renk.alt, k); c.fillRect(x, taban - L, 1, L);
+        c.fillStyle = ton(renk.alt, k * 1.3); c.fillRect(x, taban - L - 1, 1, 1);
+        if (kat > 1) {
+            // ahşap lambri panelleri; kat 3'te üstünde altın şerit
+            if (x % 14 === 0) { c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(x, taban - L + 3, 1, L - 6); }
+            if (x % 14 === 1) { c.fillStyle = 'rgba(255,255,255,.07)'; c.fillRect(x, taban - L + 3, 1, L - 6); }
+            c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(x, taban - L + 3, 1, 1); c.fillRect(x, taban - 5, 1, 1);
+            if (kat === 3) { c.fillStyle = '#c9a14a'; c.fillRect(x, taban - L - 4, 1, 2); c.fillRect(x, taban - DUVAR + 4, 1, 1); }
+        }
         c.fillStyle = ton(renk.ust, 0.55); c.fillRect(x, taban - DUVAR, 1, 3);
         // iç köşe ve tavan kenarında ortam gölgesi (derinlik)
         c.fillStyle = 'rgba(0,0,0,.14)'; c.fillRect(x, taban - 3, 1, 3);
@@ -334,6 +385,19 @@ function duvarlariCiz(c, P, kat, d, evre = 'gun') {
                         if (i % 3 === 0) c.fillRect(x, y - 48, 1, 1);
                     }
                     break;
+                case 'karatahta': {
+                    // bistro menüsü: ahşap çerçeveli kara tahtada tebeşirle yemek adları ve fiyatlar
+                    if (kenar) { c.fillStyle = '#6b3f22'; c.fillRect(x, y - 74, 1, 36); break; }
+                    c.fillStyle = '#6b3f22'; c.fillRect(x, y - 74, 1, 2); c.fillRect(x, y - 40, 1, 2);
+                    c.fillStyle = ton('#26302a', k); c.fillRect(x, y - 72, 1, 32);
+                    if (i > 4 && i < n - 5 && i % 3) { c.fillStyle = '#ffd166'; c.fillRect(x, y - 69, 1, 2); }
+                    for (let r = 0; r < 5; r++) {
+                        const fiyat = i > n * 0.72 && i < n - 3;
+                        if (i > 2 && i < n * 0.62 && (i * 3 + r * 7) % 5 < 3) { c.fillStyle = '#f4efe6'; c.fillRect(x, y - 63 + r * 4, 1, 1); }
+                        if (fiyat && (i + r) % 3) { c.fillStyle = '#f7c59f'; c.fillRect(x, y - 63 + r * 4, 1, 1); }
+                    }
+                    break;
+                }
                 case 'afis':
                     c.fillStyle = ton('#e3b23c', k); c.fillRect(x, y - 68, 1, 30);
                     c.fillStyle = ton('#c0392b', k); c.fillRect(x, y - 58, 1, 8);
@@ -393,6 +457,7 @@ function nesneCiz(c, P, d, o, sahne = {}) {
     const K = (gx, gy, gw, gd, h, renk, zz = 0) => kutu(c, P, d, gx, gy, gw, gd, h, renk, zz + z0);
     const W = (x, y) => { const q = P.W(x, y); return { x: q.x, y: q.y - z0 }; };
     const celik = (cc, x, y, h, sol, st) => { if (st % 6 === 0) { cc.fillStyle = 'rgba(255,255,255,.18)'; cc.fillRect(x, y, 1, h); } };
+    if (o.duvar && !arkaDuvarlar(d).includes(o.duvar)) return;          // duvara asılı: duvar öndeyken görünmez
     if (!z0 && !GOLGESIZ.has(o.tur)) golge(c, P, d, o.gx, o.gy, o.gw, o.gd);
     switch (o.tur) {
         // -------------------------------------------------------- mutfak
@@ -449,7 +514,7 @@ function nesneCiz(c, P, d, o, sahne = {}) {
             for (let i = 0; i < o.gw; i++) { const q = W(o.gx + i + 0.5, o.gy + 0.5); c.fillStyle = 'rgba(255,170,70,.35)'; c.fillRect(q.x - 5, q.y - o.h - 32, 10, 30); }
             break;
         }
-        // -------------------------------------------------------- kat 2 eğlence: kitaplık, atari, tilt, stand
+        // -------------------------------------------------------- sokak lambası, ağaç, kitaplık, oyun standı
         case 'sokaklambasi': {
             const q = W(o.gx + 0.15, o.gy + 0.15);
             c.fillStyle = '#2b2f36'; c.fillRect(q.x - 1, q.y - o.h, 2, o.h); c.fillRect(q.x - 3, q.y - 2, 6, 2);
@@ -464,27 +529,53 @@ function nesneCiz(c, P, d, o, sahne = {}) {
             break;
         }
         case 'agac': {
-            // ağaç: zemin gölgesi, (kaldırımda) ızgaralı çukur, gövde ve katmanlı yaprak kümeleri; çeşide ve konuma göre boy ve ton
+            // ağaç: zemin gölgesi, (kaldırımda) ızgaralı çukur, gövde ve taç. Boy: küçük / orta / büyük (çınar: geniş, çok
+            // gövdeli taç, alacalı kabuk); çam: kat kat koni; meyve: küçük, meyveli. Çeşidi verilmemişse konumdan seçilir.
+            // Yaprak tonu konumdan (üç ton); sonbaharda yaprak döken ağaçların bir kısmı sarı-turuncu.
             const q = W(o.gx + o.gw / 2, o.gy + o.gd / 2);
-            const b0 = { buyuk: 1.35, orta: 1, meyve: 0.78 }[o.cesit] || 1;
-            const t0 = karma(o.gx, o.gy, 7);
-            const boy = b0 * (0.9 + t0 * 0.2);
+            const t0 = karma(o.gx, o.gy, 7), t1 = karma(o.gy, o.gx, 3);
+            const cesit = o.cesit === 'yaprak' || !o.cesit ? (t1 < 0.4 ? 'kucuk' : t1 < 0.85 ? 'orta' : 'buyuk') : o.cesit;
+            const boy = ({ buyuk: 1.45, orta: 1, kucuk: 0.72, meyve: 0.78, cam: 1.1 }[cesit] || 1) * (0.9 + t0 * 0.2);
             c.fillStyle = 'rgba(0,0,0,.22)'; c.fillRect(q.x - 12 * boy, q.y - 2, 24 * boy, 4); c.fillRect(q.x - 8 * boy, q.y - 3, 16 * boy, 6);
             if (o.cukur) { kutu(c, P, d, o.gx - 0.05, o.gy - 0.05, o.gw + 0.1, o.gd + 0.1, 0, { ust: '#5a3d26' }); kutu(c, P, d, o.gx - 0.05, o.gy - 0.05, o.gw + 0.1, 0.05, 1, renkler('#6b737d')); kutu(c, P, d, o.gx - 0.05, o.gy + o.gd, o.gw + 0.1, 0.05, 1, renkler('#6b737d')); }
             const gece = sahne.evre === 'gece';
-            const yap = gece ? ['#1f3d2c', '#24472f', '#2c5638', '#1a3324'] : o.cesit === 'meyve' ? ['#3f8f4f', '#4f9f5a', '#6cbf6a', '#2f7a3f']
-                : t0 < 0.5 ? ['#2f7a3f', '#3f8f4f', '#5fb36d', '#276b35'] : ['#3a7f3a', '#4c944a', '#6aae5a', '#2e6d30'];
-            const gov = Math.round(14 * boy);
-            c.fillStyle = '#5a3a22'; c.fillRect(q.x - 1, q.y - gov, 3, gov); c.fillStyle = '#3f2817'; c.fillRect(q.x + 1, q.y - gov, 1, gov);
-            const r = Math.round(11 * boy), ust = q.y - gov - r + 4;
-            for (let k = 0; k < 3; k++) for (let i = 0; i < 9; i++) {                       // alttan üste üç katman
-                const a = (i / 9) * Math.PI * 2 + k, rr = r * (1 - k * 0.28);
-                c.fillStyle = yap[(i + k) % 3];
-                c.fillRect(Math.round(q.x - 4 + Math.cos(a) * rr * 0.75), Math.round(ust + 4 - k * 5 + Math.sin(a) * rr * 0.45), Math.round(8 * boy), Math.round(7 * boy));
+            const sonbahar = sahne.mevsim === 'sonbahar' && cesit !== 'cam' && karma(o.gx, o.gy, 11) < 0.55;
+            const TONLAR = [['#2f7a3f', '#3f8f4f', '#5fb36d', '#276b35', '#86c97a'], ['#3a7f3a', '#4c944a', '#6aae5a', '#2e6d30', '#9ad48a'],
+                ['#5d8a2e', '#6f9e38', '#8fbf4a', '#4e7626', '#b5dc72']];
+            const yap = gece ? ['#1f3d2c', '#24472f', '#2c5638', '#1a3324', '#36603f']
+                : sonbahar ? (t1 < 0.5 ? ['#d98a1e', '#e3a83a', '#f2c75c', '#b8661a', '#ffd98a'] : ['#c0571f', '#d9752e', '#e8a03c', '#9a3f17', '#f2c75c'])
+                : cesit === 'cam' ? ['#1f5a3a', '#2a6b45', '#3a7f52', '#184a2f', '#5a9a6a'] : TONLAR[Math.floor(t0 * 3)];
+            const gov = Math.round((cesit === 'cam' ? 8 : 14) * boy), kalin = cesit === 'buyuk' ? 4 : cesit === 'kucuk' ? 2 : 3;
+            c.fillStyle = cesit === 'buyuk' ? '#8a7a5a' : '#5a3a22'; c.fillRect(q.x - 1, q.y - gov, kalin, gov);
+            c.fillStyle = cesit === 'buyuk' ? '#c9bb92' : '#3f2817'; c.fillRect(q.x + kalin - 2, q.y - gov, 1, gov);
+            if (cesit === 'buyuk') for (let i = 2; i < gov; i += 4) { c.fillStyle = '#d9cfb0'; c.fillRect(q.x + (i % 3) - 1, q.y - i, 2, 2); }   // çınarın alacalı kabuğu
+            if (cesit === 'cam') {
+                // kat kat koni
+                for (let k = 0; k < 4; k++) {
+                    const gen = Math.round((12 - k * 2.6) * boy), y0 = q.y - gov - k * 7 * boy;
+                    for (let r = 0; r < 8 * boy; r++) {
+                        const w = Math.round(gen * (r / (8 * boy)));
+                        c.fillStyle = yap[(k + (r > 4 ? 1 : 0)) % 3]; c.fillRect(q.x - w + 1, y0 - 8 * boy + r, w * 2, 1);
+                    }
+                }
+                c.fillStyle = yap[4]; c.fillRect(q.x, q.y - gov - 34 * boy, 2, 3);
+                break;
             }
-            c.fillStyle = yap[3]; c.fillRect(q.x - r + 2, ust + 6, r * 2 - 4, 3);                  // alt gölgeli kenar
-            c.fillStyle = gece ? '#36603f' : '#86c97a'; c.fillRect(q.x - 3, ust - 8, 6, 2);       // tepe ışığı
-            if (o.cesit === 'meyve' && !gece) for (let i = 0; i < 5; i++) { c.fillStyle = i % 2 ? '#d94f3d' : '#f4a03c'; c.fillRect(q.x - 6 + i * 3, ust + (i % 3) * 3, 2, 2); }
+            const r = Math.round(11 * boy), ust = q.y - gov - r + 4;
+            const loblar = cesit === 'buyuk' ? [[-0.55, 0.2], [0.5, 0.15], [0, -0.35]] : [[0, 0]];       // çınar: üç loblu geniş taç
+            for (const [lx, ly] of loblar) {
+                const cx = q.x + lx * r, cy = ust + ly * r;
+                const rr0 = cesit === 'buyuk' ? r * 0.72 : r;
+                for (let k = 0; k < 3; k++) for (let i = 0; i < 9; i++) {                                // alttan üste üç katman
+                    const a = (i / 9) * Math.PI * 2 + k, rr = rr0 * (1 - k * 0.28);
+                    c.fillStyle = yap[(i + k) % 3];
+                    c.fillRect(Math.round(cx - 4 + Math.cos(a) * rr * (cesit === 'kucuk' ? 0.6 : 0.75)), Math.round(cy + 4 - k * 5 + Math.sin(a) * rr * 0.45), Math.round(8 * Math.max(0.8, boy * 0.8)), Math.round(7 * Math.max(0.8, boy * 0.8)));
+                }
+            }
+            c.fillStyle = yap[3]; c.fillRect(q.x - r + 2, ust + 6, r * 2 - 4, 3);                       // alt gölgeli kenar
+            c.fillStyle = yap[4]; c.fillRect(q.x - 3, ust - 8, 6, 2);                                    // tepe ışığı
+            if (cesit === 'meyve' && !gece) for (let i = 0; i < 5; i++) { c.fillStyle = i % 2 ? '#d94f3d' : '#f4a03c'; c.fillRect(q.x - 6 + i * 3, ust + (i % 3) * 3, 2, 2); }
+            if (sonbahar && !gece) for (let i = 0; i < 3; i++) { c.fillStyle = yap[i]; c.fillRect(q.x - 8 + karma(o.gx, i) * 16, q.y - 1 + (i % 2), 2, 1); }   // dökülen yapraklar
             break;
         }
         case 'duvarlambasi': {
@@ -503,70 +594,6 @@ function nesneCiz(c, P, d, o, sahne = {}) {
                 c.fillStyle = 'rgba(255,214,140,.5)'; c.fillRect(q.x - 6, q.y - o.h - 1, 12, 2);
             }
             break;
-        case 'atari': {
-            // retro arcade kabini: üstte ışıklı başlık, ortada yanıp sönen ekran, altta kontrol paneli
-            const yz = gorunenYuzler(d);
-            const t = Math.floor(performance.now() / 180);
-            K(o.gx + 0.1, o.gy + 0.1, 0.8, 0.8, o.h, renkler(o.renk, (cc, x, y, h, sol, st) => {
-                if ((sol ? yz.sol : yz.sag) !== o.on) return;
-                cc.fillStyle = '#ffd166'; cc.fillRect(x, y + 3, 1, 5);
-                cc.fillStyle = '#111'; cc.fillRect(x, y + 10, 1, 16);
-                if (st > 1 && st < 16) { cc.fillStyle = ['#5ec8ff', '#ff5ea8', '#7cf29a', '#ffd166'][(Math.floor(st / 3) + t) % 4]; cc.fillRect(x, y + 12 + ((st + t) % 3), 1, 9); }
-                cc.fillStyle = '#2b2b2b'; cc.fillRect(x, y + 28, 1, 5);
-                if (st % 6 === 2) { cc.fillStyle = '#d94f3d'; cc.fillRect(x, y + 27, 1, 2); }
-            }));
-            K(o.gx + 0.06, o.gy + 0.06, 0.88, 0.88, 3, renkler('#1c1c1c'), o.h);
-            // ekranın önüne çıkıntı yapan eğik kontrol paneli: joystick ve düğmeler
-            const [nx, ny] = YUZ_YON[o.on] || [1, 0];
-            const pw = nx ? 0.26 : 0.7, pd = ny ? 0.26 : 0.7;
-            const px = o.gx + 0.5 + nx * 0.48 - pw / 2, py = o.gy + 0.5 + ny * 0.48 - pd / 2;
-            K(px, py, pw, pd, 4, renkler('#2b2b2b'), 18);
-            K(px + 0.02, py + 0.02, pw - 0.04, pd - 0.04, 1, renkler(o.renk), 22);
-            const js = W(px + pw / 2 - ny * 0.15, py + pd / 2 - nx * 0.15);
-            c.fillStyle = '#111'; c.fillRect(js.x, js.y - 27, 1, 4); c.fillStyle = '#d94f3d'; c.fillRect(js.x - 1, js.y - 29, 3, 2);
-            for (const k of [0.05, 0.2]) { const b = W(px + pw / 2 + ny * k, py + pd / 2 + nx * k); c.fillStyle = k > 0.1 ? '#ffd166' : '#5ec8ff'; c.fillRect(b.x, b.y - 24, 2, 1); }
-            // ekran ve başlık ışıması (ekrandan dışarı taşan renkli hale + zeminde yansıma)
-            const renkI = ['#5ec8ff', '#ff5ea8', '#7cf29a', '#ffd166'][t % 4];
-            const ek = W(o.gx + 0.5 + nx * 0.55, o.gy + 0.5 + ny * 0.55);
-            c.save(); c.globalCompositeOperation = 'lighter';
-            let g = c.createRadialGradient(ek.x, ek.y - o.h * 0.6, 1, ek.x, ek.y - o.h * 0.6, 26);
-            g.addColorStop(0, hexA(renkI, 0.38)); g.addColorStop(1, hexA(renkI, 0));
-            c.fillStyle = g; c.fillRect(ek.x - 26, ek.y - o.h * 0.6 - 26, 52, 52);
-            const zy = W(o.gx + 0.5 + nx * 1.1, o.gy + 0.5 + ny * 1.1);
-            g = c.createRadialGradient(zy.x, zy.y, 1, zy.x, zy.y, 22);
-            g.addColorStop(0, hexA(renkI, 0.22)); g.addColorStop(1, hexA(renkI, 0));
-            c.fillStyle = g; c.fillRect(zy.x - 22, zy.y - 12, 44, 24);
-            c.fillStyle = hexA('#ffd166', 0.5); c.fillRect(ek.x - 6, ek.y - o.h - 2, 12, 2);                  // başlık
-            c.restore();
-            break;
-        }
-        case 'pinball': {
-            // tilt: ayaklar, eğik oyun alanı (lambalar, tamponlar), duvar tarafında ışıklı arka kutu
-            for (const v of [0.15, o.gd - 0.3]) K(o.gx + 0.15, o.gy + v, 0.1, 0.12, 10, renkler('#2b2b2b'));
-            K(o.gx + 0.1, o.gy + 0.08, 0.8, o.gd - 0.16, 6, renkler(o.renk), 10);
-            K(o.gx + 0.16, o.gy + 0.14, 0.68, o.gd - 0.28, 0, { ust: '#1f3f66' }, 16);
-            const t = Math.floor(performance.now() / 250);
-            [[0.3, 0.35], [0.6, 0.6], [0.35, 0.95], [0.62, 1.25]].forEach(([u, v], i) => {
-                K(o.gx + u, o.gy + v, 0.1, 0.1, 2, renkler(['#ffd166', '#ff5ea8', '#7cf29a', '#5ec8ff'][(i + t) % 4]), 16);
-            });
-            K(o.gx + 0.7, o.gy + 0.1, 0.2, o.gd - 0.2, 26, renkler('#1c1c1c', (cc, x, y, h, sol, st) => {
-                if (st % 4 < 2) { cc.fillStyle = ['#ff5ea8', '#ffd166'][(st + t) % 2]; cc.fillRect(x, y + 4, 1, 10); }
-            }), 16);
-            K(o.gx + 0.66, o.gy + 0.06, 0.28, o.gd - 0.12, 2, renkler('#3b3b3b'), 42);                      // arka kutu çatısı
-            {
-                const q = W(o.gx + 0.6, o.gy + o.gd / 2);
-                const renkI = ['#ff5ea8', '#ffd166'][t % 2];
-                c.save(); c.globalCompositeOperation = 'lighter';
-                let g = c.createRadialGradient(q.x, q.y - 34, 1, q.x, q.y - 34, 30);
-                g.addColorStop(0, hexA(renkI, 0.32)); g.addColorStop(1, hexA(renkI, 0));
-                c.fillStyle = g; c.fillRect(q.x - 30, q.y - 64, 60, 60);
-                g = c.createRadialGradient(q.x, q.y - 16, 1, q.x, q.y - 16, 20);
-                g.addColorStop(0, 'rgba(94,200,255,.25)'); g.addColorStop(1, 'rgba(94,200,255,0)');
-                c.fillStyle = g; c.fillRect(q.x - 20, q.y - 36, 40, 40);
-                c.restore();
-            }
-            break;
-        }
         case 'oyunstandi': {
             K(o.gx + 0.15, o.gy + 0.15, 0.7, 0.7, 8, renkler('#3b2418'));
             ['#d94f3d', '#3d7fd9', '#e3b23c', '#4caf6a'].forEach((r, i) => K(o.gx + 0.2 + (i % 2) * 0.3, o.gy + 0.22 + Math.floor(i / 2) * 0.3, 0.26, 0.26, 7 + (i % 2) * 3, renkler(r), 8));
@@ -575,40 +602,201 @@ function nesneCiz(c, P, d, o, sahne = {}) {
             c.fillStyle = '#2a1d16'; c.fillRect(q.x - 7, q.y - o.h - 3, 14, 1);
             break;
         }
-        // -------------------------------------------------------- kat 3 sahne ışıkları ve figür kaideleri
-        case 'spot': {
-            const q = W(o.gx + 0.1, o.gy + 0.1);
-            c.fillStyle = '#2b2b2b'; c.fillRect(q.x, q.y - o.h, 2, o.h);
-            c.fillStyle = o.renk; c.fillRect(q.x - 2, q.y - o.h - 4, 6, 4);
-            c.save(); c.globalAlpha = 0.16 + 0.06 * Math.sin(performance.now() / 300);
-            c.fillStyle = o.renk;
-            for (let i = 0; i < 30; i++) c.fillRect(q.x - 2 - i * 1.3, q.y - o.h + i * 1.4, 4 + i * 1.6, 2);
-            c.restore();
+        // -------------------------------------------------------- bistro (kat 2) ve VIP Kulüp (kat 3) servisi
+        case 'yemekasansoru': {
+            // kat 1 mutfağından tabak çıkaran yemek asansörü: çelik gövde, ön yüzde açıklık ve içinde tepsi
+            const yz = gorunenYuzler(d);
+            const dolu = (sahne.mutfak?.hazir || 0) > 0, geliyor = sahne.mutfak?.asansorde;
+            K(o.gx + 0.08, o.gy + 0.08, o.gw - 0.16, o.gd - 0.16, o.h, renkler('#9aa3ad', (cc, x, y, h, sol, st, yst, yn) => {
+                if (st % 6 === 0) { cc.fillStyle = 'rgba(255,255,255,.16)'; cc.fillRect(x, y, 1, h); }
+                if ((sol ? yz.sol : yz.sag) !== o.on || yst < 2 || yst > yn - 3) return;
+                cc.fillStyle = '#5b6470'; cc.fillRect(x, y + 11, 1, 2); cc.fillRect(x, y + 31, 1, 2);
+                cc.fillStyle = '#1c2126'; cc.fillRect(x, y + 13, 1, 18);                                   // açıklık
+                cc.fillStyle = 'rgba(255,214,140,.18)'; cc.fillRect(x, y + 13, 1, 3);                       // iç lamba
+                cc.fillStyle = '#c4ccd4'; cc.fillRect(x, y + 28, 1, 2);                                     // tepsi
+                if (dolu && yst > 3 && yst < yn - 4) { cc.fillStyle = yst % 5 < 3 ? '#f4efe6' : '#c0703a'; cc.fillRect(x, y + 25, 1, 3); }
+            }));
+            K(o.gx + 0.04, o.gy + 0.04, o.gw - 0.08, o.gd - 0.08, 3, renkler('#6b737d'), o.h);
+            const q = W(o.gx + 0.5, o.gy + 0.5);
+            c.fillStyle = geliyor ? (Math.floor(performance.now() / 250) % 2 ? '#ffd166' : '#8a6a2a') : dolu ? '#5fb36d' : '#3b4048';
+            c.fillRect(q.x - 2, q.y - o.h - 6, 4, 3);                                                         // çağrı lambası
             break;
         }
-        case 'figurstandi': {
-            // boyalı nadir FRP figürü: beyaz kaide, cam fanus, figür
-            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#efe6d8'));
-            K(o.gx + 0.05, o.gy + 0.05, o.gw - 0.1, o.gd - 0.1, 2, renkler('#b8892f'), o.h);
-            const q = W(o.gx + o.gw / 2, o.gy + o.gd / 2);
-            const y0 = q.y - o.h - 2;
-            if (o.figur === 'ejderha') {
-                c.fillStyle = '#2e8b57'; c.fillRect(q.x - 4, y0 - 9, 8, 7); c.fillRect(q.x + 2, y0 - 13, 4, 5);
-                c.fillStyle = '#1f6b42'; c.fillRect(q.x - 7, y0 - 11, 4, 3); c.fillRect(q.x + 4, y0 - 9, 4, 2);
-                c.fillStyle = '#e3b23c'; c.fillRect(q.x + 4, y0 - 12, 1, 1);
-            } else if (o.figur === 'sovalye') {
-                c.fillStyle = '#9aa3ad'; c.fillRect(q.x - 2, y0 - 12, 4, 10);
-                c.fillStyle = '#c0392b'; c.fillRect(q.x - 3, y0 - 8, 6, 3);
-                c.fillStyle = '#e9ecef'; c.fillRect(q.x + 3, y0 - 15, 1, 12);
-            } else {
-                c.fillStyle = '#6b4a8a'; c.fillRect(q.x - 3, y0 - 10, 6, 8); c.fillRect(q.x - 1, y0 - 14, 3, 4);
-                c.fillStyle = '#5ec8ff'; c.fillRect(q.x + 4, y0 - 13, 2, 2);
-                c.fillStyle = '#7a5232'; c.fillRect(q.x + 4, y0 - 11, 1, 9);
+        case 'bistrotezgah': {
+            // servis tezgâhı: çelik gövde, ahşap üst, gelen tabaklar; üstünde sarkan turuncu ısıtıcı lambalar
+            K(o.gx + 0.1, o.gy, o.gw - 0.2, o.gd, o.h, renkler('#7f8a94', celik));
+            K(o.gx + 0.05, o.gy - 0.03, o.gw - 0.1, o.gd + 0.06, 2, renkler('#8a5d36'), o.h);
+            K(o.gx + 0.3, o.gy + o.gd - 0.55, 0.32, 0.32, 5, renkler('#e9ecef'), o.h + 2);                     // temiz tabak yığını
+            for (let i = 0; i < Math.min(3, sahne.mutfak?.hazir || 0); i++) {
+                K(o.gx + 0.3, o.gy + 0.25 + i * 0.75, 0.38, 0.38, 1, renkler('#f4efe6'), o.h + 2);
+                K(o.gx + 0.38, o.gy + 0.33 + i * 0.75, 0.22, 0.22, 2, renkler(['#c0703a', '#e3b23c', '#5fb36d'][i]), o.h + 3);
             }
-            c.fillStyle = 'rgba(210,235,245,.28)'; c.fillRect(q.x - 8, y0 - 17, 16, 16);
-            c.fillStyle = 'rgba(255,255,255,.55)'; c.fillRect(q.x - 6, y0 - 15, 1, 8);
+            for (const v of [0.45, 1.5, 2.55]) {
+                const q = W(o.gx + 0.5, o.gy + v);
+                c.fillStyle = '#2b2b2b'; c.fillRect(q.x, q.y - o.h - 52, 1, 22);
+                c.fillStyle = '#b5523b'; c.fillRect(q.x - 3, q.y - o.h - 31, 7, 3); c.fillRect(q.x - 2, q.y - o.h - 33, 5, 2);
+                c.fillStyle = '#ffb35c'; c.fillRect(q.x - 2, q.y - o.h - 28, 5, 1);
+                c.fillStyle = 'rgba(255,150,60,.28)'; c.fillRect(q.x - 4, q.y - o.h - 27, 9, 24);
+            }
             break;
         }
+        case 'turnuva': {
+            // turnuva panosu: bugün en çok oynanan oyunlar, oyun renginde skor çubukları (yalnızca duvar arkadayken)
+            const yz = gorunenYuzler(d);
+            const liste = sahne.turnuva || [];
+            const enCok = Math.max(1, ...liste.map((x) => x.n));
+            K(o.gx, o.gy, o.gw, o.gd, 30, renkler('#5a3a22', (cc, x, y, h, sol, st, yst, yn) => {
+                if ((sol ? yz.sol : yz.sag) !== 'B' || yst < 1 || yst > yn - 2) return;
+                cc.fillStyle = '#24382c'; cc.fillRect(x, y + 2, 1, h - 4);
+                cc.fillStyle = '#e3b23c'; cc.fillRect(x, y + 3, 1, 3);                                       // başlık bandı
+                if (yst % 4 === 2 && yst > 4 && yst < yn - 5) { cc.fillStyle = '#2a1d16'; cc.fillRect(x, y + 4, 1, 1); }
+                liste.forEach((t, i) => {
+                    cc.fillStyle = '#f4efe6'; if (yst === 3) cc.fillRect(x, y + 9 + i * 5, 1, 2);            // sıra numarası
+                    if (yst > 4 && yst - 5 < (yn - 8) * t.n / enCok) { cc.fillStyle = t.renk; cc.fillRect(x, y + 9 + i * 5, 1, 3); }
+                });
+            }), 34);
+            const q = W(o.gx, o.gy + o.gd / 2);
+            c.fillStyle = '#e3b23c'; c.fillRect(q.x - 3, q.y - 72, 6, 4); c.fillRect(q.x - 1, q.y - 68, 2, 2); c.fillRect(q.x - 2, q.y - 66, 4, 1);   // kupa
+            break;
+        }
+        case 'sehpa': {
+            K(o.gx + 0.08, o.gy + 0.08, o.gw - 0.16, o.gd - 0.16, o.h - 2, renkler('#3b2418'));
+            K(o.gx, o.gy, o.gw, o.gd, 2, renkler('#6b3f22'), o.h - 2);
+            K(o.gx + 0.12, o.gy + 0.15, 0.32, 0.24, 2, renkler('#2b6cb0'), o.h); K(o.gx + 0.14, o.gy + 0.17, 0.28, 0.2, 1, renkler('#a33b20'), o.h + 2);
+            const q = W(o.gx + o.gw * 0.7, o.gy + o.gd * 0.65);
+            c.fillStyle = '#f4efe6'; c.fillRect(q.x - 1, q.y - o.h - 4, 3, 3); c.fillStyle = '#6b4423'; c.fillRect(q.x - 1, q.y - o.h - 4, 3, 1);   // fincan
+            break;
+        }
+        case 'vipvitrin': {
+            // camlı, altın çerçeveli VIP oyun vitrini: veritabanındaki VIP oyunların kutuları; masadaki oyunun yeri boş
+            const oy = sahne.vipOyunlar || [];
+            const sutun = Math.max(5, Math.ceil(oy.length / 2)), gen = (o.gw - 0.2) / sutun;
+            K(o.gx, o.gy, o.gw, o.gd, 6, renkler('#2a160d'));
+            K(o.gx, o.gy, o.gw, 0.18, o.h, renkler('#3b2418'));
+            for (let r = 0; r < 2; r++) {
+                const z = 8 + r * 20;
+                K(o.gx + 0.06, o.gy + 0.18, o.gw - 0.12, o.gd - 0.28, 2, renkler('#b8892f'), z - 2);
+                for (let i = 0; i < sutun; i++) {
+                    const og = oy[r * sutun + i];
+                    if (!og?.rafta) continue;
+                    K(o.gx + 0.1 + i * gen + gen * 0.14, o.gy + 0.3, gen * 0.72, 0.42, 14, renkler(og.renk, (cc, x, y) => { cc.fillStyle = 'rgba(255,255,255,.4)'; cc.fillRect(x, y + 2, 1, 2); }), z);
+                }
+            }
+            K(o.gx + 0.02, o.gy + 0.02, o.gw - 0.04, o.gd - 0.04, o.h - 6, {
+                ust: 'rgba(200,235,245,.14)', sol: 'rgba(170,215,230,.2)', sag: 'rgba(150,195,215,.2)',
+                desen: (cc, x, y, h, sol, st, yst, yn) => {
+                    cc.fillStyle = '#c9a14a'; cc.fillRect(x, y, 1, 2); cc.fillRect(x, y + h - 2, 1, 2);
+                    if (yst < 2 || yst > yn - 3) cc.fillRect(x, y, 1, h);
+                    if (yst % 9 === 4) { cc.fillStyle = 'rgba(255,255,255,.3)'; cc.fillRect(x, y + 6 + (yst % 5) * 2, 1, 10); }
+                },
+            }, 6);
+            K(o.gx - 0.03, o.gy - 0.03, o.gw + 0.06, o.gd + 0.06, 3, renkler('#c9a14a'), o.h);
+            break;
+        }
+        case 'vipraf':
+            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#2a160d', siseDeseni));
+            K(o.gx - 0.03, o.gy - 0.03, o.gw + 0.06, o.gd + 0.06, 3, renkler('#c9a14a'), o.h);
+            break;
+        case 'vipbar': {
+            // koyu ahşap VIP bar: altın kenarlı koyu üst, pirinç ayak barı, kadehler
+            K(o.gx, o.gy, o.gw, o.gd, o.h - 3, renkler('#3b2014', (cc, x, y, h, sol, st) => {
+                if (st % 8 === 0) { cc.fillStyle = 'rgba(0,0,0,.3)'; cc.fillRect(x, y + 2, 1, h - 4); }
+                cc.fillStyle = '#c9a14a'; cc.fillRect(x, y + 3, 1, 1); cc.fillRect(x, y + h - 7, 1, 1);
+                cc.fillStyle = '#1c0f08'; cc.fillRect(x, y + h - 3, 1, 3);
+            }));
+            K(o.gx - 0.05, o.gy - 0.05, o.gw + 0.1, o.gd + 0.1, 3, { ...renkler('#2a160d'), kenar: '#e3c06b' }, o.h - 3);
+            for (let i = 0; i < o.gw; i++) {
+                const p = W(o.gx + i + 0.5, o.gy + 0.45);
+                c.fillStyle = '#e9ecef'; c.fillRect(p.x - 1, p.y - o.h - 6, 1, 4); c.fillRect(p.x - 2, p.y - o.h - 2, 3, 1);
+                c.fillStyle = i % 2 ? '#7d1628' : '#e3c06b'; c.fillRect(p.x - 2, p.y - o.h - 9, 3, 3);
+            }
+            break;
+        }
+        case 'bartaburesi': {
+            const q = W(o.gx + o.gw / 2, o.gy + o.gd / 2);
+            c.fillStyle = '#c9a14a'; c.fillRect(q.x - 1, q.y - o.h, 2, o.h); c.fillRect(q.x - 3, q.y - 1, 6, 1);
+            K(o.gx, o.gy, o.gw, o.gd, 3, renkler('#4a1c1c'), o.h - 3);
+            break;
+        }
+        case 'kadifebariyer': {
+            // altın direkler arasında sarkan kırmızı kadife ip
+            const yatay = o.gw > o.gd, L = yatay ? o.gw : o.gd;
+            const n = Math.max(2, Math.round(L / 1.2) + 1);
+            const nok = Array.from({ length: n }, (_, i) => (yatay ? W(o.gx + (i / (n - 1)) * L, o.gy + o.gd / 2) : W(o.gx + o.gw / 2, o.gy + (i / (n - 1)) * L)));
+            for (let i = 0; i < n - 1; i++) {
+                const a = nok[i], b = nok[i + 1];
+                for (let k = 0; k <= 12; k++) {
+                    const t = k / 12;
+                    c.fillStyle = k % 4 === 0 ? '#c9404a' : '#a01f34';
+                    c.fillRect(a.x + (b.x - a.x) * t - 1, a.y + (b.y - a.y) * t - o.h + 3 + Math.sin(t * Math.PI) * 4, 2, 2);
+                }
+            }
+            for (const q of nok) {
+                c.fillStyle = '#8a6a2a'; c.fillRect(q.x - 3, q.y - 1, 7, 2);
+                c.fillStyle = '#c9a14a'; c.fillRect(q.x - 1, q.y - o.h, 2, o.h);
+                c.fillStyle = '#e3c06b'; c.fillRect(q.x - 2, q.y - o.h - 3, 4, 3);
+            }
+            break;
+        }
+        case 'hostkursu': {
+            K(o.gx + 0.1, o.gy + 0.1, o.gw - 0.2, o.gd - 0.2, o.h, renkler('#2a160d', (cc, x, y, h) => { cc.fillStyle = '#c9a14a'; cc.fillRect(x, y + 2, 1, 1); cc.fillRect(x, y + h - 4, 1, 1); }));
+            K(o.gx, o.gy, o.gw, o.gd, 3, renkler('#3b2418'), o.h);
+            const q = W(o.gx + o.gw / 2, o.gy + o.gd / 2);
+            c.fillStyle = '#f4efe6'; c.fillRect(q.x - 4, q.y - o.h - 5, 7, 2);                                  // rezervasyon defteri
+            c.fillStyle = '#c9a14a'; c.fillRect(q.x + 4, q.y - o.h - 10, 1, 7);
+            c.fillStyle = '#ffe3a0'; c.fillRect(q.x + 3, q.y - o.h - 12, 3, 2);                                 // masa lambası
+            break;
+        }
+        case 'somine': {
+            // mermer çerçeveli şömine: ön yüzde (doğu) titreşen piksel ateş, üstte ahşap raf, mumlar ve saat
+            const yz = gorunenYuzler(d);
+            const t = performance.now();
+            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#cfc4b2', (cc, x, y, h, sol, st, yst, yn) => {
+                if ((sol ? yz.sol : yz.sag) !== 'D') { if (st % 5 === 0) { cc.fillStyle = 'rgba(0,0,0,.08)'; cc.fillRect(x, y, 1, h); } return; }
+                if (yst < 5 || yst > yn - 6) { if (yst % 3 === 1) { cc.fillStyle = 'rgba(0,0,0,.08)'; cc.fillRect(x, y, 1, h); } return; }
+                const ust = y + 12, alt = y + h - 3;
+                cc.fillStyle = '#8a8f96'; cc.fillRect(x, ust - 2, 1, 2);
+                cc.fillStyle = '#1a0f0a'; cc.fillRect(x, ust, 1, alt - ust);
+                const f = Math.sin(yst * 0.9 + t / 120) * 3 + Math.sin(yst * 0.37 - t / 200) * 2;
+                const boy = Math.max(2, Math.round(11 + f - Math.abs(yst - yn / 2) * 0.25));
+                cc.fillStyle = '#d94f3d'; cc.fillRect(x, alt - 3 - boy, 1, boy);
+                cc.fillStyle = '#ff8a3d'; cc.fillRect(x, alt - 3 - boy * 0.7, 1, boy * 0.7);
+                cc.fillStyle = '#ffd166'; cc.fillRect(x, alt - 3 - boy * 0.35, 1, boy * 0.35);
+                cc.fillStyle = yst % 4 < 2 ? '#5a3a22' : '#3f2817'; cc.fillRect(x, alt - 3, 1, 3);           // odunlar
+            }));
+            K(o.gx - 0.02, o.gy - 0.12, o.gw + 0.14, o.gd + 0.24, 3, { ...renkler('#3b2418'), kenar: '#c9a14a' }, o.h);
+            for (const v of [0.25, o.gd - 0.25]) {
+                const q = W(o.gx + 0.5, o.gy + v);
+                c.fillStyle = '#f4efe6'; c.fillRect(q.x, q.y - o.h - 9, 2, 6);
+                c.fillStyle = Math.floor(t / 160 + v) % 2 ? '#ffd166' : '#ff8a3d'; c.fillRect(q.x, q.y - o.h - 11, 2, 2);
+            }
+            { const q = W(o.gx + 0.5, o.gy + o.gd / 2); c.fillStyle = '#c9a14a'; c.fillRect(q.x - 3, q.y - o.h - 10, 6, 7); c.fillStyle = '#f4efe6'; c.fillRect(q.x - 2, q.y - o.h - 9, 4, 4); }
+            break;
+        }
+        case 'chesterfield':
+            kanepe(K, o, '#5a2416');
+            break;
+        case 'derikoltuk':
+            kanepe(K, o, '#6b3a1c');
+            break;
+        case 'loca': {
+            // perdeli özel loca: U biçimli yüksek sırtlı kanepe, ortada mumlu masa, açık kenarda toplanmış kadife perdeler
+            const ana = '#4a1c1c', sirt = renkler('#3b1414', capitone);
+            K(o.gx, o.gy, 0.95, o.gd, 10, renkler(ana));
+            for (const y0 of [o.gy, o.gy + o.gd - 0.9]) K(o.gx, y0, 2.3, 0.9, 10, renkler(ana));
+            K(o.gx, o.gy, 0.35, o.gd, o.h, sirt);
+            for (const y0 of [o.gy, o.gy + o.gd - 0.35]) K(o.gx, y0, 2.3, 0.35, o.h - 6, sirt);
+            K(o.gx + 1.2, o.gy + 1.3, 0.9, o.gd - 2.6, 12, renkler('#2a160d'));
+            K(o.gx + 1.15, o.gy + 1.25, 1, o.gd - 2.5, 2, renkler('#6b3f22'), 12);
+            { const q = W(o.gx + 1.65, o.gy + o.gd / 2); c.fillStyle = '#f4efe6'; c.fillRect(q.x, q.y - 22, 2, 6); c.fillStyle = Math.floor(performance.now() / 180) % 2 ? '#ffd166' : '#ff8a3d'; c.fillRect(q.x, q.y - 24, 2, 2); }
+            for (const y0 of [o.gy + 0.02, o.gy + o.gd - 0.3]) K(o.gx + 2.4, y0, 0.28, 0.28, 58, renkler('#7d1628', (cc, x, y, h, sol, st) => { if (st % 2) { cc.fillStyle = '#5e0f1d'; cc.fillRect(x, y, 1, h); } cc.fillStyle = '#c9a14a'; cc.fillRect(x, y + 22, 1, 2); }));
+            K(o.gx + 2.45, o.gy, 0.08, o.gd, 3, renkler('#c9a14a'), 58);
+            break;
+        }
+        case 'piyanotaburesi':
+            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#1c1c1c'));
+            K(o.gx + 0.04, o.gy + 0.04, o.gw - 0.08, o.gd - 0.08, 2, renkler('#5a2416'), o.h);
+            break;
         // -------------------------------------------------------- kat 2 okuma köşesi
         case 'okumakoltugu':
             K(o.gx + 0.1, o.gy + 0.1, 0.8, 0.8, 9, renkler('#3f6f5a'));
@@ -617,81 +805,12 @@ function nesneCiz(c, P, d, o, sahne = {}) {
             K(o.gx + 0.1, o.gy + 0.75, 0.6, 0.15, 13, renkler('#355e4c'), 0);
             K(o.gx + 0.25, o.gy + 0.3, 0.4, 0.4, 2, renkler('#e3b23c'), 9);                   // yastık
             break;
-        case 'kitapyigini': {
-            K(o.gx + 0.25, o.gy + 0.25, 0.5, 0.5, 8, renkler('#7a5232'));
-            ['#a33b20', '#2b6cb0', '#e3b23c', '#3f8f4f'].forEach((r, i) => K(o.gx + 0.3 + (i % 2) * 0.05, o.gy + 0.32, 0.38, 0.32, 2, renkler(r), 8 + i * 2));
-            break;
-        }
-        // -------------------------------------------------------- kat 3 sahne, müzik, koleksiyon
-        case 'yarimsahne': {
-            // İki kademeli yarım daire platform: ince şeritler kameraya göre arkadan öne çizilir.
-            // Alt basamak halkası (z 0–4), üstünde ışıklı kenarlı sahne katı (z 4–8)
-            const { cx, cy, r, basamak } = SAHNE;
-            const ad = 0.16;
-            const kademe = (rr, hh, zz, yan, ust) => {
-                const seritler = [];
-                for (let dx = -0.3; dx < rr; dx += ad) {
-                    const yari = dx < 0 ? rr : Math.sqrt(Math.max(0, rr * rr - (dx + ad / 2) ** 2));
-                    const q = dondur(d, cx + dx + ad / 2, cy);
-                    seritler.push({ dx, yari, k: q.x + q.y });
-                }
-                seritler.sort((a, b) => a.k - b.k);
-                for (const sr of seritler) {
-                    K(cx + sr.dx, cy - sr.yari, ad, sr.yari * 2, hh, yan, zz);
-                    if (sr.yari > 0.25) K(cx + sr.dx, cy - sr.yari + 0.1, ad, sr.yari * 2 - 0.2, 0, { ust: ust(sr) }, zz + hh);
-                }
-            };
-            golge(c, P, d, cx - 0.3, cy - r - basamak, r + basamak + 0.4, (r + basamak) * 2, 1.4);
-            kademe(r + basamak, 4, 0, renkler('#2a1a12', (cc, x, y) => { cc.fillStyle = '#c9a14a'; cc.fillRect(x, y, 1, 1); }), () => '#33201a');
-            const isik = (cc, x, y, hh, sol, st) => {
-                cc.fillStyle = 'rgba(0,0,0,.25)'; cc.fillRect(x, y + hh - 1, 1, 1);
-                if (st % 5 === 0) { cc.fillStyle = (Math.floor(performance.now() / 400) + st / 5) % 2 < 1 ? '#ffd166' : '#ff8a3d'; cc.fillRect(x, y + 1, 1, 2); }
-            };
-            kademe(r, o.h - 4, 4, renkler('#3b2418', isik), (sr) => (Math.floor((sr.dx + 0.5) / 0.5) % 2 ? '#5a3424' : '#4e2d1f'));
-            // sahne önüne düşen loş VIP ışık havuzu
-            const on = W(cx + r + basamak + 0.6, cy);
-            c.save(); c.globalCompositeOperation = 'lighter';
-            const g = c.createRadialGradient(on.x, on.y, 2, on.x, on.y, 70);
-            g.addColorStop(0, 'rgba(255,94,168,.16)'); g.addColorStop(1, 'rgba(255,94,168,0)');
-            c.fillStyle = g; c.fillRect(on.x - 70, on.y - 40, 140, 80);
-            c.restore();
-            break;
-        }
-        case 'sahne':
-            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#3b2418', (cc, x, y, h, sol, st) => {
-                if (st % 8 === 0) { cc.fillStyle = (Math.floor(performance.now() / 400) + st / 8) % 2 < 1 ? '#ffd166' : '#ff8a3d'; cc.fillRect(x, y + 2, 1, 2); }
-            }));
-            K(o.gx + 0.05, o.gy + 0.05, o.gw - 0.1, o.gd - 0.1, 0, { ust: '#5a3424' }, o.h);
-            break;
         case 'piyano': {
+            // kuyruklu piyano: klavye o.klavye yüzünde (piyanist o taraftan çalar)
             K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#1c1c1c'));
-            K(o.gx + 0.05, o.gy + o.gd - 0.22, o.gw - 0.1, 0.18, 2, { ust: '#f4efe6', sol: '#d9d2c5', sag: '#c9c2b5' }, o.h - 6);
-            K(o.gx, o.gy, o.gw, 0.12, 12, renkler('#1c1c1c'), o.h);                            // kapak
-            break;
-        }
-        case 'mikrofon': {
-            const q = W(o.gx + 0.15, o.gy + 0.15);
-            c.fillStyle = '#2b2b2b'; c.fillRect(q.x - 3, q.y - 1, 6, 1); c.fillRect(q.x, q.y - o.h, 1, o.h);
-            c.fillStyle = '#9aa3ad'; c.fillRect(q.x - 1, q.y - o.h - 3, 3, 3);
-            break;
-        }
-        case 'amfi':
-            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#2b2b2b', (cc, x, y, h, sol, st) => { if (st % 3 === 1) { cc.fillStyle = '#444'; cc.fillRect(x, y + 3, 1, h - 6); } }));
-            break;
-        case 'koleksiyon': {
-            // cam vitrin: raflarda koleksiyonluk figürler ve özel kutular
-            K(o.gx + 0.05, o.gy + 0.05, o.gw - 0.1, o.gd - 0.1, 4, renkler('#3b2418'));
-            K(o.gx + 0.08, o.gy + 0.08, o.gw - 0.16, o.gd - 0.16, o.h - 8, {
-                ust: 'rgba(200,235,245,.25)', sol: 'rgba(170,215,230,.3)', sag: 'rgba(150,195,215,.3)',
-                desen: (cc, x, y, h, sol, st) => {
-                    for (let r = 0; r < 3; r++) {
-                        const yy = y + 4 + r * Math.floor((h - 6) / 3);
-                        cc.fillStyle = '#b8892f'; cc.fillRect(x, yy + 7, 1, 1);
-                        if (st % 5 < 2) { cc.fillStyle = ['#2e8b57', '#c0392b', '#e3b23c', '#9b59b6', '#3d7fd9'][(st + r * 2) % 5]; cc.fillRect(x, yy + 2 + (st % 2), 1, 5 - (st % 2)); }
-                    }
-                },
-            }, 4);
-            K(o.gx + 0.05, o.gy + 0.05, o.gw - 0.1, o.gd - 0.1, 2, renkler('#3b2418'), o.h - 4);
+            if (o.klavye === 'B') K(o.gx + 0.04, o.gy + 0.08, 0.18, o.gd - 0.16, 2, { ust: '#f4efe6', sol: '#d9d2c5', sag: '#c9c2b5' }, o.h - 6);
+            else K(o.gx + 0.05, o.gy + o.gd - 0.22, o.gw - 0.1, 0.18, 2, { ust: '#f4efe6', sol: '#d9d2c5', sag: '#c9c2b5' }, o.h - 6);
+            K(o.gx + 0.3, o.gy, o.gw - 0.3, 0.12, 14, renkler('#1c1c1c'), o.h);                // açık kapak
             break;
         }
         case 'bar':
@@ -726,16 +845,7 @@ function nesneCiz(c, P, d, o, sahne = {}) {
         }
         case 'arkaraf':
             // bar arkasında şişe ve kavanoz rafı
-            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#5e3b1f', (cc, x, y, h, sol, sutun) => {
-                for (let k = 0; k < 3; k++) {
-                    if (sutun % 4 === 3) continue;
-                    const renk = ['#3f8f4f', '#a33b20', '#e3b23c', '#2b6cb0', '#f4efe6', '#7a4b2a'][(Math.floor(sutun / 4) + k * 2) % 6];
-                    const boy = 6 + ((Math.floor(sutun / 4) + k) % 3);
-                    cc.fillStyle = sol ? renk : ton(renk, 0.8);
-                    cc.fillRect(x, y + 4 + k * 13 + (9 - boy), 1, boy);
-                    if (sutun % 4 === 1) { cc.fillStyle = '#2a1d16'; cc.fillRect(x, y + 4 + k * 13 + (9 - boy) - 2, 1, 2); }
-                }
-            }));
+            K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#5e3b1f', siseDeseni));
             break;
         case 'pasta': {
             // cam fanuslu pasta standı
@@ -911,22 +1021,6 @@ function nesneCiz(c, P, d, o, sahne = {}) {
             c.fillStyle = '#ffe3a0'; c.fillRect(p.x - 5, p.y - o.h, 11, 1);
             break;
         }
-        case 'heykel': {
-            K(o.gx + 0.1, o.gy + 0.1, 0.8, 0.8, 10, renkler('#7f8c8d'));
-            const p = W(o.gx + 0.5, o.gy + 0.5);
-            c.fillStyle = '#2e8b57';
-            c.fillRect(p.x - 4, p.y - 34, 8, 22); c.fillRect(p.x - 7, p.y - 40, 6, 8); c.fillRect(p.x + 3, p.y - 26, 8, 4);
-            c.fillStyle = '#1f6b42'; c.fillRect(p.x + 2, p.y - 34, 2, 22); c.fillRect(p.x - 10, p.y - 30, 6, 3);
-            c.fillStyle = '#e3b23c'; c.fillRect(p.x - 6, p.y - 38, 1, 1);
-            c.fillStyle = '#d94f3d'; c.fillRect(p.x - 9, p.y - 36, 2, 1);
-            break;
-        }
-        case 'sandik':
-            K(o.gx + 0.05, o.gy + 0.05, o.gw - 0.1, o.gd - 0.1, o.h, renkler('#8b5a2b', (cc, x, y, h, sol, s) => {
-                if (s % 7 === 0) { cc.fillStyle = '#e3b23c'; cc.fillRect(x, y, 1, h); }
-            }));
-            K(o.gx + 0.05, o.gy + 0.05, o.gw - 0.1, o.gd - 0.1, 2, renkler('#e3b23c'), o.h - 5);
-            break;
         default:
             K(o.gx, o.gy, o.gw, o.gd, o.h, renkler('#888888'));
     }
@@ -996,7 +1090,7 @@ function masaCiz(c, P, d, m, kat, secili) {
             kutu(c, P, d, mat.gx + i * w, mat.gy + j * h, w, h, 0, { ust: renk }, UST);
         }
     } else {
-        const matRenk = minder ? '#c9772a' : kat === 1 ? '#efe3c8' : kat === 2 ? '#2f6b45' : '#a8282f';
+        const matRenk = minder ? '#c9772a' : kat === 1 ? '#efe3c8' : kat === 2 ? '#2f6b45' : '#1f4a35';
         kutu(c, P, d, mat.gx, mat.gy, mat.gw, mat.gd, 0, { ust: matRenk }, UST);
         kutu(c, P, d, mat.gx + 0.05, mat.gy + 0.05, mat.gw - 0.1, 0.04, 0, { ust: ton(matRenk, 1.15) }, UST);
     }
@@ -1006,6 +1100,25 @@ function masaCiz(c, P, d, m, kat, secili) {
     if (m.kirli) {
         c.fillStyle = '#e9ecef'; c.fillRect(orta.x - 6, orta.y - UST - 4, 4, 3); c.fillRect(orta.x + 3, orta.y - UST - 3, 3, 3);
         c.fillStyle = '#8d6e63'; c.fillRect(orta.x - 5, orta.y - UST - 4, 2, 1);
+    }
+    if (y.lamba === 'sarkit') {
+        // yeşil abajurlu sarkıt lamba (ışık halkası loş kat geçişinde)
+        c.fillStyle = '#2b2b2b'; c.fillRect(orta.x, orta.y - DUVAR - 6, 1, DUVAR - 46);
+        c.fillStyle = '#2f6b45'; c.fillRect(orta.x - 4, orta.y - 54, 9, 2); c.fillRect(orta.x - 6, orta.y - 52, 13, 4);
+        c.fillStyle = '#c9a14a'; c.fillRect(orta.x - 6, orta.y - 48, 13, 1);
+        c.fillStyle = '#fff1b8'; c.fillRect(orta.x - 3, orta.y - 47, 7, 1);
+    } else if (y.lamba === 'avize') {
+        // altın avize: halka üstünde mumlar ve kristal damlalar
+        const t = performance.now();
+        c.fillStyle = '#c9a14a'; c.fillRect(orta.x, orta.y - DUVAR - 8, 1, DUVAR - 50); c.fillRect(orta.x - 2, orta.y - 62, 5, 6);
+        for (let i = 0; i < 10; i++) {
+            const a = (i / 10) * Math.PI * 2, x = Math.round(orta.x + Math.cos(a) * 14), yy = Math.round(orta.y - 55 + Math.sin(a) * 5);
+            c.fillStyle = '#8a6a2a'; c.fillRect(Math.min(x, orta.x), yy, Math.abs(x - orta.x) || 1, 1);
+            c.fillStyle = '#e3c06b'; c.fillRect(x - 1, yy, 3, 1);
+            c.fillStyle = '#f4efe6'; c.fillRect(x, yy - 4, 1, 4);
+            c.fillStyle = Math.floor(t / 150 + i) % 3 ? '#ffd166' : '#fff1b8'; c.fillRect(x, yy - 6, 1, 2);
+            if (i % 2) { c.fillStyle = 'rgba(210,235,245,.8)'; c.fillRect(x, yy + 2, 1, 3); }
+        }
     }
 }
 
@@ -1193,12 +1306,13 @@ export function karakterPaleti(tohum, tur = 'musteri', ogrenci = false, ek = {})
     if (tur === 'garson') Object.assign(p, { gomlek: '#f4efe6', gomlekG: '#d9d2c5', gomlekA: '#ffffff', pantolon: '#1f1f1f', pantolonG: '#141414', etek: false });
     if (tur === 'kasiyer') Object.assign(p, { gomlek: '#e9d3a6', gomlekG: '#cdb586', gomlekA: '#f7e6c2', etek: false });
     if (tur === 'sef') Object.assign(p, { gomlek: '#ffffff', gomlekG: '#dcd6cc', gomlekA: '#ffffff', pantolon: '#2b2b2b', pantolonG: '#1c1c1c', etek: false });
+    if (tur === 'host') Object.assign(p, { gomlek: '#1f1f1f', gomlekG: '#151515', gomlekA: '#2e2e2e', pantolon: '#1c1c1c', pantolonG: '#141414', etek: false, gozluk: false });
     if (ek.rol === 'sarkici') Object.assign(p, { etek: true, stil: 1, gomlek: '#a8282f', gomlekG: '#7f1d22', gomlekA: '#c9404a', pantolon: '#a8282f', pantolonG: '#7f1d22', gozluk: false });
     if (ek.rol === 'gitarist') Object.assign(p, { gomlek: '#2b2b2b', gomlekG: '#1c1c1c', gomlekA: '#444444', etek: false });
     if (ek.rol === 'piyanist') Object.assign(p, { gomlek: '#f4efe6', gomlekG: '#d9d2c5', gomlekA: '#ffffff', pantolon: '#1c1c1c', pantolonG: '#141414', etek: false });
     Object.assign(p, ek);
     p.ogrenci = ogrenci && tur === 'musteri';
-    p.anahtar = `${tohum}-${tur}-${p.ogrenci ? 1 : 0}-${ek.rol || ''}-${ek.yardimci ? 1 : 0}`;
+    p.anahtar = `${tohum}-${tur}-${p.ogrenci ? 1 : 0}-${ek.rol || ''}-${ek.yardimci ? 1 : 0}-${ek.vip ? 1 : 0}`;
     return p;
 }
 
@@ -1237,11 +1351,16 @@ function spriteUret(p, { poz, arka, kare, tepsi, elKalkik }) {
     r(4, 14, 8, 8, p.gomlek); r(10, 14, 2, 8, p.gomlekG); r(4, 14, 1, 8, p.gomlekA);
     if (!arka) r(6, 14, 4, 1, p.gomlekA);
     r(4, 21, 8, 1, '#3b2a1e');
-    if (p.tur === 'garson') {
+    if (p.tur === 'garson' && p.vip) {
+        // VIP Kulüp garsonu: siyah yelek, altın papyon ve düğmeler, önlüksüz
+        if (arka) r(4, 14, 8, 7, '#1c1c1c');
+        else { r(4, 14, 3, 7, '#1c1c1c'); r(9, 14, 3, 7, '#141414'); r(7, 14, 2, 1, '#e3b23c'); r(6, 17, 1, 1, '#c9a14a'); r(6, 19, 1, 1, '#c9a14a'); }
+    } else if (p.tur === 'garson') {
         r(4, 14, 2, 7, '#262626'); r(10, 14, 2, 7, '#1c1c1c');                                    // yelek
         if (!arka) { r(7, 14, 2, 1, '#c0392b'); r(5, 18, 6, 9, '#ffffff'); r(10, 18, 1, 9, '#e3ddd2'); }   // papyon, önlük
         else r(7, 19, 2, 1, '#ffffff');                                                            // önlük bağı
     }
+    if (p.tur === 'host' && !arka) { r(6, 14, 4, 2, '#f4efe6'); r(7, 14, 2, 1, '#1c1c1c'); r(5, 17, 1, 2, '#e3b23c'); }   // gömlek yakası, kravat, rozet
     if (p.tur === 'kasiyer') { r(4, 14, 2, 8, '#7a4b2a'); r(10, 14, 2, 8, '#5f3a20'); }
     // kollar
     if (tepsi) {
@@ -1530,6 +1649,20 @@ export function sahneCiz(c, sahne, bolge) {
             c.fillStyle = g;
             c.fillRect(p.x - 110, p.y - 120, 220, 220);
         }
+        // kendi ışığı olan nesneler (ısıtıcı lambalar, şömine ateşi, bar) ve masa lambaları (sarkıt lamba halkası, avize)
+        const t = performance.now();
+        for (const o of KATLAR[kat].nesneler.filter((x) => x.isik)) {
+            const p = P.W(o.gx + o.gw / 2 + (o.tur === 'somine' ? 0.9 : 0), o.gy + o.gd / 2);
+            const tit = o.isik.titrek ? 0.85 + 0.15 * Math.sin(t / 90) * Math.sin(t / 37) : 1;
+            parilti(c, p.x, p.y - 8, o.isik.r, o.isik.r * 0.6, o.isik.rgb, o.isik.a * tit);
+        }
+        for (const ms of sahne.masalar) {
+            const y = ms.yuva;
+            if (!y.lamba) continue;
+            const p = P.W(y.gx + y.gw / 2, y.gy + y.gd / 2);
+            if (y.lamba === 'avize') { parilti(c, p.x, p.y - 50, 46, 26, '255,214,140', 0.3); parilti(c, p.x, p.y - 14, 80, 42, '255,196,110', 0.22); }
+            else parilti(c, p.x, p.y - 16, 22 + y.gw * 10, 14 + y.gd * 5, '255,206,120', 0.34);
+        }
         c.restore();
     }
 }
@@ -1755,6 +1888,13 @@ export function ustKatmanCiz(c, olcek, donus, sahne) {
         const p = donus(P.W(b.gx + 0.5, b.gy + 0.5));
         const ust = p.y - (b.oturuyor ? 40 : 45) * olcek;
         let ikonUst = ust;
+        if (b.vip) {
+            // VIP üye: başın hemen üstünde küçük altın yıldız
+            const s = Math.max(9, Math.round(4.2 * olcek));
+            c.font = `bold ${s}px "Segoe UI Symbol", sans-serif`;
+            c.fillStyle = '#2a1d16'; c.fillText('★', p.x - s * 0.42 + 1, ust + s * 0.55 + 1);
+            c.fillStyle = '#ffd166'; c.fillText('★', p.x - s * 0.42, ust + s * 0.55);
+        }
         if (b.ruh) {
             // sabır göstergesi: ikon, sabırsızlıkta öfke barı, çok sinirlide kırmızı ünlem
             const r = ruhHali(b.ruh.sabir);
@@ -1891,7 +2031,7 @@ const DURAGAN = new Set(['agac', 'parkbanki', 'cop', 'cicek', 'saksi', 'menutaht
     'cephe', 'direk', 'camcephe', 'cepheust', 'tente', 'karavanatabela', 'cit', 'cali', 'tarh', 'cardak', 'kusyemligi']);
 function esyaSpriteCiz(c, P, d, o, sahne, ciz) {
     const evreli = o.tur === 'agac' || o.tur === 'camcephe' || o.tur === 'karavanatabela';
-    const anahtar = `${o.tur}|${o.gx}|${o.gy}|${d}|${evreli ? sahne.evre : ''}`;
+    const anahtar = `${o.tur}|${o.gx}|${o.gy}|${d}|${evreli ? sahne.evre : ''}|${o.tur === 'agac' ? sahne.mevsim || '' : ''}`;
     let e = esyaOnbellek.get(anahtar);
     if (!e) {
         const r = dikdortgenDondur(d, o.gx - 0.6, o.gy - 0.6, o.gw + 1.2, o.gd + 1.2);
@@ -1900,7 +2040,7 @@ function esyaSpriteCiz(c, P, d, o, sahne, ciz) {
         const y0 = Math.floor(Math.min(...ks.map((p) => p.y))) - (o.h || 20) - (o.z || 0) - 50, y1 = Math.ceil(Math.max(...ks.map((p) => p.y))) + 8;
         const t = document.createElement('canvas'); t.width = x1 - x0; t.height = y1 - y0;
         const tc = pikselBaglami(t); tc.translate(-x0, -y0);
-        ciz(tc, { evre: sahne.evre });
+        ciz(tc, { evre: sahne.evre, mevsim: sahne.mevsim });
         e = { t, x0, y0 };
         esyaOnbellek.set(anahtar, e);
         if (esyaOnbellek.size > 1200) esyaOnbellek.delete(esyaOnbellek.keys().next().value);
