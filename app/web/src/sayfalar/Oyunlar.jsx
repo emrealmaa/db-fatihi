@@ -1,7 +1,7 @@
 // Oyun kataloğu: müsait adetler, kişi sayısı, kategori ve VIP/standart süzgeci
 import { useMemo, useState } from 'react';
 import { useVeri } from '../kancalar.js';
-import { Durum, Etiket, SayfaBaslik, VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
+import { Durum, Etiket, KutuGorseli, SayfaBaslik, VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
 
 export default function Oyunlar() {
     const { veri, hata, yukleniyor } = useVeri('/oyunlar', { aralik: 10000 });
@@ -49,9 +49,12 @@ export default function Oyunlar() {
                     <tbody>
                         {liste.map((o) => (
                             <tr key={o.oyun_id}>
-                                <td>
-                                    <strong>{o.ad}</strong>{o.vip_ozel && <VipRozet />}
-                                    {o.vip_ozel && <span className="vip-not">Sadece VIP üyeler oynayabilir</span>}
+                                <td className="oyun-hucre">
+                                    <KutuGorseli ad={o.ad} />
+                                    <span>
+                                        <strong>{o.ad}</strong>{o.vip_ozel && <VipRozet />}
+                                        {o.vip_ozel && <span className="vip-not">Sadece VIP üyeler oynayabilir</span>}
+                                    </span>
                                 </td>
                                 <td>{o.kategori}</td>
                                 <td>{o.min_oyuncu}–{o.max_oyuncu}</td>

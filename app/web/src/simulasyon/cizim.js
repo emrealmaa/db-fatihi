@@ -2054,6 +2054,20 @@ export function kapakCiz(tuval, ad, renkNo) {
     c.strokeStyle = '#2a1d16'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, W - 3, H - 3);
 }
 
+// Kutu görselli kapak: piksel-art kutu, koyu ahşap zemin üzerinde tam sayı katla büyütülüp ortalanır (gölgeli, çerçeveli)
+export function kutuKapakCiz(tuval, resim) {
+    const c = tuval.getContext('2d');
+    const W = tuval.width, H = tuval.height;
+    c.imageSmoothingEnabled = false;
+    c.fillStyle = '#4a2f1f'; c.fillRect(0, 0, W, H);
+    c.fillStyle = '#42291b'; for (let y = 3; y < H; y += 6) c.fillRect(0, y, W, 1);           // tahta damarları
+    const k = Math.max(1, Math.floor(Math.min(W / resim.width, H / resim.height)));            // 56x44 → 120x88'de 2x
+    const w = resim.width * k, h = resim.height * k, x = Math.round((W - w) / 2), y = Math.round((H - h) / 2);
+    c.fillStyle = 'rgba(0,0,0,.45)'; c.fillRect(x + 3, y + 3, w, h);                          // kutu gölgesi
+    c.drawImage(resim, x, y, w, h);
+    c.strokeStyle = '#2a1d16'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, W - 3, H - 3);
+}
+
 // Parıltı: renge göre bir kez üretilen yumuşak radyal ışık görüntüsü; (x, y) merkezli rx × ry elipse ölçeklenir.
 // Her karede gradyan oluşturmak yerine drawImage (gece ışık geçişini ucuzlatır).
 const parlamaOnbellek = new Map();

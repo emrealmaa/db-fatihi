@@ -10,10 +10,11 @@ import { tl } from '../bicim.js';
 import { Simulasyon as Motor } from '../simulasyon/motor.js';
 import {
     ARKA_RENK, dunyaKutusu,
-    DOGAL_G, DOGAL_Y, gorunurAlan, insaMaskesi, KAT_YUKSEKLIGI, kapakCiz, katmanIsit, nesneBul, pikselBaglami, ruhHali, sahneCiz, ustKatmanCiz,
+    DOGAL_G, DOGAL_Y, gorunurAlan, insaMaskesi, KAT_YUKSEKLIGI, kapakCiz, katmanIsit, kutuKapakCiz, nesneBul, pikselBaglami, ruhHali, sahneCiz,
+    ustKatmanCiz,
 } from '../simulasyon/cizim.js';
 import { KATLAR } from '../simulasyon/harita.js';
-import { VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
+import { KutuGorseli, kutuGorseli, VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
 
 const HIZLAR = [1, 2, 4, 10];
 const YAKINLIK = { min: 0.6, max: 5 };
@@ -479,9 +480,21 @@ function AsansorPaneli({ kat, ozet, sec, kapat }) {
     );
 }
 
+// Masa detayındaki kapak: oyunun kutu görseli varsa o, yoksa addan üretilen piksel kapak
 function Kapak({ ad, no }) {
     const ref = useRef(null);
-    useEffect(() => { if (ref.current) kapakCiz(ref.current, ad, no); }, [ad, no]);
+    useEffect(() => {
+        const t = ref.current;
+        if (!t) return undefined;
+        kapakCiz(t, ad, no);
+        const g = kutuGorseli(ad);
+        if (!g) return undefined;
+        const resim = new Image();
+        let iptal = false;
+        resim.onload = () => { if (!iptal) kutuKapakCiz(t, resim); };
+        resim.src = g.src;
+        return () => { iptal = true; };
+    }, [ad, no]);
     return <canvas ref={ref} width={120} height={88} className="sim-kapak" aria-label={`${ad} kapağı`} />;
 }
 
@@ -620,7 +633,10 @@ function Kutuphane({ motor, kapat }) {
                 <tbody>
                     {oyunlar.map((o) => (
                         <tr key={o.oyun_id}>
-                            <td><strong>{o.ad}</strong>{o.vip_ozel && <VipRozet />}{o.vip_ozel && <span className="vip-not">Sadece VIP üyeler oynayabilir</span>}</td>
+                            <td className="oyun-hucre">
+                                <KutuGorseli ad={o.ad} />
+                                <span><strong>{o.ad}</strong>{o.vip_ozel && <VipRozet />}{o.vip_ozel && <span className="vip-not">Sadece VIP üyeler oynayabilir</span>}</span>
+                            </td>
                             <td>{o.kategori}</td><td>{o.min_oyuncu}–{o.max_oyuncu}</td>
                             <td className={o.alinabilir_adet ? '' : 'sim-uyari'}>{o.alinabilir_adet}/{o.toplam_adet}</td>
                             <td>{o.bekleyen_masa || '–'}</td>

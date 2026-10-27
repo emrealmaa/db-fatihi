@@ -1,5 +1,6 @@
 // Küçük ortak bileşenler
 import { useEffect, useRef } from 'react';
+import KAPAKLAR from '../kapaklar.json';
 
 export function Modal({ baslik, kapat, children, genis = false }) {
     const ref = useRef(null);
@@ -69,4 +70,12 @@ export function Adet({ deger, degistir, min = 0, max = 99 }) {
             <button type="button" onClick={() => degistir(Math.min(max, deger + 1))} disabled={deger >= max} aria-label="Artır">+</button>
         </div>
     );
+}
+
+// Oyun kutusunun piksel-art küçük görseli (scripts/kapaklar.py üretir); görseli olmayan oyunda hiçbir şey çizilmez
+export const kutuGorseli = (ad) => (KAPAKLAR[ad] ? { ...KAPAKLAR[ad], src: `/kapaklar/${KAPAKLAR[ad].dosya}` } : null);
+export function KutuGorseli({ ad }) {
+    const g = kutuGorseli(ad);
+    if (!g) return <span className="kutu-gorsel bos" aria-hidden="true" />;
+    return <img className="kutu-gorsel" src={g.src} width={g.w} height={g.h} alt="" loading="lazy" />;
 }
