@@ -31,3 +31,16 @@ export function yogunluk(dakika) {
     if (h < 21) return 0.8;
     return 0.45;
 }
+
+// Yanık pencere oranı (0,05'lik adımlarla; her adımda pencereler kendi sabit eşiğine göre birer birer yanar/söner)
+const PENCERE_KARELER = [[17 * 60, 0.12], [18 * 60 + 30, 0.48], [21 * 60, 0.45], [22 * 60, 0.3], [24 * 60, 0.1]];
+export function pencereOrani(dakika) {
+    const m = ((dakika % 1440) + 1440) % 1440;
+    let v = PENCERE_KARELER[0][1];
+    for (let k = 0; k < PENCERE_KARELER.length - 1; k++) {
+        const [a, va] = PENCERE_KARELER[k], [b, vb] = PENCERE_KARELER[k + 1];
+        if (m >= a && m < b) v = va + (vb - va) * (m - a) / (b - a);
+    }
+    if (m >= PENCERE_KARELER[PENCERE_KARELER.length - 1][0]) v = 0.1;
+    return Math.round(v * 20) / 20;
+}

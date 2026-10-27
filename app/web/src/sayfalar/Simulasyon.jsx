@@ -77,7 +77,15 @@ export default function Simulasyon() {
     const kameraGuncelle = useCallback((f) => {
         f(kamera.current);
         const k = kamera.current;
-        k.yakinlik = Math.max(YAKINLIK.min, Math.min(YAKINLIK.max, k.yakinlik));
+        let enAz = YAKINLIK.min;
+        if (gorunum.current.kat === 1) {
+            // en uzakta maketin tamamı ve çevresinde biraz arka plan görünür, daha fazlası değil
+            const alan = alanRef.current, w = alan?.clientWidth || 800, h = alan?.clientHeight || 500;
+            const g0 = gorunurAlan(1, k.d), dk = dunyaKutusu(k.d);
+            const sigdir = Math.min(w / (g0.x1 - g0.x0), h / (g0.y1 - g0.y0));
+            enAz = (Math.min(w / (dk.x1 - dk.x0), h / (dk.y1 - dk.y0 + 160)) * 0.92) / sigdir;
+        }
+        k.yakinlik = Math.max(enAz, Math.min(YAKINLIK.max, k.yakinlik));
         setKameraDurum({ yakinlik: k.yakinlik, d: k.d });
     }, []);
 
@@ -131,7 +139,7 @@ export default function Simulasyon() {
                 const bw = Math.ceil(w / s) + 4, bh = Math.ceil(h / s) + 4;
                 if (ara.width !== bw || ara.height !== bh) { ara.width = bw; ara.height = bh; ac.imageSmoothingEnabled = false; }
                 ac.setTransform(1, 0, 0, 1, -bx0, -by0);
-                sahne.olcek = s; sahne.fare = g.fare;
+                sahne.olcek = s; sahne.fare = g.fare; sahne.yakinlik = kamera.current.yakinlik;
                 sahneCiz(ac, sahne, { x0: bx0, y0: by0, x1: bx0 + bw, y1: by0 + bh });
                 const c = tuval.getContext('2d');
                 c.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -141,6 +149,11 @@ export default function Simulasyon() {
                 if (sahne.kat > 1) { c.fillStyle = 'rgba(0,0,0,.35)'; c.fillRect(0, 0, w, h); }
                 if (KATLAR[sahne.kat].isik) { c.fillStyle = `rgba(12,6,24,${KATLAR[sahne.kat].isik})`; c.fillRect(0, 0, w, h); }
                 c.drawImage(ara, ox + bx0 * s, oy + by0 * s, bw * s, bh * s);
+                if (sahne.kat === 1) {                 // odak: kenarlara doğru çok hafif kararma
+                    const v = c.createRadialGradient(w / 2, h / 2, Math.min(w, h) * 0.42, w / 2, h / 2, Math.max(w, h) * 0.78);
+                    v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.2)');
+                    c.fillStyle = v; c.fillRect(0, 0, w, h);
+                }
                 ustKatmanCiz(c, s, (p) => ({ x: ox + p.x * s, y: oy + p.y * s }), sahne);
                 if (g.gecis) {                         // kat geçişi: kararma
                     const t = Math.min(1, g.gecis.t / GECIS_SN);

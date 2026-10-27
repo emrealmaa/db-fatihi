@@ -6,10 +6,12 @@ import { karakterPaleti } from '../cizim.js';
 import { yogunluk } from './isik.js';
 import { tohumlu } from './rastgele.js';
 import { ARAC_BOY } from './sokakCizim.js';
-import { DURAK, GECITLER, GUVERCIN_ALANI, KAFE_GECIDI, KAVSAKLAR, KEDI_YERLERI, PARKLI, SINIR, YAYA_YOLLARI, YOLLAR, ZEBRA } from './yerlesim.js';
+import { BAHCELER, DURAK, GECITLER, GUVERCIN_ALANI, GUVERCIN_BAHCE, KAFE_GECIDI, KAVSAKLAR, KEDI_YERLERI, PARKLI, SINIR, YAYA_YOLLARI, YOLLAR, ZEBRA } from './yerlesim.js';
 
 export const ARAC_SINIR = 26;        // aynı anda yoldaki en fazla araç
 export const YAYA_SINIR = 60;        // aynı anda kaldırımdaki en fazla yaya
+const SONME = 2.5;                   // araçlar plaka kenarına bu kadar karo kala söner / bu mesafede belirir
+const YAYA_OMUR = [35, 90];          // yayalar plakanın içinde dolaşır; ömrü dolunca sönerek kaybolur
 const ISIK_DONGU = 16;               // trafik ışığı döngüsü (sn): x yeşil 6,5 · sarı 1,5 · y yeşil 6,5 · sarı 1,5
 
 const SERITLER = YOLLAR.flatMap((yl) => yl.seritler.map((s) => ({ yol: yl, eksen: yl.eksen, c: s.c, yon: s.yon })));
@@ -35,7 +37,7 @@ export class Sehir {
         this.parkli = PARKLI.map((y, i) => ({ id: `p${i}`, tip: i % 3 === 0 ? 'taksi' : 'oto', eksen: 'y', yon: i % 2 ? 1 : -1, x: -9.5, y, renk: i % 3 === 0 ? '#f2c230' : ARAC_RENK[i % ARAC_RENK.length], park: true }));
         this.sabitler = this.sabitNpcler();
         this.kediler = KEDI_YERLERI.map((k, i) => ({ ...k, x0: k.x, y0: k.y, renk: KEDI_RENK[i % KEDI_RENK.length], yon: 1, ilerle: 0 }));
-        this.guvercinler = Array.from({ length: 12 }, () => this.guvercinYeri());
+        this.guvercinler = [...Array.from({ length: 12 }, () => this.guvercinYeri()), ...Array.from({ length: 5 }, () => this.guvercinYeri(GUVERCIN_BAHCE))];
         this.kopek = { x: 6, y: 22.75, yon: 1, hedef: 9, bekle: 0, oturuyor: false, kare: 0 };
         // açılışta yollar ve kaldırımlar boş görünmesin
         for (let i = 0; i < 40; i++) this.adim(0.5, { dakika: 12 * 60, populerlik: 50, disarida: 0, cikanlar: [] });
@@ -43,7 +45,7 @@ export class Sehir {
     r(a, b) { return a + this.rnd() * (b - a); }
     sec(d) { return d[Math.floor(this.rnd() * d.length)]; }
     birey(x, y, ek = {}) { return { id: `s${++this.sayac}`, x, y, vx: 0, vy: 1, kare: 0, animT: 0, palet: karakterPaleti(Math.floor(this.rnd() * 40)), ...ek }; }
-    guvercinYeri() { const a = GUVERCIN_ALANI; return { x: this.r(a.x0, a.x1), y: this.r(a.y0, a.y1), z: 0, ucus: null }; }
+    guvercinYeri(a = GUVERCIN_ALANI) { return { x: this.r(a.x0, a.x1), y: this.r(a.y0, a.y1), z: 0, ucus: null, alan: a }; }
 
     sabitNpcler() {
         const s = [];
@@ -56,7 +58,13 @@ export class Sehir {
         s.push(this.birey(33.1, 17.25, { vx: 0, vy: -1 }), this.birey(33.9, 17.45, { vx: 0, vy: -1 }));        // dondurma kuyruğu
         s.push(this.birey(-22.1, 18.25, { vx: 0, vy: -1 }), this.birey(-22.9, 18.3, { vx: 0, vy: -1 }));       // ATM sırası
         for (const x of [33.5, 34.3, 35.3]) s.push(this.birey(x, 22.8, { vx: 0, vy: -1, durak: true }));         // durakta bekleyenler
-        s.push(this.birey(26.7, 17.45, { vx: -1, vy: 0, palet: karakterPaleti(4401, 'musteri', false, { gomlek: '#f4efe6' }) }));   // simitçi
+        s.push(this.birey(37.3, 23.2, { vx: -1, vy: 0, palet: karakterPaleti(4401, 'musteri', false, { gomlek: '#f4efe6' }) }));   // simitçi
+        // cep parkları: bankta oturanlar ve yolda köpeğini gezdiren
+        s.push(this.birey(-5.5, 7.85, { oturuyor: true, vx: 0, vy: 1 }), this.birey(23.1, 7.85, { oturuyor: true, vx: 0, vy: 1 }), this.birey(25.9, 10.85, { oturuyor: true, vx: 0, vy: 1 }));
+        for (const g of BAHCELER) {
+            const yol = g.yol.slice(1, -1);
+            s.push(this.birey(yol[0][0], yol[0][1], { devriye: [yol[0], yol[yol.length - 1]], hiz: 0.7, kopekli: g.id === 'bati' }));
+        }
         s.push(this.birey(35.5, -4.25, { vx: -1, vy: 0 }));                                                       // mısırcı
         for (const [x, y] of [[34.3, -9.1], [40.6, -9.1], [36.9, -5.95], [34.1, -12.1]]) s.push(this.birey(x, y, { oturuyor: true, vx: 0, vy: 1 }));   // bankta oturanlar
         s.push(this.birey(32.6, -11.6, { oturuyor: true, vx: 1, vy: 0 }), this.birey(34.6, -11.6, { oturuyor: true, vx: -1, vy: 0 }));   // çay bahçesi
@@ -86,7 +94,7 @@ export class Sehir {
             const ana = s.yol.id === 'ana';
             const tip = this.sec(ana ? ['oto', 'oto', 'oto', 'taksi', 'taksi', 'dolmus', 'otobus', 'motor', 'motor'] : s.yol.tur === 'arka' ? ['oto', 'motor', 'motor', 'taksi'] : ['oto', 'oto', 'taksi', 'motor', 'dolmus']);
             const [a0, a1] = s.eksen === 'x' ? [SINIR.x0, SINIR.x1] : [SINIR.y0, SINIR.y1];
-            const p = s.yon > 0 ? a0 - 2 : a1 + 2;
+            const p = s.yon > 0 ? a0 + 0.9 : a1 - 0.9;
             if (this.araclar.some((a) => a.serit === i && Math.abs(a.p - p) < 4)) return;
             const renk = tip === 'taksi' ? '#f2c230' : tip === 'dolmus' ? '#f0e6c8' : tip === 'otobus' ? '#2b6cb0' : this.sec(ARAC_RENK);
             this.araclar.push({ id: `a${++this.sayac}`, tip, serit: i, p, v: 3, hizMax: tip === 'otobus' ? 3.2 : tip === 'motor' ? 6 : this.r(3.8, 5.6), renk, eksen: s.eksen, yon: s.yon, bekle: 0 });
@@ -134,11 +142,13 @@ export class Sehir {
                 a.v += Math.max(-7 * dt, Math.min(3 * dt, hedef - a.v));
                 a.p += s.yon * Math.max(0, a.v) * dt;
                 Object.assign(a, this.seritKonumu(s, a.p));
+                const [k0, k1] = s.eksen === 'x' ? [SINIR.x0, SINIR.x1] : [SINIR.y0, SINIR.y1];
+                a.alfa = Math.max(0, Math.min(1, (Math.min(a.p - k0, k1 - a.p) - 0.9) / SONME));
             });
         });
         this.araclar = this.araclar.filter((a) => {
             const [a0, a1] = a.eksen === 'x' ? [SINIR.x0, SINIR.x1] : [SINIR.y0, SINIR.y1];
-            return a.p > a0 - 4 && a.p < a1 + 4;
+            return a.p > a0 + 0.8 && a.p < a1 - 0.8;
         });
     }
 
@@ -152,7 +162,7 @@ export class Sehir {
         // kafeden çıkan müşteriler sokakta yürüyüp uzaklaşır
         for (const c of okuma.cikanlar) {
             if (this.yayalar.length >= YAYA_SINIR + 10) break;
-            this.yayalar.push({ ...this.birey(c.gx + 0.5, 18.55), palet: c.palet, rota: 0, p: c.gx + 0.5, yon: -1, hiz: this.r(1, 1.4), durum: 'yuru', yan: this.r(-0.12, 0.12), cikan: true });
+            this.yayalar.push({ ...this.birey(c.gx + 0.5, 18.55), palet: c.palet, rota: 0, p: c.gx + 0.5, yon: -1, hiz: this.r(1, 1.4), durum: 'yuru', yan: this.r(-0.12, 0.12), cikan: true, alfa: 1, omur: this.r(20, 35) });
         }
         YAYA_YOLLARI.forEach((r, i) => {
             let carpan = yog;
@@ -161,13 +171,16 @@ export class Sehir {
             if (this.rotaZaman[i] > 0 || this.yayalar.length >= YAYA_SINIR) return;
             this.rotaZaman[i] = this.r(2, 5.5);
             const yon = this.rnd() < 0.5 ? 1 : -1;
-            const p = yon > 0 ? r.bas : r.son;
-            this.yayalar.push({ ...this.birey(0, 0), rota: i, p, yon, hiz: this.r(0.9, 1.5), durum: 'yuru', yan: this.r(-0.15, 0.15),
+            const p = this.r(r.bas + 1, r.son - 1);
+            this.yayalar.push({ ...this.birey(0, 0), rota: i, p, yon, hiz: this.r(0.9, 1.5), durum: 'yuru', yan: this.r(-0.15, 0.15), alfa: 0, omur: this.r(...YAYA_OMUR),
                 karsiya: (r.c === 18.55 || r.c === 22.45) && this.rnd() < 0.3 });
         });
         for (const y of this.yayalar) {
             const r = YAYA_YOLLARI[y.rota];
             y.animT += dt;
+            y.omur -= dt;
+            y.alfa = y.omur > 0 ? Math.min(1, (y.alfa ?? 1) + dt) : Math.max(0, (y.alfa ?? 1) - dt);   // belirerek gelir, sönerek gider
+            if (y.durum === 'yuru' && ((y.yon > 0 && y.p > r.son - 0.2) || (y.yon < 0 && y.p < r.bas + 0.2))) y.yon = -y.yon;   // plaka kenarında geri döner
             if (y.durum === 'vitrin' || y.durum === 'bekle') {
                 y.bekle -= dt;
                 if (y.durum === 'vitrin' && y.bekle <= 0) y.durum = 'yuru';
@@ -208,7 +221,7 @@ export class Sehir {
                 if (r.eksen === 'x') { y.vx = 0; y.vy = r.bakis; } else { y.vx = r.bakis; y.vy = 0; }
             }
         }
-        this.yayalar = this.yayalar.filter((y) => { const r = YAYA_YOLLARI[y.rota]; return y.durum === 'karsiya' || (y.p >= r.bas - 1 && y.p <= r.son + 1); });
+        this.yayalar = this.yayalar.filter((y) => y.omur > 0 || y.alfa > 0);
     }
     konumla(y, r) {
         if (r.eksen === 'x') { y.x = y.p; y.y = r.c + y.yan; if (y.durum === 'yuru') { y.vx = y.yon; y.vy = 0; } }
@@ -242,7 +255,7 @@ export class Sehir {
         }
         for (const g of this.guvercinler) {
             if (!g.ucus && this.yayalar.concat(this.sabitler).some((y) => Math.abs(y.x - g.x) < 1.3 && Math.abs(y.y - g.y) < 1.3 && y.hareketli)) {
-                const h = this.guvercinYeri(); g.ucus = { x: h.x, y: h.y };
+                const h = this.guvercinYeri(g.alan); g.ucus = { x: h.x, y: h.y };
             }
             if (g.ucus) {
                 const dx = g.ucus.x - g.x, dy = g.ucus.y - g.y, m = Math.hypot(dx, dy);
@@ -268,7 +281,9 @@ export class Sehir {
         return {
             araclar: [...this.araclar, ...this.parkli],
             yayalar: [...this.yayalar.map(birey), ...this.sabitler.filter((s) => !s.gizli).map(birey)],
-            kediler: this.kediler, guvercinler: this.guvercinler, kopek: this.kopek, isiklar: this.isiklar,
+            kediler: this.kediler, guvercinler: this.guvercinler, isiklar: this.isiklar,
+            // köpekler: kaldırımda dolaşan ve cep parkında tasmayla gezdirilen
+            kopekler: [this.kopek, ...this.sabitler.filter((s) => s.kopekli).map((s) => ({ x: s.x + 0.45, y: s.y + 0.2, yon: Math.sign(s.vx) || 1, oturuyor: false, kare: Math.floor(s.animT * 8) % 2, tasma: { x: s.x, y: s.y } }))],
         };
     }
 }

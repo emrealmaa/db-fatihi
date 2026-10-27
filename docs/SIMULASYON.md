@@ -105,13 +105,13 @@ Simülasyondan yalnızca **okur**: saat, popülerlik, dışarıdaki kuyruk ve ka
 | | Batı (x −26…−10) | Orta (−8…28) | Doğu (30…46) |
 |---|---|---|---|
 | **Kuzey** (y −17…−3) | Lale Apt. (kuaför), taş ev | Arka sokağa servis yüzü veren apartmanlar, Eski Han | Park & meydan: çeşmeli havuz, oyun alanı, çay bahçesi, WC, banklar, ağaçlar, güvercinler |
-| **Orta** (−1…19) | Dükkân sırası: Şehir Bankası (ATM), Bakkal, Berber, Nöbetçi Eczane; Gül Apt., cumbalı ev | **KARAVANA**, Sahaf Kitabevi, Simit Fırını | Maraş Dondurmacısı, Kasap, Lokumcu, Züccaciye, Çay Ocağı · Kahvehane, apartman |
+| **Orta** (−1…19) | Dükkân sırası: Şehir Bankası (ATM), Bakkal, Berber, Nöbetçi Eczane; Gül Apt., cumbalı ev | **KARAVANA** ve iki yanında cep parkları | Maraş Dondurmacısı, Kasap, Lokumcu, Züccaciye, Çay Ocağı · Kahvehane, apartman |
 | **Güney** (22…37) | Lokanta (apartman), Ayakkabıcı | Çiçekçi, Kırtasiye, Pizza Dükkânı, Oyuncakçı, Papatya Apt., cumbalı ev | Otobüs durağı, Büfe (tost & ayran), Çamaşırhane, apartman |
 
 - **Yollar** (`sehir/yerlesim.js`): **ana cadde** çift şerit, ağaçlı ve çiçekli orta refüj, yaya geçitleri, iki trafik ışıklı kavşak;
   **ara sokak** tek şerit parke taşı ve park cebinde duran araçlar; **arka sokak** dar, tek yön, çöp konteynerleri ve servis
   kapıları; doğu caddesi çift şerit. Kaldırımlar, bordürler (kavşak köşeleri yuvarlak), rögar kapakları, sokak lambaları,
-  çöp kutuları, banklar, bisiklet park yeri. Harita kenarında sade bina siluetleri "şehir devam ediyor" hissi verir.
+  çöp kutuları, banklar, bisiklet park yeri.
 - **Binalar tanımdan üretilir** (`sehir/binalar.js` → `sehir/binaCizim.js`). Her binanın dört yüzü ayrı tasarlanır:
   ön yüz **vitrin** (cam, kapı, çizgili tente, tabela, kapanışta inen kepenk) veya **konut** (pencere sıraları, perdeler, kapı);
   arka yüz **servis** (servis kapısı, kepenkli depo kapısı, yangın merdiveni, yağmur borusu); yan yüzler **yan** (küçük pencereler,
@@ -124,6 +124,35 @@ Simülasyondan yalnızca **okur**: saat, popülerlik, dışarıdaki kuyruk ve ka
 - **Görünürlük**: kameranın önünde kalıp kafeyi ekranda örten binalar **zemin katına kadar kesilir** (içi, rafları görünür);
   her döndürmede yeniden hesaplanır, fare binanın üstüne gelince bina tam görünür. Kafenin arka duvarlarının gerisinde kalan
   binalar, araçlar, eşyalar ve kişiler duvar katmanından önce çizilir.
+
+### Maket kenarı ve yeşil
+- **Maket plakası** (`DUNYA`, `PLAKA_PAYI` = 2 karo): şehir, koyu arka planın üstünde duran dikdörtgen bir dioramadır; dışında
+  hiçbir şey çizilmez. Kameraya bakan iki kenarda üç katmanlı kesit (üstte zemin malzemesi, ortada iki tonlu taşlı toprak,
+  altta koyu temel; sol yüz açık, sağ yüz koyu) ve altında yumuşak gölge (`MAKET_KALINLIK` = 22 px). Plaka kenarına ulaşan
+  yollar kırmızı-beyaz bariyerle biter (gece reflektörler yanıp söner), şerit çizgileri kenardan bir karo önce durur. Kenar
+  boyunca aralıklı çit, çalı ve ağaçlar; köşelerde ağaç kümeleri. Araçlar kenara yaklaşınca söner, kenardan belirerek girer;
+  yayalar plaka içinde dolaşır, kenarda geri döner, ömrü dolunca sönerek kaybolur. En uzak yakınlaştırmada maketin tamamı görünür.
+- **Cep parkları** (`BAHCELER`): kafenin iki yanında, eski Sahaf ve Simit Fırını parsellerinde. Kenarları koyu, dama desenli çim;
+  iki ucu kaldırıma bağlanan kıvrımlı stabilize yol ve ince bordür taşları; büyük çınar, orta boy ve meyve ağaçları;
+  kaldırıma bakan budanmış çitler (yol ağzında açık); çiçek tarhları; banklar, gece yanan bahçe lambaları, çöp kutuları;
+  batıda içme çeşmesi ve sarmaşıklı çardak, doğuda kuş yemliği. Bankta oturanlar, köpeğini tasmayla gezdiren, çimde yatan
+  kedi, güvercinler. Kafenin bu yanlara bakan cepheleri (ve arka cephesi) o duvar kameraya göre öndeyken ön cepheyle uyumlu
+  tuğla denizlik, cam vitrin, tuğla ayaklar ve alınlıkla çizilir; yer yer sarmaşık ve duvar lambaları.
+- **Yeşil sokak**: ana cadde, ara sokak ve doğu caddesi kaldırımlarında düzenli aralıklı, ızgaralı çukurlu ağaçlar (boy ve ton
+  hafif farklı); refüjde ağaçların arasında çalılar ve çiçekler (yaya geçidinde kesilir); arka sokak ve doğu caddesi kaldırım
+  kenarında çim şeridi; dükkân önlerinde büyük saksılar, cadde kenarında beton çiçeklikler; Eski Han, taş ev ve cumbalı evin
+  cephelerinde sarmaşık; parkta ek çiçek tarhları. Kafeyi örten ağaçlar yarı saydam çizilir (`AGAC_SAYDAMLIK`), her kamera
+  yönünde yeniden hesaplanır.
+
+### Görsel gürültü
+- Gece yanık pencere oranı saate göre değişir (`pencereOrani`: 18:30 ~%48, 21:00 ~%45, 22:00 ~%30, gece yarısı ~%10); her
+  pencerenin sabit eşiği vardır, saat ilerledikçe birer birer söner. Renkler çoğunlukla sıcak sarı/turuncu, bir kısmı TV
+  mavisi, azı loş. Kepenk inen dükkânın vitrin ve tabela ışığı söner.
+- Konuşma balonları çakışınca yukarı/yana kayar ve kuyrukla sahibine bağlı kalır; aynı anda en fazla `BALON_SINIR` = 6 (süresi
+  en önce dolacaklar); %70'in altındaki yakınlaştırmada yalnızca küçük ikon ("…", sabırsızlıkta "!"). Metin ve süre değişmez.
+- Bina etiketleri önceliklidir: Karavana her zaman; dondurmacı, eczane, kahvehane, çay bahçesi ve büyük binalar %60 ve üstünde;
+  diğerleri %95 ve üstünde; farenin üstündeki binanınki her zaman. Etiketler ekran içine sıkıştırılır, çakışan düşük öncelikli
+  etiket gizlenir. Kenarlara doğru çok hafif vinyet.
 
 ### Sokağa hayat (`sehir/ortam.js`)
 - **Araçlar** (en fazla 26): otomobil, sarı taksi, dolmuş, otobüs, motor kurye. Şeritte kalır, öndeki araca mesafe bırakır,

@@ -60,29 +60,31 @@ function cepheDeseni(b, d, durum, emis) {
         const kenar = yerel < 3 || yerel > gen - 4;
         if (!emis) {
             malzemeDeseni(cc, x, y, hh, sol, yerel, b);
+            // sarmaşık: eski binaların yan/konut yüzlerinde aşağıdan yukarı seyrelerek tırmanır
+            if (b.sarmasik && (tur === 'yan' || tur === 'konut' || tur === 'servis') && karma(b.tohum, fk, 5) < 0.7) {
+                for (let r = Math.floor(hh * 0.25); r < hh; r++) {
+                    const p = 0.55 * (r - hh * 0.25) / (hh * 0.75);
+                    if (karma(b.tohum, fk, yerel, r) < p) { cc.fillStyle = karma(yerel, r, 3) < 0.5 ? '#3f7a3a' : '#2f6b2f'; cc.fillRect(x, y + r, 1, 1); }
+                }
+            }
             if (yerel < 2 || yerel > gen - 3) R(y, hh, 'rgba(0,0,0,.14)');                   // köşe gölgesi
             R(y, 2, 'rgba(255,255,255,.1)');
             for (let k = 1; k < katSay; k++) { R(zemY - (k - 1) * KH - 1, 2, sol ? '#e8dcc4' : '#cbbfa6'); R(zemY - (k - 1) * KH + 1, 1, 'rgba(0,0,0,.2)'); }
         }
-        if (tur === 'siluet') {
-            for (let r = 6; r < hh - 6; r += 12) {
-                if (yerel % 8 < 2 || kenar) continue;
-                const yanik = karma(b.tohum, fk, Math.floor(yerel / 8), r) < 0.38;
-                if (emis) { if (yanik) R(y + r, 5, '#f2c46d'); } else R(y + r, 5, '#2a2f3c');
-            }
-            return;
-        }
         // ---------------------------------------------------------------- üst katlar
+        const po = durum.pencereOrani ?? 0.45;                                                         // saate göre yanık pencere oranı
         const pencere = (top, k, genis = 7, bolum = 14, ust = 8, boy = 14, oran = 0.5) => {
             const col = yerel - 4;
             if (col < 0 || yerel > gen - 5 || col % bolum >= genis) return;
             const c0 = col % bolum, wi = Math.floor(col / bolum);
-            const yanik = karma(b.tohum, fk, wi, k) < oran;
+            const yanik = karma(b.tohum, fk, wi, k) < oran * po / 0.45;                                  // pencere başına sabit eşik: saat ilerledikçe birer birer söner
             const perde = karma(b.tohum, fk, wi, k, 9) < 0.45;
             const camSutun = c0 > 0 && c0 < genis - 1;
             if (emis) {
                 if (!yanik || !camSutun) return;
-                R(top + ust, boy, perde && (c0 === 1 || c0 === genis - 2) ? '#f0b060' : '#ffd27a');
+                const ton0 = karma(b.tohum, fk, wi, k, 21);                                             // çoğu sıcak sarı/turuncu, bir kısmı TV mavisi, azı loş
+                const renk = ton0 < 0.16 ? '#cfe6ff' : ton0 < 0.24 ? '#b08a50' : ton0 < 0.62 ? '#ffd27a' : '#ffb866';
+                R(top + ust, boy, perde && (c0 === 1 || c0 === genis - 2) ? ton(renk, 0.85) : renk);
                 return;
             }
             if (!camSutun) { R(top + ust - 1, boy + 2, sol ? '#efe6d2' : '#d6ccb6'); return; }
@@ -197,7 +199,7 @@ function cepheEklentileri(c, P, d, b, durum, notlar) {
                 }), ZK - 6);
                 K(yuzKutu(g, 0.25, g.len - 0.25, 0.58, 0.64), 3, renkler(ton(b.tente, 0.8)), ZK - 9);   // saçak
             }
-            if (b.ad && b.tip !== 'siluet') {
+            if (b.ad) {
                 const zt = b.tip === 'kiosk' ? ZK : ZK;
                 K(yuzKutu(g, 0.4, g.len - 0.4, 0, 0.1), 9, renkler(b.tabela || '#2a1d16', (cc, x, y, h, sol, st) => {
                     cc.fillStyle = '#c9a14a'; cc.fillRect(x, y, 1, 1); cc.fillRect(x, y + h - 1, 1, 1);
@@ -264,7 +266,6 @@ function catiCiz(c, P, d, b, H, notlar) {
     const K = (gx, gy, gw, gd, h, renk, zz = 0) => kutu(c, P, d, gx, gy, gw, gd, h, renk, H + zz);
     const rnd = ((s) => () => { s = (s * 1103515245 + 12345) >>> 0; return (s >>> 8) / 16777216; })(b.tohum + 17);
     K(b.x - 0.06, b.y - 0.06, b.w + 0.12, b.d + 0.12, 3, renkler(ton(b.renk, 0.72)));            // saçak
-    if (b.tip === 'siluet') { if (b.w * b.d > 20 && rnd() < 0.5) K(b.x + 1, b.y + 1, 1, 1, 10, renkler('#4a4f58'), 3); return; }
     if (b.cati === 'kiremit') {
         const kir = (cc, x, y, hh, sol, st) => { cc.fillStyle = sol ? '#7a2e20' : '#64251a'; cc.fillRect(x, y + hh - 1, 1, 1); if (st % 4 === 0) cc.fillRect(x, y, 1, hh); };
         const adim = 0.42, n = Math.max(1, Math.floor(Math.min(b.w, b.d) / 2 / adim));
@@ -337,7 +338,7 @@ export function binaAltigeni(b, d, kesik = false) {
 
 export function binaSprite(b, d, durum, emis = false) {
     const kep = 0;                                          // kepenk sprite'a girmez, her karede ayrı çizilir
-    const anahtar = `${b.id}|${d}|${kep}|${durum.kesik ? 1 : 0}|${emis ? 1 : 0}`;
+    const anahtar = `${b.id}|${d}|${kep}|${durum.kesik ? 1 : 0}|${emis ? 'e' + (durum.pencereOrani ?? 0.45) : 0}`;
     const var0 = onbellek.get(anahtar);
     if (var0) { onbellek.delete(anahtar); onbellek.set(anahtar, var0); return var0; }
     const P = izdusum(d);
@@ -405,7 +406,7 @@ export function binaCiz(c, P, d, b, durum, sahne) {
         }
     }
     for (const u of n.dumanlar) {
-        if (!u.cok && b.tip !== 'siluet' && (b.tohum % 3)) continue;                              // bacaların bir kısmı tüter
+        if (!u.cok && (b.tohum % 3)) continue;                              // bacaların bir kısmı tüter
         const q = P.W(u.x, u.y);
         for (let i = 0; i < 4; i++) {
             const f = (t / 1100 + i / 4 + (b.tohum % 7) / 7) % 1;
