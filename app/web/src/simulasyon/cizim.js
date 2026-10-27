@@ -22,7 +22,7 @@ const AGAC_SAYDAMLIK = 0.42;             // kafeyi örten ağaçların opaklığ
 const BALON_SINIR = 6;                   // kat başına aynı anda görünen en fazla konuşma balonu
 const DUVAR_KAL = 0.35;                  // duvar kalınlığı (karo)
 const UST_PAY = 330, ALT_PAY = 60;       // üstte yüksek binalar ve çatılar, altta plaka için pay
-// Şehir (dünya + siluet şeridi) her kamera yönünde aynı doğal tuvale sığar
+// Şehir maketi her kamera yönünde aynı doğal tuvale sığar
 const IZ = [0, 1, 2, 3].map((d) => {
     const ks = [[SINIR.x0, SINIR.y0], [SINIR.x1, SINIR.y0], [SINIR.x0, SINIR.y1], [SINIR.x1, SINIR.y1]].map(([x, y]) => dondur(d, x, y));
     const f = ks.map((p) => p.x - p.y), t = ks.map((p) => p.x + p.y);

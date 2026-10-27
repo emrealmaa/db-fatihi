@@ -287,7 +287,7 @@ dışarıdan kapatılan hesabın müşterileri kalkar.
 | `simulasyon/cizim.js` | Piksel-art izometrik çizim: döndürülebilir izdüşüm, önbellekli zemin/duvar, desenli kutular, sprite üretimi ve önbelleği, ışık, seçim (tıklama) — harici görsel yok |
 | `simulasyon/motor.js` | Durum makineleri, sabır zamanlayıcıları, kapı önü kuyruğu, görev kuyruğu, veritabanı eşitlemesi, API çağrıları |
 | `simulasyon/sehir/yerlesim.js` | Şehir yerleşimi: yollar, bloklar, kavşaklar, yaya geçitleri ve güzergâhları, sokak eşyaları, park |
-| `simulasyon/sehir/binalar.js` | Bina tanımları (dört cephe türü, malzeme, çatı, özel ayrıntı, kapanış saati), kenar siluetleri, sağır duvar tespiti |
+| `simulasyon/sehir/binalar.js` | Bina tanımları (dört cephe türü, malzeme, çatı, özel ayrıntı, kapanış saati), sağır duvar tespiti, dükkân önü saksıları |
 | `simulasyon/sehir/binaCizim.js` | Tanımdan dört cephe + çatı üretimi, sprite önbelleği, ışık sprite'ı, kepenk, kesik (cutaway) görünüm |
 | `simulasyon/sehir/sokakCizim.js` | Şehir zemini, sokak eşyaları, araçlar, kedi ve güvercin çizimi |
 | `simulasyon/sehir/ortam.js` | Araçlar, trafik ışıkları, yayalar, mahalle sakinleri, hayvanlar (görsel, salt okur) |
