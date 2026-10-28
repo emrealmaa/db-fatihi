@@ -28,6 +28,13 @@ export function kasaRotalari() {
         res.json({ toplam: o.p_toplam });
     });
 
+    // Haftalık VIP üyelik ücretini tahsil et (ücret ayardan gelir, öğrenciye de indirimsizdir): { odemeTuru }
+    r.post('/musteriler/:id/vip-odeme', async (req, res) => {
+        const [o] = await req.vt((q) => q('CALL sp_vip_uyelik_ode($1, $2, NULL, NULL, NULL)', [
+            tamsayi(req.params.id, 'Müşteri'), metin(req.body.odemeTuru, 'Ödeme türü')]));
+        res.status(201).json({ odemeId: o.p_odeme_id, tutar: o.p_tutar, bitis: o.p_bitis });
+    });
+
     // Dönem özeti (gün sonu fişi): ?bas=ISO&bit=ISO, bit verilmezse şimdi. "Şimdi" veritabanı saatidir: ödeme zamanı
     // da onunla yazılır; API saati birkaç ms geride kalırsa az önce alınan ödeme özetin dışında kalırdı.
     r.get('/raporlar/donem', async (req, res) => {

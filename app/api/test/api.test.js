@@ -208,7 +208,7 @@ test('VIP Kulüp: kural hataları anlaşılır mesaja çevrilir; üyelik yöneti
     const vipMasa = masalar.find((m) => m.vip_masa && m.durum === 'BOS');
     const kat = await istek('POST', `/masalar/${vipMasa.masa_id}/ac`, { kisiSayisi: 2, kullaniciId: 4 }, 'garson');
     assert.equal(kat.durum, 400);
-    assert.match(kat.govde.hata, /yalnızca VIP üyeler oturabilir/);
+    assert.match(kat.govde.hata, /yalnızca ücreti ödenmiş VIP üyeler oturabilir/);
 
     const vipOyun = (await istek('GET', '/oyunlar', null, 'garson')).govde.find((o) => o.ad === 'Spirit Island');
     assert.equal(vipOyun.vip_ozel, true);
@@ -220,7 +220,16 @@ test('VIP Kulüp: kural hataları anlaşılır mesaja çevrilir; üyelik yöneti
 
     assert.equal((await istek('POST', '/yonetim/musteriler/4/vip', { vip: true }, 'garson')).durum, 403);
     assert.equal((await istek('POST', '/yonetim/musteriler/4/vip', { vip: true }, 'yonetici')).durum, 204);
+    // üyelik işaretlendi ama haftalık ücret ödenmedi: VIP oyun hâlâ kapalı
+    assert.equal((await istek('POST', `/oturumlar/${ac.govde.oturumId}/oyun`, { oyunId: vipOyun.oyun_id }, 'garson')).durum, 400);
+    assert.equal((await istek('POST', '/musteriler/4/vip-odeme', { odemeTuru: 'KART' }, 'garson')).durum, 403);
+    const ode = await istek('POST', '/musteriler/4/vip-odeme', { odemeTuru: 'KART' }, 'kasiyer');
+    assert.equal(ode.durum, 201);
+    assert.equal(Number(ode.govde.tutar), 10000);
     assert.equal((await istek('POST', `/oturumlar/${ac.govde.oturumId}/oyun`, { oyunId: vipOyun.oyun_id }, 'garson')).durum, 201);
+    const seg = await istek('GET', '/raporlar/musteri-segment', null, 'yonetici');
+    assert.equal(seg.govde.find((m) => m.id === 4).segment, 'VIP');
+    assert.equal(Number((await istek('GET', '/raporlar/vip-uyelik-gelir', null, 'yonetici')).govde[0].gelir), 10000);
 
     const kullanim = await istek('GET', '/raporlar/vip-oyun-kullanimi', null, 'yonetici');
     assert.equal(kullanim.govde.length, 10);
