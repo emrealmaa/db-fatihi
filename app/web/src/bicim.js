@@ -7,11 +7,12 @@ export const tl = (n) => (n == null ? '–' : para.format(Number(n)));
 export const saatBicim = (t) => (t ? saat.format(new Date(t)) : '–');
 export const tarihBicim = (t) => (t ? tarih.format(new Date(t)) : '–');
 
-// Başlangıçtan bu yana geçen süre: "1 sa 05 dk"
+// Başlangıçtan bu yana geçen süre: "12 dk", "1 sa 05 dk", bir günü aşınca "22 g 15 sa"
 export function gecenSure(baslangic, simdi = Date.now()) {
     if (!baslangic) return '–';
     const dk = Math.max(0, Math.floor((simdi - new Date(baslangic).getTime()) / 60000));
     const sa = Math.floor(dk / 60);
+    if (sa >= 24) return `${Math.floor(sa / 24)} g ${sa % 24} sa`;
     return sa ? `${sa} sa ${String(dk % 60).padStart(2, '0')} dk` : `${dk} dk`;
 }
 

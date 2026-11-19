@@ -17,38 +17,61 @@ export function masaDurumu(m) {
     return { tur: 'dolu', metin: 'Oyunsuz' };
 }
 
+// Durumların pano üzerindeki sırası (lejant ve süzgeç)
+const DURUM_SIRASI = [['hak', 'Seçim hakkı'], ['sira', 'Sırada'], ['dolu', 'Oyunsuz'], ['oyun', 'Oynuyor'], ['bos', 'Boş']];
+
 export default function Masalar() {
     const { veri, hata, yukleniyor, yenile } = useVeri('/masalar', { aralik: 5000 });
     const simdi = useSimdi();
     const [seciliNo, setSeciliNo] = useState(null);
+    const [suzgec, setSuzgec] = useState(null);       // yalnızca bu durumdaki masaları öne çıkar
     const secili = veri?.find((m) => m.masa_no === seciliNo);
 
     const dolu = veri?.filter((m) => m.durum === 'DOLU').length ?? 0;
     const kisi = veri?.reduce((t, m) => t + (m.kisi_sayisi || 0), 0) ?? 0;
+    const sayilar = {};
+    for (const m of veri || []) { const t = masaDurumu(m).tur; sayilar[t] = (sayilar[t] || 0) + 1; }
 
     return (
         <>
-            <SayfaBaslik baslik="Masalar" aciklama={veri ? `${dolu}/${veri.length} masa dolu · ${kisi} misafir` : ''} />
-            <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!veri?.length} bosMesaj="Tanımlı masa yok">
+            <SayfaBaslik baslik="Masalar" aciklama={veri ? `${dolu}/${veri.length} masa dolu · ${kisi} misafir` : ''}>
+                {veri && (
+                    <div className="durum-suzgec" role="group" aria-label="Duruma göre öne çıkar">
+                        {DURUM_SIRASI.filter(([t]) => sayilar[t]).map(([t, ad]) => (
+                            <button key={t} className={`durum-cip cip-${t}`} aria-pressed={suzgec === t}
+                                    onClick={() => setSuzgec((s) => (s === t ? null : t))}>
+                                <i aria-hidden="true" />{ad}<b>{sayilar[t]}</b>
+                            </button>
+                        ))}
+                    </div>
+                )}
+            </SayfaBaslik>
+            <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!veri?.length} bosMesaj="Tanımlı masa yok"
+                   bosIpucu="Masalar Yönetim › Masalar sekmesinden eklenir." iskelet={<MasaIskeleti />}>
                 {[1, 2, 3].filter((k) => veri?.some((m) => m.kat === k)).map((k) => (
                 <section key={k} className="kat-bolum">
                 <h2>{KAT_ADI[k]}{veri.some((m) => m.kat === k && m.vip_masa) && <VipRozet baslik="Bu katta yalnızca VIP üyeler oturabilir" />}</h2>
                 <div className="masa-izgara">
                     {veri.filter((m) => m.kat === k).map((m) => {
                         const d = masaDurumu(m);
+                        const soluk = suzgec && suzgec !== d.tur;
                         return (
-                            <button key={m.masa_id} className={`masa-kart masa-${d.tur}${m.vip_masa ? ' masa-vip' : ''}`} onClick={() => setSeciliNo(m.masa_no)}>
-                                <span className="masa-no">Masa {m.masa_no}</span>
-                                {m.vip_masa && <VipRozet baslik="VIP masa: yalnızca VIP üyeler oturabilir" />}
-                                <span className="masa-durum">{d.metin}</span>
+                            <button key={m.masa_id} className={`masa-kart masa-${d.tur}${m.vip_masa ? ' masa-vip' : ''}${soluk ? ' masa-soluk' : ''}`}
+                                    onClick={() => setSeciliNo(m.masa_no)}
+                                    aria-label={`Masa ${m.masa_no}, ${d.metin}${m.oynanan_oyun ? `, ${m.oynanan_oyun}` : ''}`}>
+                                <span className="masa-ust">
+                                    <span className="masa-no">{m.masa_no}{m.vip_masa && <VipRozet baslik="VIP masa: yalnızca VIP üyeler oturabilir" />}</span>
+                                    <span className="masa-durum"><i aria-hidden="true" />{d.metin}</span>
+                                </span>
                                 {m.durum === 'BOS' ? (
-                                    <span className="soluk">{m.kapasite} kişilik</span>
+                                    <span className="masa-meta">{m.kapasite} kişilik</span>
                                 ) : (
-                                    <>
-                                        <span>{m.kisi_sayisi}/{m.kapasite} kişi · {gecenSure(m.acilis, simdi)}</span>
-                                        {m.oynanan_oyun && <span className="masa-oyun-adi">{m.oynanan_oyun}</span>}
-                                        {d.tur === 'hak' && <span className="geri-sayim">{kalanSure(m.secim_bitis, simdi)}</span>}
-                                    </>
+                                    <span className="masa-meta">{m.kisi_sayisi}/{m.kapasite} kişi · {gecenSure(m.acilis, simdi)}</span>
+                                )}
+                                {m.oynanan_oyun && <span className="masa-oyun-adi">{m.oynanan_oyun}</span>}
+                                {d.tur === 'sira' && m.beklenen_oyun && <span className="masa-oyun-adi">{m.beklenen_oyun} bekleniyor</span>}
+                                {d.tur === 'hak' && (
+                                    <span className="masa-oyun-adi">{m.beklenen_oyun} · <span className="geri-sayim">{kalanSure(m.secim_bitis, simdi)}</span></span>
                                 )}
                             </button>
                         );
@@ -59,6 +82,14 @@ export default function Masalar() {
             </Durum>
             {secili && <MasaPaneli masa={secili} kapat={() => setSeciliNo(null)} yenile={yenile} />}
         </>
+    );
+}
+
+function MasaIskeleti() {
+    return (
+        <div className="masa-izgara" aria-busy="true" aria-label="Masalar yükleniyor">
+            {Array.from({ length: 12 }, (_, i) => <span key={i} className="masa-kart iskelet" />)}
+        </div>
     );
 }
 
@@ -123,14 +154,14 @@ function MasaAc({ masa, acildi }) {
 
     return (
         <div className="form">
-            <label className="satir-etiket">
-                Kişi sayısı <small className="soluk">(en fazla {masa.kapasite})</small>
-                <Adet deger={kisi} degistir={setKisi} min={1} max={masa.kapasite} />
-            </label>
-            <label className="satir-etiket">
-                Öğrenci <small className="soluk">(giriş ücretinde öğrenci indirimi)</small>
-                <Adet deger={Math.min(ogrenci, kisi)} degistir={setOgrenci} min={0} max={kisi} />
-            </label>
+            <div className="satir-etiket">
+                <span className="etiket-metin">Kişi sayısı <small className="soluk">En fazla {masa.kapasite}</small></span>
+                <Adet deger={kisi} degistir={setKisi} min={1} max={masa.kapasite} etiket="Kişi sayısı" />
+            </div>
+            <div className="satir-etiket">
+                <span className="etiket-metin">Öğrenci <small className="soluk">Giriş ücretinde öğrenci indirimi uygulanır</small></span>
+                <Adet deger={Math.min(ogrenci, kisi)} degistir={setOgrenci} min={0} max={kisi} etiket="Öğrenci sayısı" />
+            </div>
 
             <form className="satir" onSubmit={ara}>
                 <label className="genis">

@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { useUygulama } from './baglam.jsx';
 import { ROL_ADI } from './bicim.js';
+import { Ikon } from './bilesenler/ortak.jsx';
 import Giris from './sayfalar/Giris.jsx';
 import Masalar from './sayfalar/Masalar.jsx';
 import Oyunlar from './sayfalar/Oyunlar.jsx';
@@ -52,7 +53,9 @@ export default function Uygulama() {
                     <span>Karavana</span>
                 </a>
                 <button className="dugme-ikon menu-dugme" onClick={() => setMenuAcik((m) => !m)}
-                        aria-expanded={menuAcik} aria-label="Menü">☰</button>
+                        aria-expanded={menuAcik} aria-label={menuAcik ? 'Menüyü kapat' : 'Menüyü aç'}>
+                    <Ikon ad={menuAcik ? 'kapat' : 'menu'} boyut={22} />
+                </button>
                 <nav className={`ana-menu ${menuAcik ? 'acik' : ''}`} onClick={() => setMenuAcik(false)}>
                     {erisilebilir.map((s) => (
                         <a key={s.yol} href={`#/${s.yol}`} className={s === sayfa ? 'secili' : ''}
@@ -60,8 +63,10 @@ export default function Uygulama() {
                     ))}
                 </nav>
                 <div className="kullanici">
-                    <span>{personel.ad} <small className="soluk">{ROL_ADI[personel.rol]}</small></span>
-                    <button className="dugme dugme-hafif" onClick={cikis}>Çıkış</button>
+                    <span className="kullanici-ad">{personel.ad} <small className="soluk">{ROL_ADI[personel.rol]}</small></span>
+                    <button className="dugme dugme-hafif dugme-kucuk cikis-dugme" onClick={cikis}>
+                        <Ikon ad="cikis" boyut={16} /> Çıkış
+                    </button>
                 </div>
             </header>
             <main className={sayfa.tamEkran ? 'icerik-tam' : 'icerik'}>
