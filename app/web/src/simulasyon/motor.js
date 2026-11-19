@@ -746,7 +746,7 @@ export class Simulasyon {
         return adina(g.karsilayan?.personel.id);
     }
 
-    // VIP üyenin müşteri kaydı ve üyeliği: kayıt garson adına (sp_musteri_kaydet), üyelik yönetici prosedürüyle (sp_musteri_vip).
+    // VIP üyenin müşteri kaydı ve üyeliği: kayıt garson adına (sp_musteri_kaydet), haftalık üyelik ücreti kasa prosedürüyle (sp_vip_uyelik_ode; üyeliği de başlatır).
     // Simülasyonu yönetici çalıştırır; üyelik verilemezse grup standart müşteri olarak devam eder.
     async vipUyelik(g) {
         const mu = g.musteri;
@@ -755,9 +755,9 @@ export class Simulasyon {
             mu.kullaniciId = (await this.garsonApi(g).gonder('/musteriler', { ad, soyad, telefon, ogrenci })).kullaniciId;
         }
         if (!mu.vipVerildi) {
-            await gonder(`/yonetim/musteriler/${mu.kullaniciId}/vip`, { vip: true });
+            const odeme = await gonder(`/musteriler/${mu.kullaniciId}/vip-odeme`, { odemeTuru: Math.random() < 0.7 ? 'KART' : 'NAKIT' });
             mu.vipVerildi = true;
-            this.kaydet(`${mu.ad} ${mu.soyad} VIP Kulüp üyesi oldu`, 'para');
+            this.kaydet(`${mu.ad} ${mu.soyad} VIP Kulüp haftalık üyelik ücretini ödedi (${Number(odeme.tutar).toLocaleString('tr-TR')} TL)`, 'para');
         }
     }
 

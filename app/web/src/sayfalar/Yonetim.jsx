@@ -350,7 +350,7 @@ function Ayarlar() {
     async function kaydet(e) {
         e.preventDefault();
         const ok = await islem(() => guncelle('/yonetim/ayar', {
-            giris_ucreti: Number(d.giris_ucreti), secim_suresi_dk: Number(d.secim_suresi_dk), kayit_zorunlu: d.kayit_zorunlu,
+            giris_ucreti: Number(d.giris_ucreti), vip_haftalik_ucret: Number(d.vip_haftalik_ucret), secim_suresi_dk: Number(d.secim_suresi_dk), kayit_zorunlu: d.kayit_zorunlu,
             ogrenci_indirim_orani: Number(d.ogrenci_indirim_orani) / 100,
         }), 'Ayarlar kaydedildi');
         if (ok !== undefined) { setForm(null); yenile(); }
@@ -371,6 +371,12 @@ function Ayarlar() {
                         <input type="number" min="0" max="100" step="5" value={d.ogrenci_indirim_orani} required
                                onChange={(e) => setForm({ ...d, ogrenci_indirim_orani: e.target.value })} />
                         <small className="soluk">Yeni açılan masalara uygulanır; %50 = öğrenci yarı fiyat öder.</small>
+                    </label>
+                    <label>
+                        VIP haftalık üyelik ücreti (TL)
+                        <input type="number" min="0" step="0.01" value={d.vip_haftalik_ucret} required
+                               onChange={(e) => setForm({ ...d, vip_haftalik_ucret: e.target.value })} />
+                        <small className="soluk">Herkese aynı (öğrenci indirimi yok). Ücreti ödenmiş VIP üye masa ücreti ödemez.</small>
                     </label>
                     <label>
                         Seçim hakkı süresi (dakika)

@@ -55,6 +55,8 @@ export function yonetimRotalari() {
         'urun-satis': 'SELECT * FROM v_urun_satis ORDER BY gelir DESC, ad',
         'vip-oyun-kullanimi': 'SELECT * FROM v_vip_oyun_kullanimi ORDER BY oturum_sayisi DESC, ad',
         'kat-gelir': 'SELECT * FROM v_kat_gelir ORDER BY gun DESC, kat',
+        'musteri-segment': 'SELECT * FROM v_musteri_segment ORDER BY segment DESC, ziyaret_sayisi DESC, id',
+        'vip-uyelik-gelir': 'SELECT gun::text AS gun, odeme_sayisi, gelir, nakit, kart FROM v_vip_uyelik_gelir ORDER BY gun DESC',
     };
     for (const [ad, sql] of Object.entries(raporlar)) {
         r.get(`/raporlar/${ad}`, async (req, res) => res.json(await req.vt((q) => q(sql))));
@@ -107,15 +109,15 @@ export function yonetimRotalari() {
 
     // ---------------------------------------------------------------- ayarlar
     r.get('/yonetim/ayar', async (req, res) => {
-        const [a] = await req.vt((q) => q('SELECT giris_ucreti, secim_suresi_dk, kayit_zorunlu, ogrenci_indirim_orani FROM ayar'));
+        const [a] = await req.vt((q) => q('SELECT giris_ucreti, secim_suresi_dk, kayit_zorunlu, ogrenci_indirim_orani, vip_haftalik_ucret FROM ayar'));
         res.json(a);
     });
 
     r.patch('/yonetim/ayar', async (req, res) => {
-        const alanlar = ['giris_ucreti', 'secim_suresi_dk', 'kayit_zorunlu', 'ogrenci_indirim_orani'].filter((s) => req.body[s] !== undefined);
+        const alanlar = ['giris_ucreti', 'secim_suresi_dk', 'kayit_zorunlu', 'ogrenci_indirim_orani', 'vip_haftalik_ucret'].filter((s) => req.body[s] !== undefined);
         if (!alanlar.length) throw new HttpHata(400, 'Güncellenecek alan yok');
         const [a] = await req.vt((q) => q(
-            `UPDATE ayar SET ${alanlar.map((s, i) => `${s} = $${i + 1}`).join(', ')} RETURNING giris_ucreti, secim_suresi_dk, kayit_zorunlu, ogrenci_indirim_orani`,
+            `UPDATE ayar SET ${alanlar.map((s, i) => `${s} = $${i + 1}`).join(', ')} RETURNING giris_ucreti, secim_suresi_dk, kayit_zorunlu, ogrenci_indirim_orani, vip_haftalik_ucret`,
             alanlar.map((s) => req.body[s])));
         res.json(a);
     });
