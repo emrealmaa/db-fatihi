@@ -1,7 +1,7 @@
 // Oyun kataloğu: müsait adetler, kişi sayısı, kategori ve VIP/standart süzgeci
 import { useMemo, useState } from 'react';
 import { useVeri } from '../kancalar.js';
-import { Durum, Etiket, KutuGorseli, SayfaBaslik, VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
+import { Durum, Etiket, KutuGorseli, Olcer, SayfaBaslik, VIP_SUZGEC, VipRozet, vipSuzgecUyar } from '../bilesenler/ortak.jsx';
 
 export default function Oyunlar() {
     const { veri, hata, yukleniyor } = useVeri('/oyunlar', { aralik: 10000 });
@@ -43,7 +43,8 @@ export default function Oyunlar() {
                 </select>
                 <label className="onay"><input type="checkbox" checked={musaitMi} onChange={(e) => setMusaitMi(e.target.checked)} /> Yalnızca müsait</label>
             </div>
-            <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!liste.length} bosMesaj="Filtreye uyan oyun yok">
+            <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!liste.length} bosMesaj="Filtreye uyan oyun yok"
+                   bosIpucu="Aramayı kısaltmayı ya da kişi sayısı, kategori veya “Yalnızca müsait” süzgecini kaldırmayı deneyin.">
                 <table className="tablo">
                     <thead><tr><th>Oyun</th><th>Kategori</th><th>Kişi</th><th>Süre</th><th>Zorluk</th><th className="sag">Müsait</th></tr></thead>
                     <tbody>
@@ -59,7 +60,7 @@ export default function Oyunlar() {
                                 <td>{o.kategori}</td>
                                 <td>{o.min_oyuncu}–{o.max_oyuncu}</td>
                                 <td>{o.sure_dk} dk</td>
-                                <td title={`${o.zorluk} / 5`}>{'★'.repeat(o.zorluk)}<span className="soluk">{'★'.repeat(5 - o.zorluk)}</span></td>
+                                <td><Olcer deger={o.zorluk} baslik={`Zorluk ${o.zorluk} / 5`} /></td>
                                 <td className="sag">
                                     {o.musait_adet > 0
                                         ? <Etiket tur="basari">{o.musait_adet}/{o.toplam_adet}</Etiket>

@@ -16,7 +16,7 @@ export function Modal({ baslik, kapat, children, genis = false }) {
                  aria-label={baslik} tabIndex={-1} ref={ref}>
                 <header className="modal-baslik">
                     <h2>{baslik}</h2>
-                    <button className="dugme-ikon" onClick={kapat} aria-label="Kapat">×</button>
+                    <button className="dugme-ikon" onClick={kapat} aria-label="Kapat"><Ikon ad="kapat" /></button>
                 </header>
                 <div className="modal-icerik">{children}</div>
             </div>
@@ -24,12 +24,37 @@ export function Modal({ baslik, kapat, children, genis = false }) {
     );
 }
 
-// Yükleniyor / hata / boş durumlarını tek yerde ele alır
-export function Durum({ yukleniyor, hata, bos, bosMesaj = 'Kayıt yok', children }) {
-    if (hata) return <p className="durum durum-hata">{hata}</p>;
-    if (yukleniyor) return <p className="durum">Yükleniyor…</p>;
-    if (bos) return <p className="durum">{bosMesaj}</p>;
+// Arayüz ikonları: tek çizgi kalınlığında, metin rengini alan küçük SVG'ler
+const IKONLAR = {
+    menu: 'M4 7h16M4 12h16M4 17h16',
+    kapat: 'M6 6l12 12M18 6L6 18',
+    cikis: 'M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l4-4-4-4M14 12H4',
+};
+export function Ikon({ ad, boyut = 20 }) {
+    return (
+        <svg className="ikon" width={boyut} height={boyut} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d={IKONLAR[ad]} />
+        </svg>
+    );
+}
+
+// Yükleniyor / hata / boş durumlarını tek yerde ele alır. bosIpucu: boş ekranın ne zaman dolacağını anlatır.
+// iskelet: yükleniyorken gösterilecek yer tutucu (yoksa sade metin)
+export function Durum({ yukleniyor, hata, bos, bosMesaj = 'Kayıt yok', bosIpucu, iskelet, children }) {
+    if (hata) return <div className="durum durum-hata" role="alert"><strong>Veri alınamadı</strong><span>{hata}</span></div>;
+    if (yukleniyor) return iskelet || <p className="durum" aria-busy="true">Yükleniyor…</p>;
+    if (bos) return <div className="durum"><strong>{bosMesaj}</strong>{bosIpucu && <span>{bosIpucu}</span>}</div>;
     return children;
+}
+
+// Zorluk gibi 1–5 arası değerler için nokta ölçer
+export function Olcer({ deger, en = 5, baslik }) {
+    return (
+        <span className="olcer" role="img" aria-label={baslik || `${deger} / ${en}`} title={baslik || `${deger} / ${en}`}>
+            {Array.from({ length: en }, (_, i) => <i key={i} className={i < deger ? 'dolu' : ''} />)}
+        </span>
+    );
 }
 
 export function Etiket({ tur = 'notr', children }) {
@@ -62,12 +87,12 @@ export function SayfaBaslik({ baslik, aciklama, children }) {
     );
 }
 
-export function Adet({ deger, degistir, min = 0, max = 99 }) {
+export function Adet({ deger, degistir, min = 0, max = 99, etiket = 'Adet' }) {
     return (
-        <div className="adet">
-            <button type="button" onClick={() => degistir(Math.max(min, deger - 1))} disabled={deger <= min} aria-label="Azalt">−</button>
-            <span>{deger}</span>
-            <button type="button" onClick={() => degistir(Math.min(max, deger + 1))} disabled={deger >= max} aria-label="Artır">+</button>
+        <div className="adet" role="group" aria-label={etiket}>
+            <button type="button" onClick={() => degistir(Math.max(min, deger - 1))} disabled={deger <= min} aria-label={`${etiket}: azalt`}>−</button>
+            <span aria-live="polite">{deger}</span>
+            <button type="button" onClick={() => degistir(Math.min(max, deger + 1))} disabled={deger >= max} aria-label={`${etiket}: artır`}>+</button>
         </div>
     );
 }

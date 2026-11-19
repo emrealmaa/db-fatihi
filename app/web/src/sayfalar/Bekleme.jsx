@@ -36,7 +36,8 @@ export default function Bekleme() {
         <>
             <SayfaBaslik baslik="Bekleme sırası"
                          aciklama="Her oyunun kendi sırası var. Bir kopya boşalınca o oyunu bekleyen ilk masaya ayrılır; süre dolarsa masa o oyunun sırasının sonuna gider." />
-            <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!gruplar.length} bosMesaj="Sırada bekleyen masa yok">
+            <Durum yukleniyor={yukleniyor && !veri} hata={hata} bos={!gruplar.length} bosMesaj="Sırada bekleyen masa yok"
+                   bosIpucu="Bir oyunun bütün kopyaları masadaysa, masa panelinde o oyun için “Sıraya gir” deyin; masa burada görünür.">
                 {gruplar.map((g) => (
                     <section key={g.oyun} className="sira-grup">
                         <h2>{g.oyun} <small className="soluk">· {g.satirlar.length} masa</small></h2>
